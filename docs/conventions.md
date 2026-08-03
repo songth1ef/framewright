@@ -39,11 +39,50 @@ framewright/
 | node 的 `type` 字段值 | 小写单词 | `frame` `box` `img` `video` |
 | 测试文件 | 与被测文件同目录，`.test.ts` 后缀 | `node-tree.test.ts` |
 
-## 4. 组件与渲染器模式
+## 4. 渲染器模式（本仓最重要的约定）
 
-- **同一个 node 类型，在两个渲染器里必须叫同一个名字**（`FrameNode` 在 DOM 侧是 React 组件，在 Leafer 侧是节点封装类，名字一致）。这是双实现能被对照 review 的前提。
-- 渲染器对外只暴露一个统一入口（挂载、更新、销毁、选中态、事件回调），形状定义在 `core` 的 `RendererAdapter` 接口里。**上层代码不允许出现 `if (renderer === 'leafer')` 之类的分支**。
-- 渲染器内部不持有业务状态，状态只有一份、在 `core`/应用层。渲染器是纯粹的「把 node 树画出来 + 把交互事件抛回去」。
+### 4.1 统一接口
+
+两个渲染器实现同一个 `RendererAdapter`，形状定义在 `core`：
+
+```ts
+interface RendererAdapter {
+  readonly id: 'dom' | 'leafer'
+  readonly displayName: string
+  mount(container: HTMLElement, ctx: RenderContext): void
+  update(ctx: RenderContext): void          // 树 / 选中 / 视口 变化时调用
+  destroy(): void                            // 必须彻底清干净，不留 DOM、监听器、RAF
+}
+```
+
+`RenderContext` 携带**渲染所需的全部输入**（node 树、选中集合、视口）与**事件回调**（用户想选中什么、想把节点拖到哪、想缩放平移到哪）。
+
+- 命令式接口对两侧都公平：`renderer-dom` 内部自己用 React `createRoot` 渲染 tsx 组件（React 的 diff 本来就是 DOM 方案的固有优势，内部用是合理的）；`renderer-leafer` 内部管自己的 Leafer 实例。
+- **同一个 node 类型在两侧必须同名**：`FrameNode` 在 DOM 侧是 React 组件、在 Leafer 侧是节点封装类，名字一致。这是能被对照 review 的前提。
+- **上层不允许出现 `if (adapter.id === 'leafer')` 之类的分支。** 差异只能藏在渲染器内部。
+
+### 4.2 在线切换
+
+切换渲染器 = `旧.destroy()` → `新.mount(同一个 container, 同一个 ctx)`。**切换前后画面与状态必须一致**。
+
+由此推出一条硬规则：
+
+> **任何切换后必须保留的状态，都不能存在渲染器内部。**
+
+包括但不限于：node 树、选中集合、视口（缩放 + 平移）、正在编辑的输入值、悬停高亮。这些一律在 `core` / 应用层，通过 `RenderContext` 单向流进渲染器。
+
+渲染器内部只允许持有**纯粹的呈现细节**——DOM 节点引用、Leafer 实例、动画句柄、离屏缓存。这些在 `destroy()` 里全部释放。
+
+**验收方式**：随便操作一通后切换渲染器，画面、选中、视口三者不变，控制台无残留监听器。这是每次改渲染器都要跑一遍的手动冒烟。
+
+### 4.3 两版同步开发
+
+**一个功能在两个渲染器都可用，才算完成。** 允许一侧显式声明不支持，但必须：
+
+1. 在该渲染器里返回明确的「不支持」信号，而不是静默不生效；
+2. 在 `docs/lessons.md` 记一条，写清**为什么这个方案做不到**——这恰恰是选型结论最值钱的素材。
+
+不接受「先在 DOM 侧做完，Leafer 侧回头补」。回头补等于永远不补，且会让对照实验失去意义。
 
 ## 5. TypeScript
 
