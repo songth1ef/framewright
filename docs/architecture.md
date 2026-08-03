@@ -130,7 +130,7 @@
 | ~~1~~ | ~~MVP 成功判据~~ | ✅ **已定（2026-08-03）**：端到端跑通 + 作品可展示；选型结论是副产品 | — |
 | ~~2~~ | ~~后端是否进第一阶段~~ | ✅ **已定（2026-08-03，用户拍板）**：完整后端一次到位，NestJS + Postgres/Prisma + 真实 provider | — |
 | ~~3~~ | ~~app 壳子 Next.js 还是 Vite~~ | ✅ **已定（2026-08-03）**：Next.js。随后端选型自动关闭 | — |
-| 4 | **`mingtu` 到底能复用多少** | 已 clone 到 `E:/code/github/mingtu`，只读过 `package.json`，未读代码 | 🟡 「搭积木」能否成立取决于此 |
+| ~~4~~ | ~~`mingtu` 能复用多少~~ | ✅ **已盘点（2026-08-03）**，结论见 §9 | — |
 | 5 | **真实 provider 选哪家** | 归属是个人作品，默认 provider 必须是任何人可自行注册的公开服务；雇主相关的只能作为可选实现 + 本地 `.env` key | 🟡 |
 | 6 | **是否引入布局引擎（yoga 等）** | 会同时改变两个渲染器的实现难度，须等选型结论 | 🟢 明确推迟 |
 | 7 | **状态管理选型** | 取决于 #3 与 core 的状态形态 | 🟢 |
@@ -157,6 +157,7 @@ P0 功能面小是刻意的——两遍的成本此时最低，返工也最便�
 | 依赖 | 用途 | License | 核实来源 |
 |---|---|---|---|
 | LeaferJS | `renderer-leafer` 的渲染底座 | **MIT** ✅ | 2026-08-03 读 `github.com/leaferjs/LeaferJS` README：「LeaferJS 是采用 MIT 许可的开源项目，可以永久免费使用」 |
+| **gzm-design（果米设计）** | 编辑器服务层的**代码来源**（非运行时依赖），见 §9 | **MIT** ✅ | 2026-08-03 双源核实：`gitee.com/sourcenet/gzm-design` 的 LICENSE 文件原文 + GitHub 镜像 `github.com/LvHuaiSheng/gzm-design`。版权行 `Copyright © 2023-present guozimi.cn`，商用无额外限制 |
 
 **LeaferJS license 已核实为 MIT**，与「未来可能闭源商用」不冲突，方案 B 的前提成立。
 
@@ -202,3 +203,38 @@ LeaferJS 有现成生态（`leafer-editor` 等提供选中框、变换、辅助�
 - **一侧做不到**时也记一行，写清技术原因——那是最有价值的条目。
 - 每引入一个 `leafer-*` 插件，**单独核 license 并登记进 §6 依赖表**（主仓 MIT 不能外推到周边包）。
 - 表格随开发增长，落在 `docs/comparison.md`（超 500 行再拆）。
+
+## 9. 可复用资产盘点（2026-08-03）
+
+来源仓 `mingtu`（作者本人项目，已 clone 到 `E:/code/github/mingtu`，**不是本仓依赖**，只作代码来源）。
+
+### 9.1 三块资产
+
+| 资产 | 内容 | 可复用度 |
+|---|---|---|
+| **主体（Next.js 15 全栈）** | `better-sqlite3` 直连 + `jose`/`bcryptjs` 自建 JWT + 对象存储 + standalone/PM2 自部署，附完整运维手册 | **高**——「Next.js 全栈」这条路已在生产验证过，坑趟过一遍 |
+| `components/editor/CanvasRenderer.tsx` | React + `leafer-editor` 封装：zoom 钳制、选中态向上冒泡解析、结构 key diff（全量重建 vs 增量）、`CSS.escape` 处理特殊字符 id、HTMLText 的 textarea overlay 编辑、触屏检测、字体预加载 | **中高**——代码可用，但它直接读全局 store，**违反「渲染器不持有/不直接读状态」铁律**，搬过来必须改造成 `RendererAdapter` 形状 |
+| **`v2/`**（212 文件 / 14k 行） | `@mingtu/frontend`（Vite + Vue3 + LeaferJS）+ `backend`（NestJS）+ `shared`。含 `undoRedoService` / `zoom` / `layer` / `clipboard` / `contextMenu` / `followButton` / `penDraw` / 自定义 shape（QrCode、BarCode、HTMLText2、Image2）/ PSD 解析 | **高**——见 §9.2 |
+
+### 9.2 关键发现：大部分交互逻辑与渲染器无关
+
+实测 `v2/frontend/src/views/Editor` 下全部 `.ts`：**只有 8 个文件 import vue**（共 10 处，集中在 `proxyData` / `baseApp` / `editor` / `toolBar` 与两个 hooks——都是响应式绑定层）。`core/canvas/*` 与 `app/editor/*` 的服务类**绝大多数是纯 TS**。
+
+由此得出本项目的落位规则：
+
+| 能力 | 渲染器相关？ | 落位 |
+|---|---|---|
+| undo/redo、图层增删排序、剪贴板、右键菜单、对齐分布、**吸附与辅助线的几何计算** | ❌ 纯数据 / 纯几何 | **`core`——只写一遍，两个渲染器共享** |
+| 命中测试、实际绘制、事件绑定、辅助线的**绘制** | ✅ | 两侧各写 |
+
+**含义**：真正要写两遍的只有「命中 + 绘制」这一薄层，双渲染器的成本远低于直觉。v2 已经天然是这个切分，照抄它的分层即可。
+
+### 9.3 代码来源与署名义务（MIT 合规）
+
+`v2/` 源自 **gzm-design（果米设计）**，MIT，版权 `Copyright © 2023-present guozimi.cn`（见 §6 依赖表）。MIT 允许自由使用、修改、商用，**唯一实质义务是保留版权与许可声明**。因此：
+
+1. 仓根建 `THIRD-PARTY-NOTICES.md`，完整收录 gzm-design 的 MIT 许可全文与版权行。
+2. **每个搬运或改写自 gzm-design 的文件，头部注释标明来源**（原路径 + 项目名 + 许可）。
+3. 借鉴架构而未复制代码的部分，不构成署名义务，但仍在 `docs/lessons.md` 记一笔来源，便于后人追溯。
+
+> ⚠️ 顺带记录：来源仓 `mingtu` 的 `v2/` 目录当前**没有 LICENSE 文件、也没有版权声明**——那是 `mingtu` 侧的 MIT 合规瑕疵。本仓不得沿袭，搬运时必须补齐。
