@@ -44,6 +44,8 @@ export function RendererHost() {
       const adapter = entry.create()
       adapterRef.current = adapter
       adapter.mount(container, ctxRef.current)
+      ;(window as unknown as Record<string, unknown>)['__fwGetBounds'] = () =>
+        Object.fromEntries(adapter.getRenderedBounds())
     })
 
     return () => {
@@ -52,6 +54,7 @@ export function RendererHost() {
       if (adapter === null) return
       adapterRef.current = null
       queueMicrotask(() => adapter.destroy())
+      delete (window as unknown as Record<string, unknown>)['__fwGetBounds']
     }
   }, [activeIndex])
 

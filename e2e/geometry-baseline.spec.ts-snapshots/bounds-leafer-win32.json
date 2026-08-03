@@ -1,0 +1,44 @@
+{
+  "box-back": {
+    "x": 40,
+    "y": 40,
+    "width": 200,
+    "height": 140
+  },
+  "box-front": {
+    "x": 120,
+    "y": 100,
+    "width": 200,
+    "height": 140
+  },
+  "img-1": {
+    "x": 40,
+    "y": 300,
+    "width": 160,
+    "height": 100
+  },
+  "inner-frame": {
+    "x": 380,
+    "y": 60,
+    "width": 240,
+    "height": 180
+  },
+  "nested-box": {
+    "x": 400,
+    "y": 80,
+    "width": 120,
+    "height": 80
+  },
+  "root": {
+    "x": 0,
+    "y": 0,
+    "width": 800,
+    "height": 450
+  },
+  "video-1": {
+    "x": 240,
+    "y": 300,
+    "width": 160,
+    "height": 100
+  }
+}
