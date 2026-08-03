@@ -12,9 +12,9 @@
 
 **阶段：P0 接口夹逼进行中。**
 
-**下一步**：执行 `docs/plans/2026-08-03-P0-接口夹逼.md` 的 Task 5。
+**下一步**：等待独立实现方完成 Task 6；交付后执行 Task 7。
 
-**卡着的事**：无。P0 的全部前置决定已闭合。
+**卡着的事**：Task 7 依赖 Task 6 的 LeaferJS 渲染器交付。
 
 ---
 
@@ -38,7 +38,7 @@
 | 2 | `node-schema.ts` schema 单一真相源 | ✅ | 见本任务提交 |
 | 3 | `node-tree.ts` 树操作与绝对坐标累加 | ✅ | 见本任务提交 |
 | 4 | `renderer-adapter.ts` 接口与注册表校验 | ✅ | 见本任务提交 |
-| 5 | `renderer-dom` DOM/React 渲染器 | ⬜ | — |
+| 5 | `renderer-dom` DOM/React 渲染器 | ✅ | 见本任务提交 |
 | 6 | `renderer-leafer` LeaferJS 渲染器 | ⬜ | — |
 | 7 | `apps/web` RendererHost 与切换开关 | ⬜ | — |
 | 8 | Playwright 真实渲染、对照、切换、几何基线 | ⬜ | — |
