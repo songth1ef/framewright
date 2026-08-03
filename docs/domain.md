@@ -16,7 +16,7 @@
 
 | 术语 | 含义 |
 |---|---|
-| **Document（文档）** | 一个画布工作台的完整内容，对应一棵 node 树的根。用户打开的「一个项目/一张画布」就是一个 Document。 |
+| **Document（文档 / 画布）** | 一个画布工作台的完整内容。用户打开的「一张画布」就是一个 Document。**它有自己的 `id`，那个 id 就是后端存储的主键与一切读写的入口**，见 §2.1。 |
 | **Node（节点）** | 画布上的一个元素。所有可见内容都是 node。 |
 | **Node 树** | Document 的全部 node 按父子关系组成的树。**是唯一真相源**——渲染、持久化、协作、撤销重做全部基于它。 |
 | **Renderer（渲染器）** | 把 node 树画到屏幕上、并把用户交互抛回来的实现。本项目并行两套：`renderer-dom`（Next.js/tsx 组件）与 `renderer-leafer`（LeaferJS 节点封装），**可在运行时一键切换**。 |
@@ -24,6 +24,23 @@
 | **Selection（选中集）** | 当前被选中的 node id 集合。同为会话状态，同样必须跨渲染器切换保留。 |
 | **Provider（生成方）** | AI 生成能力的提供方抽象。输入生成参数，输出素材 URL。仓内只有 mock 实现。 |
 | **Generation（生成任务）** | 一次 AI 调用的生命周期：提交 → 排队/进行中 → 成功（产出素材）或失败。 |
+
+## 2.1 Document 与它的 id
+
+```ts
+interface Document {
+  id: string          // 画布 id —— 后端存储主键、URL 路径段、一切读写的入口
+  name: string
+  root: FrameNode     // node 树的根
+  historySeq: number  // 当前所处的历史序号，见 §6
+  createdAt: string
+  updatedAt: string
+}
+```
+
+- **`id` 不加 `fw` 前缀**——按 §3.1.1 的边界规则，前缀只用于 node schema；Document 不进渲染器，不存在与渲染器属性同名的风险。
+- **`id` 是唯一入口**：读画布、存画布、查历史、发起生成，全部以 `documentId` 为键。前端路由 `/canvas/{documentId}`。
+- **`root.fwId` 与 `Document.id` 是两回事**：前者是文档**内部**的节点标识（恒为 `'root'`），后者是文档**之间**的标识。别混。
 
 ## 3. Node 模型
 
@@ -116,6 +133,67 @@
 - **参数原样留存**。用户要能看到「这张图当时是用什么参数生成的」并一键复跑。
 - **Provider 可替换**。`core` 只认 Provider 接口，不认任何具体厂商。仓内默认是返回占位素材的 mock provider。
 
+## 4.5 撤销历史（持久化，以 documentId 为键）
+
+**撤销历史存后端，不是内存。** 关掉页面第二天打开，仍然能撤销——对「误删了一张昨天生成的图」这个真实场景，内存内 undo 是没用的。
+
+### 存什么
+
+**存操作日志，不存整树快照。** 快照方案每步存一棵完整的树，几百步就是几十 MB；本项目的操作又是低频的（摆放和生成，不是设计器那种每秒几十次属性微调），日志方案的体积优势明显且实现不复杂。
+
+```ts
+interface NodeSlot {
+  parentFwId: string
+  index: number      // 在父节点 children 里的位置，即 z 序
+  x: number
+  y: number
+}
+
+type CanvasOp =
+  | { kind: 'add-node'; slot: NodeSlot; node: CanvasNode }
+  | { kind: 'remove-node'; slot: NodeSlot; node: CanvasNode }
+  | { kind: 'move-node'; fwId: string; from: NodeSlot; to: NodeSlot }
+  | { kind: 'update-node'; fwId: string; before: Partial<CanvasNode>; after: Partial<CanvasNode> }
+
+interface HistoryEntry {
+  id: string
+  documentId: string   // ← 以画布 id 为键
+  seq: number          // document 内单调递增
+  op: CanvasOp
+  createdAt: string
+}
+```
+
+**关键性质：每个 op 自带反推逆操作所需的全部信息**，因此不需要另存一份 inverse。
+
+| op | 逆操作 |
+|---|---|
+| `add-node` | 用同一个 `slot` 做 `remove-node` |
+| `remove-node` | 用同一个 `slot` 和 `node` 做 `add-node` |
+| `move-node` | `from` 与 `to` 对调 |
+| `update-node` | `before` 与 `after` 对调 |
+
+### 怎么存怎么读
+
+两张表，**都以 `documentId` 为键**：
+
+| 表 | 存什么 | 为什么 |
+|---|---|---|
+| `Document` | **当前**的完整 node 树 + `historySeq` | 打开画布时一次读到位，不需要从头重放 |
+| `HistoryEntry` | 操作日志 | 撤销 / 重做用 |
+
+- **撤销** = 取 `seq === historySeq` 那条，应用其逆操作，`historySeq--`，写回 Document
+- **重做** = `historySeq++`，取该条正向应用，写回 Document
+- **产生新操作时**，丢弃 `seq > historySeq` 的条目（不做分支历史——那是另一个量级的复杂度，且业务上没人要）
+
+### 必须配套的裁剪策略
+
+日志会无限增长，**必须裁**：每个 document 只保留最近 **200** 条，写入时把更早的删掉。理由是本项目操作低频，200 步足够覆盖「昨天那张图」这类场景；不设上限迟早撑爆表。
+
+### 范围
+
+**这属于 P1（骨架贯通）**，P0 无交互所以没有撤销。P0 只需保证 node 树是唯一真相源、变更都经应用层——那是撤销能成立的前提。
+
 ## 5. 明确不做
 
 判据是 `AGENTS.md` §1.1 的主要矛盾：**服务「生成 → 摆放 → 再生成」循环的才做，服务「把图形调得更好看」的不做。**
@@ -137,7 +215,8 @@
 
 - 多人实时协作 / CRDT
 - 自动布局引擎（yoga / flexbox 语义）
-- 完整的撤销重做历史（先只做内存内简单 undo；**撤销一次生成/一次移动**是业务需要的，撤销"改了个圆角"不是）
+- 分支历史（撤销后又产生新操作时，被丢弃的重做分支不保留）
+- 跨端并发编辑同一 document 的冲突合并
 - 权限、分享、评论
 - 素材库 / 资产管理
 - 多页面 / 多画板
