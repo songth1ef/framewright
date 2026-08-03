@@ -238,3 +238,70 @@ LeaferJS 有现成生态（`leafer-editor` 等提供选中框、变换、辅助�
 3. 借鉴架构而未复制代码的部分，不构成署名义务，但仍在 `docs/lessons.md` 记一笔来源，便于后人追溯。
 
 > ⚠️ 顺带记录：来源仓 `mingtu` 的 `v2/` 目录当前**没有 LICENSE 文件、也没有版权声明**——那是 `mingtu` 侧的 MIT 合规瑕疵。本仓不得沿袭，搬运时必须补齐。
+
+### 9.4 借鉴清单：抄什么，不抄什么
+
+gzm-design 是个成熟编辑器，好东西很多，**但它是单渲染器的通用设计器，我们是双渲染器的选型验证项目，目标不同**。全盘照搬会把它的复杂度整个继承过来。逐项定性：
+
+| 模块 | 行数 | 判断 | 理由 |
+|---|---|---|---|
+| `core/undoRedo/*` `app/editor/layer.ts` `clipboard` `contextMenu` `zoom` | ~700 | ✅ **借鉴逻辑，落 `core`** | 纯数据/几何操作，渲染器无关，两版共享 |
+| `core/shapes/*` | ~370 | ✅ **借鉴模式，不照抄代码** | 见 §10——它是 Leafer 专属扩展，我们要三段式 |
+| `core/canvas/mLeaferCanvas.ts` | 571 | 🟡 **只能进 `renderer-leafer`** | 纯 Leafer 封装。**绝不能进 `core`**，否则 `core` 就被 Leafer 污染，DOM 侧没法用 |
+| `core/keybinding` `core/eventbus` | ~190 | 🟡 可借鉴，但先别做 | 有价值，但不是 P0/P1 必需 |
+| **`core/instantiation/*`（VSCode 式 DI 容器）** | **691** | ❌ **明确不抄** | 它解决的是大型编辑器的服务解耦问题。本项目当前规模用不上，引入等于**先给自己加一层难度再开始验证**——这正是「战线过长」的典型形态 |
+| `core/workspaces` `utils/psd/*` | ~500+ | ❌ 不进第一版 | 多页面与 PSD 导入都在 `domain.md` §5「明确不做」里 |
+
+**判据**：一个模块要进来，必须能回答「它让选型结论更快出现吗，或者它是端到端跑通的必需品吗」。两个都不是就记进 backlog。
+
+## 10. 自定义 shape 的三段式结构
+
+### 10.1 gzm-design 的做法，以及为什么我们不能照抄
+
+gzm-design 的自定义元素（`QrCode` / `BarCode` / `HTMLText2` / `Image2`）是**纯 LeaferJS 扩展**：
+
+```ts
+@registerUI()
+class QrCode extends Rect {
+  @dataProcessor(CustomData) declare public __: ICustomData
+  @boundsType('文字') declare public text: string
+  public get __tag() { return 'QrCode' }
+  public __onUpdateSize() { this.renderQr(); super.__onUpdateSize() }
+}
+```
+
+数据侧存 `tag: 'QrCode'` + 参数，Leafer 靠 `registerUI` 反查类实例化。**在单渲染器项目里这个设计很干净**——数据驱动、类型自注册、参数变更自动触发重绘。
+
+但它整套依赖 `registerUI` / `dataProcessor` / `boundsType` / `__tag` / `__onUpdateSize`，**这些只在 Leafer 世界存在**。DOM 侧一个都没有。照抄进 framewright 会让 `renderer-leafer` 有 shape 而 `renderer-dom` 无从对齐，直接违反「两版同步」。
+
+还有一个更说明问题的例子：`Image2` 的存在理由是注释里写的「**解决官方 Image 元素不能在初始化时设置 fill 的 opacity 问题**」——这是个纯粹的 **Leafer workaround**，DOM 侧压根没有这个问题。**它证明了 shape 层不可能 1:1 对应**，硬对应反而是错的。
+
+### 10.2 framewright 的三段式
+
+把一个 shape 拆成三段，其中**只有第三段要写两遍**：
+
+| 段 | 位置 | 内容 | 写几遍 |
+|---|---|---|---|
+| **① 数据** | `packages/core/src/node-schema.ts` | `fwType` 取值 + 该类型的参数字段（如 QR 的 `text`/`ecLevel`/`logo`） | 1 |
+| **② 纯逻辑** | `packages/core/src/shapes/<name>.ts` | 参数 → **可绘制的中间产物**，渲染器无关 | 1 |
+| **③ 渲染绑定** | `renderer-leafer/src/shapes/<Name>.ts`<br>`renderer-dom/src/shapes/<Name>.tsx` | 把中间产物挂进各自的渲染树 | 2（都很薄） |
+
+以二维码为例：`QRCode.toString(text, options) → SVG 字符串` 这一步**完全与渲染器无关**，属于 ②，只写一遍。剩下的 ③ 两侧各自是「Leafer 里把 SVG 设成 `fill`」和「React 里渲染一个 `<img>`/内联 SVG」——都只有几行。
+
+这正是 §9.2 那条规律的具体实例：**要写两遍的永远只有「挂进渲染树」那一薄层。**
+
+### 10.3 shape 注册表：把「两版同步」变成机器可检查
+
+`core` 导出全部合法 `fwType` 的清单；两个渲染器各自维护 `fwType → 实现` 的注册表。
+
+**应用层在装载渲染器时校验注册表完整性**：某个渲染器缺任何一个 `fwType` 就**当场报错**，而不是渲染时静默画不出来。
+
+```
+core.SHAPE_TYPES            = ['frame','box','img','video', ...]
+rendererDom.shapes          → 必须覆盖 SHAPE_TYPES 全集
+rendererLeafer.shapes       → 必须覆盖 SHAPE_TYPES 全集
+```
+
+**这条的价值超出技术本身**：`conventions.md` §4.3 的「两版同步开发、不许单侧先行」原本只是一条纪律，靠人自觉；有了注册表完整性检查，**它变成加一个 shape 就必须两边都加、否则跑不起来的硬约束**。纪律靠机器守，比靠人守可靠。
+
+允许一侧显式声明「不支持」——注册一个显式的 unsupported 实现（渲染成占位并上报），而不是留空。这样「做不到」是**被记录的**，正好喂给 §8.2 的实现成本对照表。

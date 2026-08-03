@@ -19,6 +19,9 @@ framewright/
 │       └── app/api/**        # 薄适配层，只做解析/鉴权/调 server-core
 ├── packages/
 │   ├── core/                 # @framewright/core         node schema + 树操作 + 会话状态 + RendererAdapter，零渲染依赖
+│   │   └── src/
+│   │       ├── node-schema.ts        # schema 单一真相源：类型/字段常量/守卫/默认值
+│   │       └── shapes/<name>.ts      # shape 的纯逻辑段（参数 → 可绘制中间产物），见 architecture §10
 │   ├── renderer-dom/         # @framewright/renderer-dom     DOM/HTML 渲染器（React/tsx）
 │   ├── renderer-leafer/      # @framewright/renderer-leafer  LeaferJS 渲染器
 │   ├── server-core/          # @framewright/server-core  全部服务端业务逻辑，纯 TS 零 Next 依赖
@@ -89,6 +92,8 @@ interface RendererAdapter {
 2. 在 `docs/lessons.md` 记一条，写清**为什么这个方案做不到**——这恰恰是选型结论最值钱的素材。
 
 不接受「先在 DOM 侧做完，Leafer 侧回头补」。回头补等于永远不补，且会让对照实验失去意义。
+
+**对 shape 而言这条是机器强制的**：`core` 导出 `SHAPE_TYPES` 全集，两个渲染器的 shape 注册表必须覆盖全集，缺一个装载时就报错。加 shape 必须两边都加。见 `architecture.md` §10.3。
 
 ## 5. TypeScript
 
