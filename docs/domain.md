@@ -33,8 +33,8 @@
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `id` | `string` | 文档内唯一，创建时生成，永不复用 |
-| `type` | `'frame' \| 'box' \| 'img' \| 'video'` | 判别字段，决定其余字段形状 |
+| `fwId` | `string` | 文档内唯一，创建时生成，永不复用 |
+| `fwType` | `'frame' \| 'box' \| 'img' \| 'video'` | 判别字段，决定其余字段形状 |
 | `name` | `string` | 用户可见名称，图层面板显示用 |
 | `x` `y` | `number` | 相对**父节点**左上角的偏移 |
 | `width` `height` | `number` | 尺寸 |
@@ -43,6 +43,20 @@
 | `visible` | `boolean` | 是否渲染 |
 | `locked` | `boolean` | 锁定后不可选中拖动 |
 | `children` | `Node[]` | 仅 `frame` 有；其余类型无此字段 |
+
+### 3.1.1 `fw` 前缀约定
+
+`fwId` / `fwType` 带 `fw` 前缀，其余字段（`x` `y` `width` `name` …）不带。这不是随手起的名，规则是：
+
+> **凡是「framewright 语义」而非「几何/呈现语义」的字段，一律加 `fw` 前缀。**
+
+`fwId` 是我们的身份标识、`fwType` 是我们的判别字段——它们**只对 framewright 有意义**，且恰好与渲染器原生的 `id` / `type` 同名。前缀让代码里任何一处都能一眼看出「这是我们的数据，不是渲染器的属性」。后续再加此类字段（如 `fwVersion`、`fwLocked`）同样加前缀。
+
+**前缀的适用边界**：只用于 **node schema**。`Generation` 等不进入渲染器的数据结构保持 `id` 不带前缀——前缀的两条理由（与渲染器原生字段同名、需要在混杂上下文里一眼辨归属）对它们都不成立，硬加只会变成噪音。
+
+**⚠️ 但前缀不是防冲突的真正防线。** 必须认清一个事实：**LeaferJS 的节点属性 `x` `y` `width` `height` `rotation` `opacity` `visible` `name` `children` 与我们的字段全部同名。** 只给两个字段加前缀，反而会造成「其余字段是安全的」这种错觉。
+
+真正的防线是下面这条铁律（见 §3.3 规则 7）：**禁止把 node 对象整体展开进渲染器节点。**
 
 ### 3.2 各类型专有字段
 
@@ -57,8 +71,23 @@
 2. **只有 frame 能有子节点。** box/img/video 是叶子。
 3. **布局起步用绝对定位**（x/y/width/height 直接生效），**不引入自动布局引擎**。yoga 之类是明确的后续开环，不进第一版——引入它会同时改变两个渲染器的实现难度，必须等选型结论出来后再评估。
 4. **兄弟节点的数组顺序即 z 序**，数组靠后的画在上面。不设独立 `zIndex` 字段（两份真相必然漂移）。
-5. **schema 只有一份真相源**，定义在 `@framewright/core`。两个渲染器都从它导入类型，谁都不能私自扩字段。
+5. **schema 只有一份真相源** = `packages/core/src/node-schema.ts`。类型定义、字段名常量、类型守卫、默认值全在这一个文件里；两个渲染器与 `server-core` 都从它导入，谁都不能私自扩字段。
 6. **node 树不含任何渲染器专有字段**。没有 `leaferId`、没有 `domRef`。渲染器需要的内部映射自己在内存里维护，`destroy()` 时丢弃。
+7. **🔴 禁止把 node 对象整体展开进渲染器节点。** 不允许 `Object.assign(leaferNode, node)`、`new Rect({ ...node })`、`<div {...node}>` 这类写法，**必须逐字段显式映射**：
+
+   ```ts
+   // ❌ 危险：node 的字段会静默覆盖 Leafer 的同名属性，且新增字段会悄悄泄漏进去
+   const rect = new Rect({ ...node })
+
+   // ✅ 显式映射：加了字段不会自动流进渲染器，改名会当场编译报错
+   const rect = new Rect({
+     x: node.x, y: node.y,
+     width: node.width, height: node.height,
+     fill: node.fill,
+   })
+   ```
+
+   **理由**：`x` `y` `width` `height` `rotation` `opacity` `visible` `name` `children` 在 LeaferJS 上全部同名。整体展开一旦写下，语义冲突会以「莫名其妙渲染不对」的形式出现，而且两个渲染器的表现还不一样——那正是最难查的一类 bug。逐字段映射看着啰嗦，但它把冲突从运行时挪到了编译期。
 
 ### 3.4 状态分层
 

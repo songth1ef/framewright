@@ -41,7 +41,8 @@ framewright/
 | React 组件文件 | kebab-case，组件本身 PascalCase | `frame-node.tsx` → `FrameNode` |
 | 类型 / 接口 | PascalCase，**不加 `I` 前缀** | `CanvasNode` `RendererAdapter` |
 | 常量 | SCREAMING_SNAKE_CASE | `DEFAULT_FRAME_SIZE` |
-| node 的 `type` 字段值 | 小写单词 | `frame` `box` `img` `video` |
+| node 的 `fwType` 字段值 | 小写单词 | `frame` `box` `img` `video` |
+| **framewright 语义字段** | 加 `fw` 前缀，camelCase | `fwId` `fwType`（几何/呈现字段如 `x` `width` 不加，见 `domain.md` §3.1.1） |
 | 测试文件 | 与被测文件同目录，`.test.ts` 后缀 | `node-tree.test.ts` |
 
 ## 4. 渲染器模式（本仓最重要的约定）

@@ -41,7 +41,8 @@
 - ❌ 违反 §2 四条硬约束
 - ❌ 未经确认引入新的重量级依赖（状态库、UI 框架、DB、布局引擎）
 - ❌ 在 `renderer-dom` 与 `renderer-leafer` 之外的层引用任何渲染器专有 API——渲染器必须可替换
-- ❌ 让两个渲染器的 node schema 产生分叉；schema 只有一份真相源
+- ❌ 让两个渲染器的 node schema 产生分叉；schema 只有一份真相源 = `packages/core/src/node-schema.ts`
+- ❌ **把 node 对象整体展开进渲染器节点**（`new Rect({...node})` / `Object.assign` / `<div {...node}>`）——必须逐字段显式映射，见 `docs/domain.md` §3.3 规则 7
 - ❌ **只在一个渲染器里实现某个功能**。两版功能必须同步——一个特性在两侧都能用（或两侧都显式标注「不支持，原因是 X」）才算完成，见 `docs/conventions.md` §4.3
 - ❌ 把任何**切换后必须保留的状态**（选中、视口缩放平移、编辑中的输入）存在渲染器内部
 - ❌ 提交任何 key / token / 真实服务地址
