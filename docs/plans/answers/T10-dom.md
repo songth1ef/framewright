@@ -340,3 +340,128 @@ DOM 侧需要一个统一的 pointer gesture state machine，不能给各 shape 
    无法触发。
 3. 复合生成单元的内部按钮会冒泡到业务单元外框；若没有 opt-out 与
    `onNodeAction`，点“重试”会同时触发选中、拖拽或激活。
+
+## 增量补答（interaction-spec 成文后）
+
+### 交互 A′ 平移的另外三种触发
+
+**Q1 监听方式**：容器设 `tabIndex={0}`，聚焦后用 `keydown/keyup` 维护 Space 状态；
+Space + 左键沿用 pointer capture 的 pan 状态。`wheel` 用同一个非 passive 原生监听器，
+按 `ctrlKey/metaKey`（捏合缩放）→ `shiftKey`（水平平移）→ 普通输入的优先级分派。
+另监听 `window.blur`、`visibilitychange` 清除卡住的 Space。
+
+**Q2 原始数据**：键盘侧有 `code/key/repeat/modifier`，pointer 侧有
+`clientX/clientY/button/pointerId`；wheel 有 `deltaX/deltaY/deltaMode` 与 modifiers。
+
+**Q3 缺什么**：Space 拖拽和 Shift + wheel 只需 core 的 `panBy()`。但浏览器没有可靠的
+设备类型字段，**无法严格区分鼠标滚轮与触控板双指纵向滑动**；`deltaMode === 0`、
+非零 `deltaX`、delta 大小都只能做启发式判断。规格必须明确接受启发式，或改成统一语义。
+
+**Q4 坑与做不到**：只有画布键盘域激活且 target 非可编辑控件时才 `preventDefault()`，
+否则 Space 会滚页/点击按钮。Shift + wheel 要使用 `deltaY` 作为水平量，并兼容设备原本
+已有 `deltaX`；`pointercancel`、失焦和切换 renderer 都必须清状态。
+
+**Q5 中间态反馈**：三种平移都用本地 preview viewport 每 RAF 重绘，并经
+`onViewportChange` 同步会话状态；Space 未拖动显示 `grab`，拖动后显示 `grabbing`。
+
+### 交互 B′ 缩放快捷键与视图命令
+
+**Q1 监听方式**：在画布键盘域监听 `keydown`；用 `event.code` 识别
+`Equal/Minus/Digit0/Digit1`，避免键盘布局改变字符。命中快捷键后阻止浏览器缩放。
+
+**Q2 原始数据**：DOM 提供容器 `clientWidth/clientHeight` 作为视口尺寸；上下文提供
+root、viewport，键盘事件提供 Ctrl/Meta/Shift。快捷键锚点是容器中心，不依赖鼠标。
+
+**Q3 缺什么**：DOM 虽能从 `getRenderedBounds()` 拼包围盒，但不应把渲染结果倒灌成
+业务真相。core 应提供 `getContentBounds(root)`、`fitViewport(bounds, viewportSize, 5%)`
+和 `centerViewport(bounds, scale, viewportSize)`；明确排除 root、不可见节点，并计算旋转
+后的 AABB。空内容时保持当前中心，scale 回到 1。
+
+**Q4 坑与做不到**：必须定义“5%”是视口四边各留 5%（即使用 90% 可用宽高）；嵌套
+frame、clip、旋转及 root 是否算内容不能由两侧自行解释。`Ctrl+=` 要兼容主键区和小键盘。
+
+**Q5 中间态反馈**：这是离散命令，算出最终 viewport 后一次回调即可；若以后加过渡动画，
+动画只属 renderer preview，最终值仍由应用层持有，renderer 切换时取消动画。
+
+### 交互 G 等比缩放
+
+**Q1 监听方式**：在不受画布 transform 的 selection overlay 中渲染四个 handle；handle
+监听 `pointerdown` 并 capture，`pointermove` 预览，`pointerup` 提交，cancel 时回滚。
+视觉点可为 8px，外包 20-24px 的透明命中元素，二者尺寸都按屏幕像素固定。
+
+**Q2 原始数据**：需要 handle 方位、起始/当前 client point、选中集包围盒，以及各节点
+起始的父相对 `x/y/width/height`、父绝对位置、rotation/locked。
+
+**Q3 缺什么**：core 需按“对角固定、统一 scale factor”计算单选和多选的新几何，并处理
+最小尺寸、不同父级与已选祖先去重。现有契约缺提交尺寸的能力，建议新增
+`onNodesResize(changes: { fwId, parentFwId, x, y, width, height }[])`，不能滥用
+`onNodesMove`。旋转节点的 handle 几何也必须由 core 统一。
+
+**Q4 坑与做不到**：多选跨父级、frame clip、旋转后的屏幕象限、拖过固定角造成翻转都需
+定规则；P2 建议 clamp 到最小正尺寸，不允许翻转。命中层必须高于节点且阻止点选/拖拽。
+
+**Q5 中间态反馈**：renderer 保存起始快照与临时变换，仅改 overlay/节点预览；松手一次
+提交。cancel、Esc 或 destroy 丢弃 preview，不能改 node 树。
+
+### 交互 H 键盘操作
+
+**Q1 监听方式**：画布容器使用 `tabIndex={0}` 和 `keydown/keyup`，pointerdown 画布时主动
+focus。焦点离开画布就不响应；`input/textarea/select/button/[contenteditable]` 内一律放行，
+不使用无条件 window 快捷键。
+
+**Q2 原始数据**：事件提供 `code/key/repeat` 与 modifiers；上下文提供 selection/root，
+容器焦点决定快捷键作用域。方向键 delta 为画布坐标 1 或 10，不随 viewport.scale 改变。
+
+**Q3 缺什么**：全选/清空复用 selection 回调，方向键可复用明确为父相对结果的
+`onNodesMove`；删除必须新增 `onNodesDelete(fwIds)`。core 还应提供可选业务单元遍历、
+锁定过滤及批量 nudge 计算，避免嵌套选中重复移动。
+
+**Q4 坑与做不到**：需 `preventDefault()` 阻止 Ctrl+A 选网页、Backspace 导航和方向键滚页；
+IME composing 时不处理。长按方向键的 repeat 若逐次提交会污染撤销日志，建议一次按住期间
+本地预览，keyup 合并成一次提交；blur 时也要提交或回滚，契约必须定死。
+
+**Q5 中间态反馈**：全选/清空/删除是离散请求，无 renderer 中间态；长按微调按拖拽同样
+使用本地 preview，松键提交一次。删除由应用层改树后通过 `update(ctx)` 反映。
+
+### 交互 I 不随缩放变化的视觉元素
+
+**Q1 监听方式**：首选在 transformed content sibling 上建立未缩放的绝对定位 overlay，
+用 `canvasToScreen()` 投影选中几何；描边直接 2 CSS px、handle 固定 CSS px，无需反向缩放。
+备选是在内容层中设置 `border-width: calc(2px / scale)`、handle 尺寸为 `size / scale`。
+
+**Q2 原始数据**：需要 viewport、容器 rect、单元的画布几何及 rotation；多选还需 core
+给出的整体包围盒。`devicePixelRatio` 只影响锐度，不改变 CSS px 规格。
+
+**Q3 缺什么**：core 只需统一投影点/旋转矩形/包围盒；overlay 的 DOM 结构和 CSS 属于
+renderer。若继续使用反向补偿，`scale` 必须先钳制在 0.1-4，不能出现零或负数。
+
+**Q4 坑与做不到**：投影结果常有 0.5px 等小数，浏览器会抗锯齿，无法保证每个 DPR 下都
+落在物理像素整数边界。不要独立取整各点，否则选框会漂；接受亚像素，必要时只对纯水平/
+垂直描边做 DPR 对齐。overlay 还要同步滚动、resize、rotation 与 frame clip 语义。
+
+**Q5 中间态反馈**：viewport 或 preview geometry 每帧变化时只重算 overlay 投影；它不进
+RenderContext。renderer destroy 时移除 overlay 和 RAF。
+
+### 交互 J 光标反馈
+
+**Q1 监听方式**：容器维护单一 gesture/hover 状态并映射到 `style.cursor` 或 `data-cursor`；
+节点与 handle 只上报 hover 命中，不各自持有冲突的光标状态。handle 按角映射两种 resize。
+
+**Q2 原始数据**：使用当前 gesture、Space 状态、pointer 命中目标、handle 方位、节点
+rotation/locked；不需要把原生事件上抛。
+
+**Q3 缺什么**：不缺 core 回调；若旋转节点也可缩放，core 应提供旋转后角点对应的光标
+方向，避免 DOM 与 Leafer 各自判断后不一致。
+
+**Q4 坑与做不到**：pointer capture 后真实 hover target 不再可靠，手势期间必须由状态机
+强制 cursor。优先级建议 resize > grabbing > crosshair > grab > move > default；locked
+节点保持 default。Space keyup、blur、pointercancel/lostcapture、destroy 都走同一 reset。
+
+**Q5 中间态反馈**：cursor 本就是 renderer 本地瞬时状态，不进入 RenderContext；reset 后
+根据当前 hover/Space 重新派生，而不是硬编码回 `default`。
+
+## 增量补答后的三个主要风险
+
+1. 浏览器无法可靠区分鼠标滚轮与触控板双指纵向滑动，当前规格要求两者产生不同语义。
+2. 等比缩放与删除没有语义层回调；若不补契约，只能泄漏 DOM 事件或偷用错误回调。
+3. 多选缩放、键盘微调横跨不同父级时，结果必须保持父相对坐标并去重已选祖先。
