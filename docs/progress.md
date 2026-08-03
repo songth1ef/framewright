@@ -50,7 +50,7 @@
 
 | 项 | 结论 | 出处 |
 |---|---|---|
-| 项目归属 | 个人作品 / 技术预研，可开源；四条硬约束 | `AGENT.md` §2 |
+| 项目归属 | 个人作品 / 技术预研，可开源；四条硬约束 | `AGENTS.md` §2 |
 | 渲染层 | 可插拔 + 运行时一键切换，两版同步开发 | `architecture.md` §1 |
 | 后端 | Next.js 全栈；业务逻辑收进 `server-core` 保留拆 NestJS 退路 | `architecture.md` §4.1 |
 | app 壳子 | Next.js（随后端自动关闭） | `architecture.md` §4 |
