@@ -12,9 +12,9 @@
 
 **阶段：P0 接口夹逼进行中。**
 
-**下一步**：等待独立实现方完成 Task 6；交付后执行 Task 7。
+**下一步**：等待独立实现方执行 Task 8 的 Playwright 对照与几何基线测试。
 
-**卡着的事**：Task 7 依赖 Task 6 的 LeaferJS 渲染器交付。
+**卡着的事**：无。T7 已完成真实浏览器切换与两侧几何对照。
 
 ---
 
@@ -23,7 +23,7 @@
 | 阶段 | 目标 | 状态 | 完成日期 |
 |---|---|---|---|
 | 设计 | 定案技术栈、架构、约束 | ✅ 完成 | 2026-08-03 |
-| **P0 接口夹逼** | 两个渲染器夹出 `RendererAdapter` 正确形状；仅 frame/box 静态渲染，可一键切换 | ⬜ 未开始 | — |
+| **P0 接口夹逼** | 两个渲染器夹出 `RendererAdapter` 正确形状；仅 frame/box 静态渲染，可一键切换 | 🚧 进行中 | — |
 | P1 骨架贯通 | Next.js 全栈端到端：按 `documentId` 存读画布、**持久化撤销历史**、生成走 mock provider | ⬜ 未开始 | — |
 | P2 交互补齐 | 拖拽、框选、缩放平移、属性编辑；两版严格同步 | ⬜ 未开始 | — |
 | P3 真实生成 | 接真实 provider，img/video 落真实素材 | ⬜ 未开始 | — |
@@ -39,8 +39,8 @@
 | 3 | `node-tree.ts` 树操作与绝对坐标累加 | ✅ | 见本任务提交 |
 | 4 | `renderer-adapter.ts` 接口与注册表校验 | ✅ | 见本任务提交 |
 | 5 | `renderer-dom` DOM/React 渲染器 | ✅ | 见本任务提交 |
-| 6 | `renderer-leafer` LeaferJS 渲染器 | ⬜ | — |
-| 7 | `apps/web` RendererHost 与切换开关 | ⬜ | — |
+| 6 | `renderer-leafer` LeaferJS 渲染器 | ✅ | `e116589` |
+| 7 | `apps/web` RendererHost 与切换开关 | ✅ | 见本任务提交 |
 | 8 | Playwright 真实渲染、对照、切换、几何基线 | ⬜ | — |
 | 9 | 回填实现成本对照表与进度 | ⬜ | — |
 
