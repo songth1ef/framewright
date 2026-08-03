@@ -12,7 +12,7 @@
 
 **阶段：P0 接口夹逼进行中。**
 
-**下一步**：执行 `docs/plans/2026-08-03-P0-接口夹逼.md` 的 Task 4。
+**下一步**：执行 `docs/plans/2026-08-03-P0-接口夹逼.md` 的 Task 5。
 
 **卡着的事**：无。P0 的全部前置决定已闭合。
 
@@ -37,7 +37,7 @@
 | 1 | monorepo 脚手架与测试基建 | ✅ | 见本任务提交 |
 | 2 | `node-schema.ts` schema 单一真相源 | ✅ | 见本任务提交 |
 | 3 | `node-tree.ts` 树操作与绝对坐标累加 | ✅ | 见本任务提交 |
-| 4 | `renderer-adapter.ts` 接口与注册表校验 | ⬜ | — |
+| 4 | `renderer-adapter.ts` 接口与注册表校验 | ✅ | 见本任务提交 |
 | 5 | `renderer-dom` DOM/React 渲染器 | ⬜ | — |
 | 6 | `renderer-leafer` LeaferJS 渲染器 | ⬜ | — |
 | 7 | `apps/web` RendererHost 与切换开关 | ⬜ | — |
