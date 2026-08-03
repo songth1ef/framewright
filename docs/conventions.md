@@ -15,17 +15,22 @@
 ```
 framewright/
 ├── apps/
-│   ├── web/                  # 前端应用（Next.js 或 Vite+React，见 architecture 开环）
-│   └── server/               # 后端（NestJS）—— 是否进 MVP 待定
+│   └── web/                  # 唯一应用：Next.js 全栈（前端 + Route Handlers）
+│       └── app/api/**        # 薄适配层，只做解析/鉴权/调 server-core
 ├── packages/
-│   ├── core/                 # @framewright/core   node schema + 类型 + 纯逻辑，零渲染依赖
-│   ├── renderer-dom/         # @framewright/renderer-dom     DOM/HTML 渲染器
+│   ├── core/                 # @framewright/core         node schema + 树操作 + 会话状态 + RendererAdapter，零渲染依赖
+│   ├── renderer-dom/         # @framewright/renderer-dom     DOM/HTML 渲染器（React/tsx）
 │   ├── renderer-leafer/      # @framewright/renderer-leafer  LeaferJS 渲染器
-│   └── provider/             # @framewright/provider  AI 生成能力的接口 + mock 实现
+│   ├── server-core/          # @framewright/server-core  全部服务端业务逻辑，纯 TS 零 Next 依赖
+│   └── provider/             # @framewright/provider     AI 生成能力的接口 + mock 实现
 └── docs/
 ```
 
-**分层铁律**：`core` 不依赖任何渲染器，两个 `renderer-*` 都依赖 `core`，彼此互不依赖。任何一个 renderer 被删掉，`core` 必须仍能编译通过。
+**分层铁律**
+
+1. `core` 不依赖任何渲染器；两个 `renderer-*` 都依赖 `core`，彼此互不依赖。**删掉任何一个 renderer，`core` 必须仍能编译通过。**
+2. `server-core` **零 Next 依赖**——不 import `next/*`，不碰 `Request`/`Response`，不读 `process.env` 之外的运行时全局。Route Handler 负责把 HTTP 翻译成函数调用。这条守住了，将来拆成独立 NestJS 服务只需重写适配层。
+3. `core` 与 `server-core` 共享 node schema（`core` 导出，`server-core` 导入），**schema 仍然只有一份**。
 
 ## 3. 命名
 
