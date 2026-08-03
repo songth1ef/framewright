@@ -8,7 +8,6 @@ import {
   type RendererAdapter,
 } from '@framewright/core'
 import type { ReactNode } from 'react'
-import { flushSync } from 'react-dom'
 import { createRoot, type Root } from 'react-dom/client'
 import { DOM_SHAPES } from './shapes/registry'
 
@@ -19,6 +18,7 @@ function renderNode(
   bounds: Map<string, Rect>,
 ): ReactNode {
   const absolute: Point = { x: parentAbsolute.x + node.x, y: parentAbsolute.y + node.y }
+  const position: Point = { x: node.x, y: node.y }
   bounds.set(node.fwId, {
     x: absolute.x,
     y: absolute.y,
@@ -35,7 +35,7 @@ function renderNode(
     <Shape
       key={node.fwId}
       node={node}
-      absolute={absolute}
+      position={position}
       selected={selection.includes(node.fwId)}
     >
       {children}
@@ -53,22 +53,20 @@ export function createDomRenderer(): RendererAdapter {
     if (root === null) return
     bounds = new Map<string, Rect>()
     const { scale, offsetX, offsetY } = ctx.viewport
-    flushSync(() => {
-      root?.render(
-        <div
-          style={{
-            position: 'relative',
-            width: '100%',
-            height: '100%',
-            overflow: 'hidden',
-            transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
-            transformOrigin: 'top left',
-          }}
-        >
-          {renderNode(ctx.root, { x: 0, y: 0 }, ctx.selection, bounds)}
-        </div>,
-      )
-    })
+    root.render(
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          overflow: 'hidden',
+          transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
+          transformOrigin: 'top left',
+        }}
+      >
+        {renderNode(ctx.root, { x: 0, y: 0 }, ctx.selection, bounds)}
+      </div>,
+    )
   }
 
   return {
