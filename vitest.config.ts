@@ -17,6 +17,13 @@ export default defineConfig({
           include: ['packages/renderer-dom/src/**/*.test.{ts,tsx}'],
         },
       },
+      {
+        test: {
+          name: 'renderer-leafer',
+          environment: 'node',
+          include: ['packages/renderer-leafer/src/**/*.test.ts'],
+        },
+      },
     ],
   },
 })

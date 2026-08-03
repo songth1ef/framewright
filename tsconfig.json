@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "./packages/core" },
-    { "path": "./packages/renderer-dom" }
+    { "path": "./packages/renderer-dom" },
+    { "path": "./packages/renderer-leafer" }
   ]
 }
