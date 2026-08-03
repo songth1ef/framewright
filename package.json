@@ -1,0 +1,23 @@
+{
+  "name": "framewright",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.0.0" },
+  "packageManager": "pnpm@11.10.0",
+  "scripts": {
+    "typecheck": "tsc --build --force",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "e2e": "playwright test",
+    "verify": "pnpm typecheck && pnpm test && pnpm e2e",
+    "dev": "pnpm --filter @framewright/web dev"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.10",
+    "jsdom": "^27.4.0",
+    "@types/node": "^22.20.1"
+  }
+}
