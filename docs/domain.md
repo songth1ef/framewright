@@ -42,6 +42,36 @@ interface Document {
 - **`id` 是唯一入口**：读画布、存画布、查历史、发起生成，全部以 `documentId` 为键。前端路由 `/canvas/{documentId}`。
 - **`root.fwId` 与 `Document.id` 是两回事**：前者是文档**内部**的节点标识（恒为 `'root'`），后者是文档**之间**的标识。别混。
 
+## 2.2 🔴 节点粒度原则（决定 schema 怎么拆的唯一依据）
+
+> **node 树的粒度 = 用户选中的粒度 = 业务单元的粒度。**
+
+一个 node **不是**一个视觉元素，而是**一个用户会整体选中、整体移动、整体删除的东西**。
+
+用户不会去选中「那张 AI 生成图下面的 prompt 标签」，他选的是**那张生成结果**整体。所以：
+
+- ✅ 一个 `ai-image` 是**一个 node**
+- ❌ 它内部的图片本体、生成中遮罩、prompt 摘要条、hover 操作条**都不是 node**，是该 shape 的内部实现细节
+
+### 这条规则带来三个连锁好处
+
+1. **命中测试天然正确**——不需要额外写逻辑去「抑制选中子元素」，因为子元素压根不在树里。
+2. **`getRenderedBounds()` 报的就是选中框该画的位置**——业务单元的整体外框。
+3. **⭐ 它让「两版同步」变简单，不是变难**——parity 只需断言**业务单元的外框一致**，内部布局允许两侧各用各的最优解：DOM 侧可以用 flex / grid，Leafer 侧可以用绝对定位。**约束反而放宽了。**
+
+### 所以「按 type 拆得太细」的担心不成立
+
+拆分依据不是「有几种视觉形状」，而是「有几种业务单元」。业务单元的种类天然很少：
+
+| 分类 | fwType | 有生成生命周期？ | 说明 |
+|---|---|---|---|
+| 容器 | `frame` | — | 画板 / 分组容器 |
+| **生成单元** | `ai-image` `ai-video` | ✅ 有 | **一等公民**。带生成态、参数、结果，渲染成复合视觉 |
+| 纯素材 | `img` `video` | ❌ 无 | 用户上传或拖入的参考素材，只有 `src` |
+| 测试载体 | `box` | ❌ 无 | 仅用于几何对照测试，**不是产品元素**，见 `AGENTS.md` §1.1 |
+
+`ai-image` 与 `img` 的区别只有一个：**有没有生成生命周期**。有的话就带 `status` / `prompt` / `params` / `generationId`，用户能看到它在生成、能看到参数、能一键复跑。
+
 ## 3. Node 模型
 
 ### 3.1 通用字段
@@ -79,8 +109,44 @@ interface Document {
 
 - **frame** — 容器。可嵌套任意类型（含 frame 自身）。额外有 `clip: boolean`（是否裁剪超出边界的子节点）、`background`。
 - **box** — 纯图形块（矩形起步）。额外有 `fill`、`cornerRadius`、`stroke`。
-- **img** — 图片。额外有 `src`、`fit`（contain/cover/fill）、`generation?`（若由 AI 生成，指向对应 Generation 记录）。
-- **video** — 视频。额外有 `src`、`poster`、`fit`、`generation?`。
+- **img** — 纯素材图片（用户上传/拖入的参考图）。额外有 `src`、`fit`（contain/cover/fill）。**无生成态**。
+- **video** — 纯素材视频。额外有 `src`、`poster`、`fit`。**无生成态**。
+
+### 3.2.1 生成单元（一等公民，P1 引入）
+
+`ai-image` 与 `ai-video` 是本项目真正的主角。它们是**复合业务组件**——一个 node 渲染成一整套视觉（图/骨架屏/进度遮罩/prompt 摘要条/hover 操作条），但**整体只是一个 node**，见 §2.2。
+
+```ts
+interface AiGeneratedNode extends BaseNode {
+  fwType: 'ai-image' | 'ai-video'
+
+  // ── 生成生命周期 ──
+  generationId: string | null
+  status: 'empty' | 'pending' | 'running' | 'succeeded' | 'failed'
+  errorMessage: string | null
+
+  // ── 生成参数（原样留存，供用户查看与一键复跑）──
+  prompt: string
+  params: Record<string, unknown>   // 模型、尺寸、时长、种子等，形状由 provider 决定
+
+  // ── 结果 ──
+  src: string | null
+  poster: string | null             // 仅 ai-video
+
+  fit: ObjectFit
+}
+```
+
+**每个 status 都必须有明确的视觉**，且两个渲染器都要实现：
+
+| status | 该画成什么 |
+|---|---|
+| `empty` | 空占位框 + 「点击生成」提示 |
+| `pending` / `running` | 骨架屏 + 进度指示（不要只显示 spinner，要占住最终尺寸避免跳动） |
+| `succeeded` | 图片 / 视频首帧 + 底部 prompt 摘要条 |
+| `failed` | 错误占位 + `errorMessage` + 「重试」入口 |
+
+**参数原样留存**是硬要求：用户要能看到「这张图当时用什么参数生成的」并一键复跑。见 §4。
 
 ### 3.3 规则
 

@@ -2,7 +2,9 @@
   "name": "framewright",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.0.0" },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "packageManager": "pnpm@11.10.0",
   "scripts": {
     "typecheck": "tsc --build --force",
@@ -14,10 +16,11 @@
     "dev": "pnpm --filter @framewright/web dev"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "vitest": "^4.1.10",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^22.20.1",
     "@vitest/coverage-v8": "^4.1.10",
     "jsdom": "^27.4.0",
-    "@types/node": "^22.20.1"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
   }
 }
