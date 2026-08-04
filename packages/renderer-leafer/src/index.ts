@@ -13,6 +13,7 @@ import { assertBuiltinGesturesInert } from './builtin-gesture-guard'
 import {
   createCanvasInteraction,
   EMPTY_INTERACTION_PREVIEW,
+  type CanvasCursor,
   type CanvasInteraction,
   type CanvasInteractionPreview,
   type NodeResize,
@@ -35,6 +36,14 @@ export function createLeaferRenderer(): RendererAdapter {
   let visibleNodeIds: string[] = []
   /** 最近一次 draw 的 ctx：tap 分派只读 callbacks，用它避免闭包抓住过期 ctx */
   let currentCtx: RenderContext | null = null
+  // 两个手势模块都会驱动光标，本地统一仲裁：平移手势（grab/grabbing）优先于画布手势
+  let canvasCursor: CanvasCursor = 'default'
+  let viewportCursor: 'grab' | 'grabbing' | null = null
+  let cursorContainer: HTMLElement | null = null
+
+  const applyCursor = (): void => {
+    if (cursorContainer !== null) cursorContainer.style.cursor = viewportCursor ?? canvasCursor
+  }
 
   /**
    * 只改 transform 的轻量预览：手势进行中逐帧调用，不重建场景图。
@@ -143,6 +152,7 @@ export function createLeaferRenderer(): RendererAdapter {
 
     mount(container, ctx) {
       leafer = new Leafer({ view: container })
+      cursorContainer = container
       // 建实例时显式确认内建手势为关（renderer-contract §3.1）：
       // 我们只把 Leafer 当感知器，视口手势由下面的原生事件状态机实现
       assertBuiltinGesturesInert(leafer)
@@ -155,6 +165,10 @@ export function createLeaferRenderer(): RendererAdapter {
       interaction = createViewportInteraction(container, ctx.viewport, {
         onViewportChange: ctx.callbacks.onViewportChange,
         onPreview: applyViewport,
+        onCursorChange: (cursor) => {
+          viewportCursor = cursor
+          applyCursor()
+        },
       })
       // 注册顺序是约定：viewport 的 pointerdown 先跑（中键/空格平移 preventDefault），
       // 画布手势检查 defaultPrevented 让位——与 DOM 侧同一互锁机制
@@ -162,6 +176,10 @@ export function createLeaferRenderer(): RendererAdapter {
         onPreview: (preview) => {
           interactionPreview = preview
           if (currentCtx !== null) draw(currentCtx)
+        },
+        onCursorChange: (cursor) => {
+          canvasCursor = cursor
+          applyCursor()
         },
       })
       draw(ctx)
@@ -184,6 +202,10 @@ export function createLeaferRenderer(): RendererAdapter {
       currentCtx = null
       bounds = new Map<string, CoreRect>()
       visibleNodeIds = []
+      canvasCursor = 'default'
+      viewportCursor = null
+      if (cursorContainer !== null) cursorContainer.style.cursor = ''
+      cursorContainer = null
     },
 
     getRenderedBounds() {

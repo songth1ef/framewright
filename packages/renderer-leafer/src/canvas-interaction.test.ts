@@ -128,6 +128,18 @@ function pointer(type: string, x: number, y: number, init: MouseEventInit = {}):
   return event
 }
 
+function keydown(key: string, init: KeyboardEventInit = {}): KeyboardEvent {
+  const event = new KeyboardEvent('keydown', {
+    key,
+    code: key === ' ' ? 'Space' : key,
+    bubbles: true,
+    cancelable: true,
+    ...init,
+  })
+  window.dispatchEvent(event)
+  return event
+}
+
 function setup(ctx = makeContext(), customProbe?: CanvasHitProbe) {
   const onPreview = vi.fn()
   const probe = customProbe ?? geometricProbe(ctx.root)
@@ -198,7 +210,7 @@ describe('点选状态机', () => {
       fwId: 'box-a',
       internalAction: true,
     })
-    const { callbacks, onPreview } = setup(makeContext(['box-b']), internalProbe)
+    const { callbacks } = setup(makeContext(['box-b']), internalProbe)
 
     pointer('pointerdown', 15, 15)
     pointer('pointermove', 25, 25)
@@ -206,7 +218,6 @@ describe('点选状态机', () => {
 
     expect(callbacks.onSelectionRequest).not.toHaveBeenCalled()
     expect(callbacks.onNodesMove).not.toHaveBeenCalled()
-    expect(onPreview).not.toHaveBeenCalled()
   })
 })
 
@@ -378,6 +389,112 @@ describe('单选等比缩放', () => {
   })
 })
 
+describe('键盘操作', () => {
+  it('方向键移动 1px，Shift + 方向键移动 10px', () => {
+    const { callbacks } = setup(makeContext(['nested']))
+
+    keydown('ArrowRight')
+    keydown('ArrowDown', { shiftKey: true })
+
+    expect(callbacks.onNodesMove).toHaveBeenNthCalledWith(1, [
+      { fwId: 'nested', parentFwId: 'transparent-frame', x: 6, y: 5 },
+    ])
+    expect(callbacks.onNodesMove).toHaveBeenNthCalledWith(2, [
+      { fwId: 'nested', parentFwId: 'transparent-frame', x: 5, y: 15 },
+    ])
+  })
+
+  it('Delete/Backspace 删除选中集，Ctrl+A 阻止浏览器默认行为并全选可选节点', () => {
+    const { callbacks } = setup(makeContext(['box-a', 'box-b']))
+
+    keydown('Delete')
+    keydown('Backspace')
+    const selectAll = keydown('a', { code: 'KeyA', ctrlKey: true })
+
+    expect(callbacks.onNodesDelete).toHaveBeenNthCalledWith(1, ['box-a', 'box-b'])
+    expect(callbacks.onNodesDelete).toHaveBeenNthCalledWith(2, ['box-a', 'box-b'])
+    expect(selectAll.defaultPrevented).toBe(true)
+    expect(callbacks.onSelectionRequest).toHaveBeenCalledWith(
+      ['box-a', 'box-b', 'transparent-frame', 'nested', 'resize-node'],
+      'replace',
+    )
+  })
+
+  it('Esc 清空选中并取消手势预览，IME composing 时不处理快捷键', () => {
+    const { callbacks, onPreview } = setup(makeContext(['box-a']))
+    pointer('pointerdown', 15, 15)
+    pointer('pointermove', 25, 20)
+
+    keydown('Escape')
+    keydown('Delete', { isComposing: true })
+
+    expect(onPreview).toHaveBeenLastCalledWith({})
+    expect(callbacks.onSelectionRequest).toHaveBeenCalledWith([], 'replace')
+    expect(callbacks.onNodesDelete).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['input', document.createElement('input')],
+    ['textarea', document.createElement('textarea')],
+    ['contenteditable', Object.assign(document.createElement('div'), { contentEditable: 'true', tabIndex: 0 })],
+  ])('document.activeElement 在 %s 时方向键、Delete 与 Ctrl+A 均不劫持', (_name, editable) => {
+    container.appendChild(editable)
+    editable.focus()
+    expect(document.activeElement).toBe(editable)
+    const { callbacks } = setup(makeContext(['box-a']))
+
+    keydown('ArrowLeft')
+    keydown('Delete')
+    const selectAll = keydown('a', { code: 'KeyA', ctrlKey: true })
+
+    expect(callbacks.onNodesMove).not.toHaveBeenCalled()
+    expect(callbacks.onNodesDelete).not.toHaveBeenCalled()
+    expect(callbacks.onSelectionRequest).not.toHaveBeenCalled()
+    expect(selectAll.defaultPrevented).toBe(false)
+  })
+})
+
+describe('光标与悬停反馈', () => {
+  it('空白、业务单元与四角控制点使用对应光标', () => {
+    setup(
+      makeContext(['box-a']),
+      withHandleZone(
+        withHandleZone(geometricProbe(root), 'box-a', 'nw'),
+        'box-a',
+        'ne',
+      ),
+    )
+
+    pointer('pointermove', 15, 15)
+    expect(container.style.cursor).toBe('move')
+    pointer('pointermove', 10, 10)
+    expect(container.style.cursor).toBe('nwse-resize')
+    pointer('pointermove', 30, 10)
+    expect(container.style.cursor).toBe('nesw-resize')
+    pointer('pointermove', 200, 100)
+    expect(container.style.cursor).toBe('default')
+  })
+
+  it('悬停业务单元上报 hoveredFwId 预览，移出清空', () => {
+    const { onPreview } = setup(makeContext())
+
+    pointer('pointermove', 15, 15)
+    expect(onPreview).toHaveBeenLastCalledWith({ hoveredFwId: 'box-a' })
+    pointer('pointermove', 200, 100)
+    expect(onPreview).toHaveBeenLastCalledWith({})
+  })
+
+  it('框选中为 crosshair，pointercancel 后复位 default', () => {
+    setup()
+    pointer('pointerdown', 200, 100)
+    pointer('pointermove', 210, 110)
+    expect(container.style.cursor).toBe('crosshair')
+
+    pointer('pointercancel', 210, 110)
+    expect(container.style.cursor).toBe('default')
+  })
+})
+
 describe('D2-leafer 挂载接线（真实渲染器 + 真实命中探针）', () => {
   let renderer: RendererAdapter | null
 
@@ -441,5 +558,18 @@ describe('D2-leafer 挂载接线（真实渲染器 + 真实命中探针）', () 
       { fwId: 'box-a', parentFwId: 'root', x: 20, y: 20 },
       { fwId: 'box-b', parentFwId: 'root', x: 50, y: 20 },
     ])
+  })
+
+  it('光标仲裁：空格平移（grab）优先于悬停 move，松开恢复', () => {
+    renderer = createLeaferRenderer()
+    renderer.mount(container, makeContext())
+
+    pointer('pointermove', 15, 15)
+    expect(container.style.cursor).toBe('move')
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }))
+    expect(container.style.cursor).toBe('grab')
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', key: ' ' }))
+    expect(container.style.cursor).toBe('move')
   })
 })

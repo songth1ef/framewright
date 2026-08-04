@@ -98,3 +98,27 @@ test('Leafer 侧单选等比缩放：拖 se 角松手提交一次', async ({ pag
     .poll(async () => (await readBounds(page))['box-back'])
     .toMatchObject({ x: 40, y: 40, width: 300, height: 210 })
 })
+
+test('Leafer 侧键盘：方向键微调、Ctrl+A 全选、Esc 清空、Delete 删除', async ({ page }) => {
+  const canvas = await page.getByTestId('canvas-container').boundingBox()
+  expect(canvas).not.toBeNull()
+
+  // 方向键 1px、Shift+方向键 10px
+  await page.mouse.click(canvas!.x + 50, canvas!.y + 50)
+  await expect(page.getByTestId('selection')).toHaveText('box-back')
+  await page.keyboard.press('ArrowRight')
+  await page.keyboard.press('Shift+ArrowDown')
+  await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 41, y: 50 })
+
+  // Ctrl+A 全选（demo 文档共 9 个可选节点），Esc 清空
+  await page.keyboard.press('Control+a')
+  await expect(page.getByTestId('selection-count')).toHaveText('9')
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('selection-count')).toHaveText('0')
+
+  // Delete 删除选中集
+  await page.mouse.click(canvas!.x + 460, canvas!.y + 320)
+  await expect(page.getByTestId('selection')).toHaveText('ai-image-1')
+  await page.keyboard.press('Delete')
+  await expect.poll(async () => (await readBounds(page))['ai-image-1']).toBeUndefined()
+})
