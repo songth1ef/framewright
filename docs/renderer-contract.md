@@ -168,6 +168,40 @@ export interface RendererCallbacks {
 
 **P2 建实例时必须逐项显式 `disabled`，只把 Leafer 的事件层当「感知器」用。**
 
+### 3.1 实测订正（2026-08-04，Kimi 运行时探针 + bundle 源码分析）
+
+上面那条红线是**基于 API 存在性**写的，**开得过宽**。实测 `leafer-ui@2.2.9` 的**运行时默认值**：
+
+```
+config.move   = { autoDistance: 2 }        ← 没有 drag / holdSpaceKey / holdMiddleKey
+                                              / holdRightKey / dragEmpty，全部 undefined
+config.zoom   = {}                          ← 空
+config.wheel  = { zoomSpeed:0.5, moveSpeed:0.5, rotateSpeed:0.5, delta:{x:20,y:8} }
+Rect.draggable = false
+config.keyEvent = true                      ← 默认就开着
+```
+
+结合 bundle 源码分析：
+
+| 原红线列的项 | 2.2.9 plain Leafer 的实情 |
+|---|---|
+| `move.holdMiddleKey` / `holdSpaceKey` | `config.move` **确实被读**（`get m()`），但这几个开关**默认全是 undefined = 关**。开了才会由 Dragger 直接平移视图 |
+| UI 级 `draggable` | 被 Dragger 消费，但**默认 `false`** |
+| `wheel.zoomMode` | **wheel handler 在 plain Leafer 里对 transform 是 no-op**，只在配置了 `preventDefault` 时起作用 |
+| `zoom.min` / `zoom.max` | **本版本根本没被读取**（只与 editor / 未来版本相关） |
+
+**修正后的结论**：在 `leafer-ui@2.2.9` 的 **plain Leafer**（不引 `App`、不引 `leafer-editor`）下，能真正改 transform 的只有 **moveMode** 与 **UI `draggable`** 两项，**且两者默认都是关的**。
+
+**所以 D1-leafer 的实际风险远低于原判断**——不需要「逐项禁用六样东西」，只需要**不去打开**它们，并在建实例时显式确认这两项为关。
+
+⚠️ **这个结论有明确的失效条件，达成时必须重验**：
+
+1. **引入 `leafer-editor` 或 `App`**（D5 选中 overlay 很可能要用）——它们会启用另一套 interaction，`zoom.min/max` 那时才被消费
+2. **升级 leafer-ui 版本**
+3. 使用 multiTouch 手势（本版本 `zoom()`/`rotate()` 基类是 no-op，但那是实现细节，可能变）
+
+**探针脚本值得保留**：升级 leafer-ui 后重跑一次就知道默认值有没有变，比读 changelog 可靠。
+
 **漏禁一个，就出现「画布自己动了，但 host 不知道」** —— 视口状态泄漏进渲染器内部，切换渲染器时当场丢失，且 parity 与切换测试都测不出来（因为两侧行为一致地错）。
 
 连带：Leafer interaction 内部已监听 wheel，我们再挂原生 wheel 前**必须先 `wheel.disabled = true`**，否则同一次滚轮被消费两次。
