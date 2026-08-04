@@ -13,14 +13,22 @@
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "verify": "pnpm typecheck && pnpm test && pnpm e2e",
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
     "dev": "pnpm --filter @framewright/web dev"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.20.1",
     "@vitest/coverage-v8": "^4.1.10",
     "jsdom": "^27.4.0",
+    "prisma": "^6.19.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@prisma/adapter-better-sqlite3": "^6.19.3",
+    "@prisma/client": "^6.19.3"
   }
 }

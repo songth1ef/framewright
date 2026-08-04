@@ -1,0 +1,31 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Document {
+  id         String         @id @default(cuid())
+  name       String
+  root       Json
+  historySeq Int            @default(0)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  history    HistoryEntry[]
+}
+
+model HistoryEntry {
+  id         String   @id @default(cuid())
+  documentId String
+  seq        Int
+  op         Json
+  createdAt  DateTime @default(now())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, seq])
+  @@index([documentId])
+}
