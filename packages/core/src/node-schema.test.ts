@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   SHAPE_TYPES,
+  createAiImageNode,
+  createAiVideoNode,
   createBoxNode,
   createFrameNode,
   createImgNode,
   createVideoNode,
+  isAiImageNode,
+  isAiVideoNode,
   isBoxNode,
   isFrameNode,
   isImgNode,
@@ -12,8 +16,8 @@ import {
 } from './node-schema'
 
 describe('SHAPE_TYPES', () => {
-  it('是 frame/box/img/video 四个，且顺序固定', () => {
-    expect(SHAPE_TYPES).toEqual(['frame', 'box', 'img', 'video'])
+  it('是 frame/box/img/video/ai-image/ai-video 六个，且顺序固定', () => {
+    expect(SHAPE_TYPES).toEqual(['frame', 'box', 'img', 'video', 'ai-image', 'ai-video'])
   })
 })
 
@@ -75,5 +79,64 @@ describe('类型守卫', () => {
     expect(isImgNode(video)).toBe(false)
     expect(isVideoNode(video)).toBe(true)
     expect(isVideoNode(image)).toBe(false)
+  })
+
+  it('六个 fwType 的守卫互斥', () => {
+    const aiImage = createAiImageNode({ fwId: 'ai1' })
+    const aiVideo = createAiVideoNode({ fwId: 'av1' })
+    expect(isAiImageNode(aiImage)).toBe(true)
+    expect(isAiImageNode(aiVideo)).toBe(false)
+    expect(isAiVideoNode(aiVideo)).toBe(true)
+    expect(isAiVideoNode(aiImage)).toBe(false)
+    expect(isImgNode(aiImage)).toBe(false)
+    expect(isVideoNode(aiVideo)).toBe(false)
+    expect(isBoxNode(aiImage)).toBe(false)
+    expect(isFrameNode(aiVideo)).toBe(false)
+  })
+})
+
+describe('createAiImageNode', () => {
+  it('补齐默认值：empty 状态、无来源、无结果', () => {
+    const node = createAiImageNode({ fwId: 'ai1' })
+    expect(node.fwType).toBe('ai-image')
+    expect(node.status).toBe('empty')
+    expect(node.generationId).toBeNull()
+    expect(node.errorMessage).toBeNull()
+    expect(node.prompt).toBe('')
+    expect(node.params).toEqual({})
+    expect(node.src).toBeNull()
+    expect(node.fit).toBe('contain')
+    expect(node.sourceFwIds).toEqual([])
+  })
+
+  it('显式传入的字段覆盖默认值', () => {
+    const node = createAiImageNode({
+      fwId: 'ai1',
+      status: 'succeeded',
+      prompt: 'a cat',
+      src: 'https://example.com/cat.png',
+      sourceFwIds: ['other'],
+    })
+    expect(node.status).toBe('succeeded')
+    expect(node.prompt).toBe('a cat')
+    expect(node.src).toBe('https://example.com/cat.png')
+    expect(node.sourceFwIds).toEqual(['other'])
+  })
+})
+
+describe('createAiVideoNode', () => {
+  it('补齐默认值：empty 状态、poster 为 null、无来源', () => {
+    const node = createAiVideoNode({ fwId: 'av1' })
+    expect(node.fwType).toBe('ai-video')
+    expect(node.status).toBe('empty')
+    expect(node.src).toBeNull()
+    expect(node.poster).toBeNull()
+    expect(node.sourceFwIds).toEqual([])
+  })
+
+  it('显式传入的字段覆盖默认值', () => {
+    const node = createAiVideoNode({ fwId: 'av1', status: 'running', poster: 'p.png' })
+    expect(node.status).toBe('running')
+    expect(node.poster).toBe('p.png')
   })
 })

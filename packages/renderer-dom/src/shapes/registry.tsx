@@ -77,6 +77,8 @@ export const DOM_SHAPES: Record<ShapeType, ShapeComponent> = {
   box: BoxShape,
   img: makeUnsupportedShape('img'),
   video: makeUnsupportedShape('video'),
+  'ai-image': makeUnsupportedShape('ai-image'),
+  'ai-video': makeUnsupportedShape('ai-video'),
 }
 
 assertShapeCoverage('dom', DOM_SHAPES)

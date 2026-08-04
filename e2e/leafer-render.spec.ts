@@ -10,7 +10,18 @@ test('Leafer 渲染器能在真实浏览器里挂载并报告全部节点的 bou
   )
 
   expect(Object.keys(bounds).sort()).toEqual(
-    ['box-back', 'box-front', 'img-1', 'inner-frame', 'nested-box', 'root', 'video-1'].sort(),
+    [
+      'ai-image-1',
+      'ai-video-1',
+      'ai-video-2',
+      'box-back',
+      'box-front',
+      'img-1',
+      'inner-frame',
+      'nested-box',
+      'root',
+      'video-1',
+    ].sort(),
   )
   expect(bounds['nested-box']).toEqual({ x: 400, y: 80, width: 120, height: 80 })
 })

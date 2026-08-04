@@ -1,4 +1,22 @@
 {
+  "ai-image-1": {
+    "x": 440,
+    "y": 300,
+    "width": 160,
+    "height": 100
+  },
+  "ai-video-1": {
+    "x": 620,
+    "y": 300,
+    "width": 160,
+    "height": 100
+  },
+  "ai-video-2": {
+    "x": 630,
+    "y": 60,
+    "width": 160,
+    "height": 100
+  },
   "box-back": {
     "x": 40,
     "y": 40,

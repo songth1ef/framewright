@@ -1,4 +1,6 @@
 import {
+  createAiImageNode,
+  createAiVideoNode,
   createBoxNode,
   createFrameNode,
   createImgNode,
@@ -75,6 +77,44 @@ export function createDemoDocument(): FrameNode {
     height: 100,
   })
 
+  // 溯源关系示例：一个 ai-image 派生出两个 ai-video（§3.2.2），
+  // 是波次 2 连线渲染与测试的输入
+  const aiImage = createAiImageNode({
+    fwId: 'ai-image-1',
+    name: '生成图片',
+    x: 440,
+    y: 300,
+    width: 160,
+    height: 100,
+    status: 'succeeded',
+    prompt: 'a cat sitting on a windowsill',
+  })
+
+  const aiVideo1 = createAiVideoNode({
+    fwId: 'ai-video-1',
+    name: '派生视频 A',
+    x: 620,
+    y: 300,
+    width: 160,
+    height: 100,
+    status: 'running',
+    prompt: 'a cat sitting on a windowsill, gentle motion',
+    sourceFwIds: ['ai-image-1'],
+  })
+
+  const aiVideo2 = createAiVideoNode({
+    fwId: 'ai-video-2',
+    name: '派生视频 B',
+    x: 630,
+    y: 60,
+    width: 160,
+    height: 100,
+    status: 'failed',
+    prompt: 'a cat sitting on a windowsill, camera pan',
+    errorMessage: '生成超时',
+    sourceFwIds: ['ai-image-1'],
+  })
+
   return createFrameNode({
     fwId: 'root',
     name: '画布',
@@ -83,6 +123,6 @@ export function createDemoDocument(): FrameNode {
     width: 800,
     height: 450,
     background: '#FFFFFF',
-    children: [boxBack, boxFront, innerFrame, img, video],
+    children: [boxBack, boxFront, innerFrame, img, video, aiImage, aiVideo1, aiVideo2],
   })
 }

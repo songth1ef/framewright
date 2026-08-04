@@ -68,6 +68,8 @@ export const LEAFER_SHAPES: Record<ShapeType, ShapeFactory> = {
   box: createBox,
   img: makeUnsupportedShape(),
   video: makeUnsupportedShape(),
+  'ai-image': makeUnsupportedShape(),
+  'ai-video': makeUnsupportedShape(),
 }
 
 assertShapeCoverage('leafer', LEAFER_SHAPES)
