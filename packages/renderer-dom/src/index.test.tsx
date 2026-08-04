@@ -288,4 +288,26 @@ describe('createDomRenderer', () => {
     expect(el.style.outline).toContain('#5B8091')
     await act(async () => renderer.destroy())
   })
+
+  it('原生 wheel 监听阻止默认滚动并把 viewport 逐帧上报给 host', async () => {
+    let animationFrame: FrameRequestCallback | null = null
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      animationFrame = callback
+      return 1
+    })
+    vi.stubGlobal('cancelAnimationFrame', () => undefined)
+    const onViewportChange = vi.fn()
+    const callbacks = { ...NOOP_RENDERER_CALLBACKS, onViewportChange }
+    const ctx = { ...makeContext(), callbacks }
+    const renderer = await mountRenderer(ctx)
+    const event = new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true })
+
+    await act(async () => container!.dispatchEvent(event))
+    expect(event.defaultPrevented).toBe(true)
+    expect(onViewportChange).not.toHaveBeenCalled()
+
+    await act(async () => animationFrame?.(16))
+    expect(onViewportChange).toHaveBeenCalledWith({ scale: 1, offsetX: 0, offsetY: -100 })
+    await act(async () => renderer.destroy())
+  })
 })

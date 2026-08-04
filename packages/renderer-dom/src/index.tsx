@@ -11,6 +11,7 @@ import type { ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { collectConnectionItems, ConnectionLayer } from './connections'
 import { DOM_SHAPES } from './shapes/registry'
+import { createViewportInteraction, type ViewportInteraction } from './viewport-interaction'
 
 function renderNode(
   node: CanvasNode,
@@ -70,6 +71,8 @@ export function createDomRenderer(): RendererAdapter {
   assertShapeCoverage('dom', DOM_SHAPES)
 
   let root: Root | null = null
+  let interaction: ViewportInteraction | null = null
+  let currentContext: RenderContext | null = null
   let bounds = new Map<string, Rect>()
   let visibleNodeIds: string[] = []
 
@@ -123,16 +126,29 @@ export function createDomRenderer(): RendererAdapter {
 
     mount(container, ctx) {
       root = createRoot(container)
+      currentContext = ctx
       draw(ctx)
+      interaction = createViewportInteraction(container, ctx.viewport, {
+        onViewportChange: ctx.callbacks.onViewportChange,
+        onPreview: (viewport) => {
+          if (currentContext === null) return
+          draw({ ...currentContext, viewport })
+        },
+      })
     },
 
     update(ctx) {
+      currentContext = ctx
+      interaction?.update(ctx.viewport, ctx.callbacks.onViewportChange)
       draw(ctx)
     },
 
     destroy() {
+      interaction?.destroy()
+      interaction = null
       root?.unmount()
       root = null
+      currentContext = null
       bounds = new Map<string, Rect>()
       visibleNodeIds = []
     },
