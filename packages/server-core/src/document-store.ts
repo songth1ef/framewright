@@ -14,7 +14,7 @@ export interface StoredDocument {
 
 export interface CreateDocumentInput {
   id?: string
-  projectId: string
+  projectId?: string
   name: string
   root: FrameNode
 }
@@ -48,19 +48,16 @@ function toStoredDocument(document: PrismaDocument): StoredDocument {
   }
 }
 
+const DEFAULT_PROJECT_ID = 'default-project'
+const DEFAULT_PROJECT_NAME = '默认项目'
+
 export function createDocumentStore(client: PrismaClient): DocumentStore {
   return {
     async listDocuments() {
-      try {
-        const documents = await client.document.findMany({
-          orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
-        })
-        return documents.map(toStoredDocument)
-      } catch (error) {
-        // TEMP-DEBUG: 打印 Next 运行时完整堆栈，定位后回退
-        console.error('LIST_DOCUMENTS_ERROR', error)
-        throw error
-      }
+      const documents = await client.document.findMany({
+        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+      })
+      return documents.map(toStoredDocument)
     },
 
     async getDocument(documentId) {
@@ -69,10 +66,18 @@ export function createDocumentStore(client: PrismaClient): DocumentStore {
     },
 
     async createDocument(input) {
+      const projectId = input.projectId ?? DEFAULT_PROJECT_ID
+      if (input.projectId === undefined) {
+        await client.project.upsert({
+          where: { id: projectId },
+          update: {},
+          create: { id: projectId, name: DEFAULT_PROJECT_NAME },
+        })
+      }
       const document = await client.document.create({
         data: {
           ...(input.id === undefined ? {} : { id: input.id }),
-          projectId: input.projectId,
+          projectId,
           name: input.name,
           root: toJson(input.root),
         },

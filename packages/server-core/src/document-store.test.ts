@@ -42,6 +42,20 @@ describe('Document store', () => {
     await expect(store.getDocument('doc-a')).resolves.toEqual(created)
   })
 
+  it('未指定 projectId 时在默认项目下创建画布', async () => {
+    const created = await store.createDocument({
+      id: 'doc-default',
+      name: '未命名画布',
+      root: createFrameNode({ fwId: 'root' }),
+    })
+
+    expect(created.projectId).toBe('default-project')
+    await expect(prisma.project.findUnique({ where: { id: 'default-project' } })).resolves.toMatchObject({
+      id: 'default-project',
+      name: '默认项目',
+    })
+  })
+
   it('getDocument 对不存在的 id 返回 null', async () => {
     await expect(store.getDocument('missing')).resolves.toBeNull()
   })
