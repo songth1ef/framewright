@@ -55,3 +55,46 @@ test('Leafer 侧 Shift 点击切换选中', async ({ page }) => {
   await page.keyboard.up('Shift')
   await expect(page.getByTestId('selection')).toHaveText('box-front')
 })
+
+type Bounds = Record<string, { x: number; y: number; width: number; height: number }>
+
+async function readBounds(page: import('@playwright/test').Page): Promise<Bounds> {
+  return page.evaluate(
+    () => (window as unknown as { __fwGetBounds: () => Bounds }).__fwGetBounds(),
+  )
+}
+
+test('Leafer 侧拖拽移动：松手才提交，位置写回且切换渲染器后不弹回', async ({ page }) => {
+  const canvas = await page.getByTestId('canvas-container').boundingBox()
+  expect(canvas).not.toBeNull()
+
+  // box-back 初始 (40,40,200,140)；「松手才提交、不逐帧」由单测断言 onNodesMove 调用次数覆盖
+  await page.mouse.move(canvas!.x + 60, canvas!.y + 60)
+  await page.mouse.down()
+  await page.mouse.move(canvas!.x + 90, canvas!.y + 85, { steps: 5 })
+  await page.mouse.up()
+
+  await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 70, y: 65 })
+  await page.getByTestId('renderer-switch').click()
+  await page.getByTestId('renderer-switch').click()
+  await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 70, y: 65 })
+})
+
+test('Leafer 侧单选等比缩放：拖 se 角松手提交一次', async ({ page }) => {
+  const canvas = await page.getByTestId('canvas-container').boundingBox()
+  expect(canvas).not.toBeNull()
+
+  // 先点选 box-back，再拖其 se 控制点（角点 (240,180)）
+  await page.mouse.click(canvas!.x + 50, canvas!.y + 50)
+  await expect(page.getByTestId('selection')).toHaveText('box-back')
+
+  await page.mouse.move(canvas!.x + 240, canvas!.y + 180)
+  await page.mouse.down()
+  await page.mouse.move(canvas!.x + 340, canvas!.y + 250, { steps: 5 })
+  await page.mouse.up()
+
+  // 等比：宽向 300/200 与高向 210/140 同为 1.5 倍
+  await expect
+    .poll(async () => (await readBounds(page))['box-back'])
+    .toMatchObject({ x: 40, y: 40, width: 300, height: 210 })
+})

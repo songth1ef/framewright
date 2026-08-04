@@ -6,8 +6,11 @@ import {
   NOOP_RENDERER_CALLBACKS,
   createBoxNode,
   createFrameNode,
+  findNodeById,
+  getAbsolutePosition,
   walkTree,
   type CanvasNode,
+  type Corner,
   type FrameNode,
   type RenderContext,
   type RendererCallbacks,
@@ -66,6 +69,21 @@ function geometricProbe(treeRoot: FrameNode): CanvasHitProbe {
         screenPoint.y <= z.y + z.height,
     )
     return { ...EMPTY_CANVAS_HIT, fwId: zone?.fwId ?? null }
+  }
+}
+
+/** 在几何桩上叠加一个缩放控制点命中区（节点角点 ±4px），等价 DOM 侧的 addResizeHandle。 */
+function withHandleZone(base: CanvasHitProbe, fwId: string, corner: Corner): CanvasHitProbe {
+  const node = findNodeById(root, fwId)
+  const absolute = getAbsolutePosition(root, fwId)
+  if (node === null || absolute === null) throw new Error(`节点不存在: ${fwId}`)
+  const cx = corner === 'ne' || corner === 'se' ? absolute.x + node.width : absolute.x
+  const cy = corner === 'sw' || corner === 'se' ? absolute.y + node.height : absolute.y
+  return (screenPoint) => {
+    if (Math.abs(screenPoint.x - cx) <= 4 && Math.abs(screenPoint.y - cy) <= 4) {
+      return { ...EMPTY_CANVAS_HIT, fwId, resizeHandle: { fwId, corner } }
+    }
+    return base(screenPoint)
   }
 }
 
@@ -236,6 +254,130 @@ describe('框选状态机', () => {
   })
 })
 
+describe('节点拖拽移动', () => {
+  it('超过 4 CSS px 后逐帧只预览，pointerup 才提交一次父相对坐标', () => {
+    const { callbacks, onPreview } = setup(makeContext(['box-a']))
+
+    pointer('pointerdown', 15, 15)
+    pointer('pointermove', 25, 20)
+
+    expect(onPreview).toHaveBeenLastCalledWith({
+      moves: [{ fwId: 'box-a', parentFwId: 'root', x: 20, y: 15 }],
+    })
+    expect(callbacks.onNodesMove).not.toHaveBeenCalled()
+
+    pointer('pointerup', 30, 25)
+    expect(callbacks.onNodesMove).toHaveBeenCalledOnce()
+    expect(callbacks.onNodesMove).toHaveBeenCalledWith([
+      { fwId: 'box-a', parentFwId: 'root', x: 25, y: 20 },
+    ])
+  })
+
+  it('拖未选节点时用 pointerdown 得到的新选中集移动，不拖旧选中集', () => {
+    const { callbacks } = setup(makeContext(['box-b']))
+
+    pointer('pointerdown', 106, 16)
+    pointer('pointermove', 116, 26)
+    pointer('pointerup', 116, 26)
+
+    expect(callbacks.onSelectionRequest).toHaveBeenNthCalledWith(1, ['nested'], 'replace')
+    expect(callbacks.onNodesMove).toHaveBeenCalledWith([
+      { fwId: 'nested', parentFwId: 'transparent-frame', x: 15, y: 15 },
+    ])
+  })
+
+  it('未超过阈值不提交移动，pointercancel 丢弃预览且不提交', () => {
+    const { callbacks, onPreview } = setup(makeContext(['box-a']))
+
+    pointer('pointerdown', 15, 15)
+    pointer('pointermove', 19, 15)
+    pointer('pointerup', 19, 15)
+    expect(callbacks.onNodesMove).not.toHaveBeenCalled()
+
+    pointer('pointerdown', 15, 15)
+    pointer('pointermove', 25, 20)
+    pointer('pointercancel', 25, 20)
+    expect(callbacks.onNodesMove).not.toHaveBeenCalled()
+    expect(onPreview).toHaveBeenLastCalledWith({})
+  })
+})
+
+describe('单选等比缩放', () => {
+  it('拖动四角控制点只预览，pointerup 才提交一次父相对坐标', () => {
+    const { callbacks, onPreview } = setup(
+      makeContext(['resize-node']),
+      withHandleZone(geometricProbe(root), 'resize-node', 'se'),
+    )
+
+    pointer('pointerdown', 160, 50)
+    pointer('pointermove', 200, 70)
+
+    expect(onPreview).toHaveBeenLastCalledWith({
+      resizes: [
+        {
+          fwId: 'resize-node',
+          parentFwId: 'transparent-frame',
+          x: 20,
+          y: 20,
+          width: 80,
+          height: 40,
+        },
+      ],
+    })
+    expect(callbacks.onNodesResize).not.toHaveBeenCalled()
+
+    pointer('pointerup', 220, 80)
+    expect(callbacks.onNodesResize).toHaveBeenCalledOnce()
+    expect(callbacks.onNodesResize).toHaveBeenCalledWith([
+      {
+        fwId: 'resize-node',
+        parentFwId: 'transparent-frame',
+        x: 20,
+        y: 20,
+        width: 100,
+        height: 50,
+      },
+    ])
+  })
+
+  it('使用 core 的 32 画布 px 最小尺寸钳制', () => {
+    const { callbacks } = setup(
+      makeContext(['box-a']),
+      withHandleZone(geometricProbe(root), 'box-a', 'se'),
+    )
+
+    pointer('pointerdown', 30, 30)
+    pointer('pointermove', 11, 11)
+    pointer('pointerup', 11, 11)
+
+    expect(callbacks.onNodesResize).toHaveBeenCalledWith([
+      { fwId: 'box-a', parentFwId: 'root', x: 10, y: 10, width: 32, height: 32 },
+    ])
+  })
+
+  it('多选不启动缩放，pointercancel 丢弃缩放预览且不提交', () => {
+    const multi = setup(
+      makeContext(['box-a', 'box-b']),
+      withHandleZone(geometricProbe(root), 'box-a', 'nw'),
+    )
+    pointer('pointerdown', 10, 10)
+    pointer('pointermove', 0, 0)
+    pointer('pointerup', 0, 0)
+    expect(multi.callbacks.onNodesResize).not.toHaveBeenCalled()
+
+    interaction?.destroy()
+    const single = setup(
+      makeContext(['box-a']),
+      withHandleZone(geometricProbe(root), 'box-a', 'nw'),
+    )
+    pointer('pointerdown', 10, 10)
+    pointer('pointermove', 0, 0)
+    pointer('pointercancel', 0, 0)
+    expect(single.callbacks.onNodesResize).not.toHaveBeenCalled()
+    expect(single.onPreview).toHaveBeenLastCalledWith({})
+  })
+})
+
 describe('D2-leafer 挂载接线（真实渲染器 + 真实命中探针）', () => {
   let renderer: RendererAdapter | null
 
@@ -266,5 +408,38 @@ describe('D2-leafer 挂载接线（真实渲染器 + 真实命中探针）', () 
 
     expect(callbacks.onSelectionRequest).toHaveBeenCalledOnce()
     expect(callbacks.onSelectionRequest).toHaveBeenCalledWith(['box-a'], 'replace')
+  })
+
+  it('单选时 overlay 画出四角控制点，拖拽 se 角提交一次等比缩放', () => {
+    const callbacks = makeCallbacks()
+    renderer = createLeaferRenderer()
+    renderer.mount(container, makeContext(['box-a'], callbacks))
+
+    // box-a 位于 (10,10,20,20)，se 控制点以角点 (30,30) 为中心
+    pointer('pointerdown', 30, 30)
+    pointer('pointermove', 50, 50)
+    pointer('pointerup', 50, 50)
+
+    expect(callbacks.onNodesResize).toHaveBeenCalledOnce()
+    expect(callbacks.onNodesResize).toHaveBeenCalledWith([
+      { fwId: 'box-a', parentFwId: 'root', x: 10, y: 10, width: 40, height: 40 },
+    ])
+  })
+
+  it('多选时 overlay 不提供控制点，角点按下按节点拖拽处理', () => {
+    const callbacks = makeCallbacks()
+    renderer = createLeaferRenderer()
+    renderer.mount(container, makeContext(['box-a', 'box-b'], callbacks))
+
+    pointer('pointerdown', 30, 30)
+    pointer('pointermove', 40, 40)
+    pointer('pointerup', 40, 40)
+
+    expect(callbacks.onNodesResize).not.toHaveBeenCalled()
+    expect(callbacks.onNodesMove).toHaveBeenCalledOnce()
+    expect(callbacks.onNodesMove).toHaveBeenCalledWith([
+      { fwId: 'box-a', parentFwId: 'root', x: 20, y: 20 },
+      { fwId: 'box-b', parentFwId: 'root', x: 50, y: 20 },
+    ])
   })
 })

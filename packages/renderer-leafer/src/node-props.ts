@@ -16,13 +16,19 @@ export interface LeaferBaseProps {
  * 🔴 绝不允许 `new Rect({...node})`：Leafer 的 x/y/width/height/rotation/opacity/
  * visible/name/children 与我方字段全部同名，展开会静默覆盖并让新增字段泄漏。
  * 见 docs/domain.md §3.3 规则 7。
+ *
+ * `size` 仅用于拖拽/缩放预览的尺寸覆盖（纯呈现，不回写 node 树）。
  */
-export function toLeaferProps(node: CanvasNode, position: Point): LeaferBaseProps {
+export function toLeaferProps(
+  node: CanvasNode,
+  position: Point,
+  size?: { width: number; height: number },
+): LeaferBaseProps {
   return {
     x: position.x,
     y: position.y,
-    width: node.width,
-    height: node.height,
+    width: size?.width ?? node.width,
+    height: size?.height ?? node.height,
     rotation: node.rotation,
     opacity: node.opacity,
     visible: node.visible,

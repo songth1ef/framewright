@@ -1,11 +1,17 @@
 import {
   applySelection,
   collectNodesInRect,
+  computeMoves,
   findNodeById,
   hitTestPoint,
   isFrameNode,
+  MIN_NODE_SIZE,
   rectFromPoints,
+  resizeProportional,
   screenToCanvas,
+  type CanvasNode,
+  type Corner,
+  type FrameNode,
   type NodeMove,
   type Point,
   type Rect,
@@ -69,7 +75,18 @@ interface NodeGesture {
   gestureSelection: readonly string[]
 }
 
-type Gesture = BlankGesture | NodeGesture
+interface ResizeGesture {
+  kind: 'resize'
+  startScreen: Point
+  fwId: string
+  parentFwId: string
+  parentAbsolute: Point
+  originalAbsolute: Rect
+  corner: Corner
+  dragging: boolean
+}
+
+type Gesture = BlankGesture | NodeGesture | ResizeGesture
 
 function localScreenPoint(container: HTMLElement, event: MouseEvent): Point {
   const bounds = container.getBoundingClientRect()
@@ -78,6 +95,28 @@ function localScreenPoint(container: HTMLElement, event: MouseEvent): Point {
 
 function exceededThreshold(start: Point, current: Point): boolean {
   return Math.hypot(current.x - start.x, current.y - start.y) > DRAG_THRESHOLD_CSS_PX
+}
+
+interface NodeLocation {
+  node: CanvasNode
+  parent: FrameNode
+  absolute: Point
+  parentAbsolute: Point
+}
+
+function findNodeLocation(root: FrameNode, fwId: string): NodeLocation | null {
+  const visit = (parent: FrameNode, parentAbsolute: Point): NodeLocation | null => {
+    for (const node of parent.children) {
+      const absolute = { x: parentAbsolute.x + node.x, y: parentAbsolute.y + node.y }
+      if (node.fwId === fwId) return { node, parent, absolute, parentAbsolute }
+      if (isFrameNode(node)) {
+        const found = visit(node, absolute)
+        if (found !== null) return found
+      }
+    }
+    return null
+  }
+  return visit(root, { x: root.x, y: root.y })
 }
 
 /**
@@ -115,6 +154,26 @@ export function createCanvasInteraction(
     options.onPreview(EMPTY_INTERACTION_PREVIEW)
   }
 
+  const cursorForCorner = (corner: Corner): CanvasCursor =>
+    corner === 'nw' || corner === 'se' ? 'nwse-resize' : 'nesw-resize'
+
+  const resizeAt = (resize: ResizeGesture, screenPoint: Point): NodeResize => {
+    const rect = resizeProportional(
+      resize.originalAbsolute,
+      resize.corner,
+      screenToCanvas(ctx.viewport, screenPoint),
+      { minSize: MIN_NODE_SIZE },
+    )
+    return {
+      fwId: resize.fwId,
+      parentFwId: resize.parentFwId,
+      x: rect.x - resize.parentAbsolute.x,
+      y: rect.y - resize.parentAbsolute.y,
+      width: rect.width,
+      height: rect.height,
+    }
+  }
+
   const selectableHit = (targetFwId: string | null, canvasPoint: Point): string | null => {
     if (targetFwId === ctx.root.fwId) return null
     if (targetFwId !== null && findNodeById(ctx.root, targetFwId)?.locked) return null
@@ -130,6 +189,30 @@ export function createCanvasInteraction(
 
     const startScreen = localScreenPoint(container, event)
     const hit = probe(startScreen)
+    // 缩放控制点：只认「单选且选中项就是控制点所属节点」（多选首版不缩放，interaction-spec §3）
+    if (hit.resizeHandle !== null) {
+      if (ctx.selection.length !== 1 || ctx.selection[0] !== hit.resizeHandle.fwId) return
+      const location = findNodeLocation(ctx.root, hit.resizeHandle.fwId)
+      if (location === null || location.node.locked) return
+      event.preventDefault()
+      gesture = {
+        kind: 'resize',
+        startScreen,
+        fwId: location.node.fwId,
+        parentFwId: location.parent.fwId,
+        parentAbsolute: location.parentAbsolute,
+        originalAbsolute: {
+          x: location.absolute.x,
+          y: location.absolute.y,
+          width: location.node.width,
+          height: location.node.height,
+        },
+        corner: hit.resizeHandle.corner,
+        dragging: false,
+      }
+      setCursor(cursorForCorner(hit.resizeHandle.corner))
+      return
+    }
     // 内部动作按钮（点击生成 / 重试）：不参与选中/拖拽/框选（M1 §5），由 tap 分派处理
     if (hit.internalAction) return
 
@@ -174,9 +257,26 @@ export function createCanvasInteraction(
       gesture.dragging = true
     }
     const currentCanvas = screenToCanvas(ctx.viewport, currentScreen)
-    if (gesture.kind === 'blank' && gesture.dragging) {
-      setCursor('crosshair')
-      options.onPreview({ marquee: rectFromPoints(gesture.startCanvas, currentCanvas) })
+    if (gesture.kind === 'resize') {
+      setCursor(cursorForCorner(gesture.corner))
+      if (gesture.dragging) options.onPreview({ resizes: [resizeAt(gesture, currentScreen)] })
+      return
+    }
+    if (gesture.kind === 'blank') {
+      if (gesture.dragging) {
+        setCursor('crosshair')
+        options.onPreview({ marquee: rectFromPoints(gesture.startCanvas, currentCanvas) })
+      }
+      return
+    }
+    if (gesture.dragging) {
+      setCursor('move')
+      options.onPreview({
+        moves: computeMoves(ctx.root, gesture.gestureSelection, {
+          x: currentCanvas.x - gesture.startCanvas.x,
+          y: currentCanvas.y - gesture.startCanvas.y,
+        }),
+      })
     }
   }
 
@@ -184,6 +284,15 @@ export function createCanvasInteraction(
     if (event.button !== 0 || gesture === null) return
     const finished = gesture
     gesture = null
+
+    if (finished.kind === 'resize') {
+      if (finished.dragging) {
+        ctx.callbacks.onNodesResize([resizeAt(finished, localScreenPoint(container, event))])
+      }
+      resetPreview()
+      setCursor('default')
+      return
+    }
 
     if (finished.kind === 'blank') {
       if (finished.dragging) {
@@ -200,6 +309,16 @@ export function createCanvasInteraction(
 
     if (!finished.dragging && finished.shiftKey && finished.wasSelected) {
       ctx.callbacks.onSelectionRequest([finished.fwId], 'toggle')
+      return
+    }
+    if (finished.dragging) {
+      const endCanvas = screenToCanvas(ctx.viewport, localScreenPoint(container, event))
+      const moves = computeMoves(ctx.root, finished.gestureSelection, {
+        x: endCanvas.x - finished.startCanvas.x,
+        y: endCanvas.y - finished.startCanvas.y,
+      })
+      if (moves.length > 0) ctx.callbacks.onNodesMove(moves)
+      resetPreview()
     }
   }
 

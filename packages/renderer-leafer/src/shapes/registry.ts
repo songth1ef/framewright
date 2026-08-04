@@ -13,6 +13,8 @@ import { createGenerationUnitShape } from './generation-unit'
 export interface ShapeContext {
   node: CanvasNode
   position: Point
+  /** 拖拽/缩放预览的尺寸覆盖；缺省用 node 自身宽高 */
+  size?: { width: number; height: number }
   selected: boolean
 }
 
@@ -29,18 +31,18 @@ export function applySelection(ui: IUI, selected: boolean): IUI {
   return ui
 }
 
-const createFrame: ShapeFactory = ({ node, position, selected }) => {
+const createFrame: ShapeFactory = ({ node, position, size, selected }) => {
   const box = new Box({
-    ...toLeaferProps(node, position),
+    ...toLeaferProps(node, position, size),
     fill: isFrameNode(node) && node.background !== null ? node.background : undefined,
     overflow: isFrameNode(node) && node.clip ? 'hide' : 'show',
   })
   return applySelection(box, selected)
 }
 
-const createBox: ShapeFactory = ({ node, position, selected }) => {
+const createBox: ShapeFactory = ({ node, position, size, selected }) => {
   const rect = new Rect({
-    ...toLeaferProps(node, position),
+    ...toLeaferProps(node, position, size),
     fill: isBoxNode(node) ? node.fill : undefined,
     cornerRadius: isBoxNode(node) ? node.cornerRadius : 0,
   })
@@ -52,9 +54,9 @@ const createBox: ShapeFactory = ({ node, position, selected }) => {
  * 留空会让 assertShapeCoverage 报错，这是刻意的。
  */
 function makeUnsupportedShape(): ShapeFactory {
-  return ({ node, position, selected }) => {
+  return ({ node, position, size, selected }) => {
     const rect = new Rect({
-      ...toLeaferProps(node, position),
+      ...toLeaferProps(node, position, size),
       fill: '#DDDDDD',
       stroke: '#999999',
       strokeWidth: 1,

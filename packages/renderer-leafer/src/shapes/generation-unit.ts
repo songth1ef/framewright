@@ -194,12 +194,15 @@ function buildFailed(container: IUI, node: GenUnitNode): void {
  * 几何、颜色、字号、层次按 M1 实现；布局手段（绝对定位）是本侧自由发挥的部分。
  */
 export function createGenerationUnitShape(): ShapeFactory {
-  return ({ node, position, selected }) => {
+  return ({ node, position, size, selected }) => {
     if (!isAiImageNode(node) && !isAiVideoNode(node)) {
       throw new Error(`createGenerationUnitShape 只接受 ai-image/ai-video，收到 ${node.fwType}`)
     }
+    // 缩放预览时内部布局跟随预览尺寸（纯呈现；只读副本，不回写 node 树）
+    const layoutNode: GenUnitNode =
+      size === undefined ? node : { ...node, width: size.width, height: size.height }
     const container = new Box({
-      ...toLeaferProps(node, position),
+      ...toLeaferProps(node, position, size),
       cornerRadius: S.cornerRadius,
       overflow: 'hide',
       stroke: node.status === 'failed' ? S.failedBorderColor : S.borderColor,
@@ -208,17 +211,17 @@ export function createGenerationUnitShape(): ShapeFactory {
     })
     switch (node.status) {
       case 'empty':
-        buildEmpty(container, node)
+        buildEmpty(container, layoutNode)
         break
       case 'pending':
       case 'running':
-        buildSkeleton(container, node)
+        buildSkeleton(container, layoutNode)
         break
       case 'succeeded':
-        buildSucceeded(container, node)
+        buildSucceeded(container, layoutNode)
         break
       case 'failed':
-        buildFailed(container, node)
+        buildFailed(container, layoutNode)
         break
     }
     return applySelection(container, selected)
