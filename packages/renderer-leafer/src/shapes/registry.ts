@@ -21,32 +21,24 @@ export interface ShapeContext {
 /** 返回一个 Leafer 节点；frame 返回容器（可 add 子节点），其余返回叶子。 */
 export type ShapeFactory = (ctx: ShapeContext) => IUI
 
-const SELECTED_STROKE = '#5B8091'
+// 🔴 shape 不画选中描边——选中/hover 视觉统一由 interaction-overlay 以 1/scale 补偿绘制
+// （D5；scaleFixed 对 strokeWidth 不生效，见 docs/lessons.md 踩坑 2）。
+// ShapeContext.selected 保留在入参里（与 DOM 侧 ShapeProps 对齐），但此处不再消费。
 
-export function applySelection(ui: IUI, selected: boolean): IUI {
-  if (selected) {
-    ui.stroke = SELECTED_STROKE
-    ui.strokeWidth = 2
-  }
-  return ui
-}
-
-const createFrame: ShapeFactory = ({ node, position, size, selected }) => {
-  const box = new Box({
+const createFrame: ShapeFactory = ({ node, position, size }) => {
+  return new Box({
     ...toLeaferProps(node, position, size),
     fill: isFrameNode(node) && node.background !== null ? node.background : undefined,
     overflow: isFrameNode(node) && node.clip ? 'hide' : 'show',
   })
-  return applySelection(box, selected)
 }
 
-const createBox: ShapeFactory = ({ node, position, size, selected }) => {
-  const rect = new Rect({
+const createBox: ShapeFactory = ({ node, position, size }) => {
+  return new Rect({
     ...toLeaferProps(node, position, size),
     fill: isBoxNode(node) ? node.fill : undefined,
     cornerRadius: isBoxNode(node) ? node.cornerRadius : 0,
   })
-  return applySelection(rect, selected)
 }
 
 /**
@@ -54,15 +46,14 @@ const createBox: ShapeFactory = ({ node, position, size, selected }) => {
  * 留空会让 assertShapeCoverage 报错，这是刻意的。
  */
 function makeUnsupportedShape(): ShapeFactory {
-  return ({ node, position, size, selected }) => {
-    const rect = new Rect({
+  return ({ node, position, size }) => {
+    return new Rect({
       ...toLeaferProps(node, position, size),
       fill: '#DDDDDD',
       stroke: '#999999',
       strokeWidth: 1,
       dashPattern: [4, 4],
     })
-    return applySelection(rect, selected)
   }
 }
 

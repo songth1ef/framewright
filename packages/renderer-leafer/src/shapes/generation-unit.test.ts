@@ -177,11 +177,14 @@ describe('C1-leafer 生成单元四态', () => {
     }
   })
 
-  it('选中态：外框用选中描边（与 frame/box 同一语义）', () => {
+  it('选中态不画进 shape：选中描边由 overlay 统一绘制（D5）', () => {
     const node = createAiImageNode({ fwId: 'g9', status: 'empty' })
-    const ui = factory({ node, position: { x: 0, y: 0 }, selected: true })
-    expect(ui.stroke).toBe('#5B8091')
-    expect(ui.strokeWidth).toBe(2)
+    const selectedUi = factory({ node, position: { x: 0, y: 0 }, selected: true })
+    const unselectedUi = factory({ node, position: { x: 0, y: 0 }, selected: false })
+    // 选中与否 shape 完全一致：只有 empty 态自身的状态边框
+    expect(selectedUi.stroke).toBe(unselectedUi.stroke)
+    expect(selectedUi.stroke).toBe(S.borderColor)
+    expect(selectedUi.strokeWidth).toBe(S.borderWidth)
   })
 })
 

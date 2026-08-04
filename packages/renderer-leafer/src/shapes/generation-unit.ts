@@ -9,7 +9,7 @@ import {
 } from '@framewright/core'
 import { Box, Rect, Text, type IUI } from 'leafer-ui'
 import { toLeaferProps } from '../node-props'
-import { applySelection, type ShapeFactory } from './registry'
+import type { ShapeFactory } from './registry'
 
 const S = GEN_UNIT_STYLE
 
@@ -194,7 +194,7 @@ function buildFailed(container: IUI, node: GenUnitNode): void {
  * 几何、颜色、字号、层次按 M1 实现；布局手段（绝对定位）是本侧自由发挥的部分。
  */
 export function createGenerationUnitShape(): ShapeFactory {
-  return ({ node, position, size, selected }) => {
+  return ({ node, position, size }) => {
     if (!isAiImageNode(node) && !isAiVideoNode(node)) {
       throw new Error(`createGenerationUnitShape 只接受 ai-image/ai-video，收到 ${node.fwType}`)
     }
@@ -224,6 +224,7 @@ export function createGenerationUnitShape(): ShapeFactory {
         buildFailed(container, layoutNode)
         break
     }
-    return applySelection(container, selected)
+    // 选中描边不画在 shape 上——由 interaction-overlay 统一绘制（D5，见 registry.ts 注）
+    return container
   }
 }

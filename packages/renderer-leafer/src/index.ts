@@ -141,6 +141,12 @@ export function createLeaferRenderer(): RendererAdapter {
           const rect = bounds.get(fwId)
           return rect === undefined ? [] : [{ fwId, rect }]
         }),
+        hoverBounds: (() => {
+          const fwId = interactionPreview.hoveredFwId
+          if (fwId === undefined || fwId === null) return null
+          const rect = bounds.get(fwId)
+          return rect === undefined ? null : { fwId, rect }
+        })(),
         viewportScale: ctx.viewport.scale,
       }),
     )

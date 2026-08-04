@@ -227,3 +227,17 @@ Leafer 侧关于 Leafer 内建手势的每一条都对（技术处境），关�
 **现象**：溯源连线层 `leafer.add(连线层)` 先于 root frame，结果连线完全不可见——root 的白色 background 画在整个 800×450 上，把它盖住了。
 
 **结论**：「画在所有节点之下」的正确落点是**root frame 内部、作为第一个孩子**——在 root 自己的 background 之上、一切业务节点之下。后续的选中 overlay（D5）若也要「压在所有节点之上」，镜像地应作为 root 的**最后**一个孩子，而不是 add 到 leafer 根。
+
+> 补注（2026-08-04，D5-leafer 实施）：overlay 实际落在 **leafer 根上、root frame 之后** add——
+> 绘制顺序等价（在所有节点之上），但坐标保持画布绝对坐标（与 DOM 侧 overlay 同口径），
+> 不必减 root 原点。两种落点都成立，选坐标语义更简单的那个。
+
+### 4. Leafer 命中探针的三个实测要点（2026-08-04，D2/D5-leafer）
+
+**背景**：D2-leafer 用 `leafer.selector.getByPoint` 做命中探针（等价 DOM 侧的 `closest()`），实测结论：
+
+1. **坐标系**：入参是 view 相对坐标（与 Leafer 事件的 x/y 同系，`clientX - viewBounds`），不是画布坐标——命中内部走 `__world` 变换，已含 host 设置的 `leafer.x/y/scale`（viewport），无需自己换算。
+2. **调用前先 `updateLayout()`**：draw() 重建场景图后、渲染帧之前到达的命中会拿到过期包围盒（`Interaction.findPath` 对模拟交互同样这么做）。
+3. **🔴 overlay 层不能整层 `hittable: false`**：`worldHittable` 沿父链逐级检查，父层 false 会把子元素全部打成不可命中——缩放控制点就点不到了。正确做法：层用 `Group`（非 branchLeaf，永不自命中），装饰元素（框选框/描边）逐个 `hittable: false`，控制点保持可命中。
+
+**桩环境边界**（接踩坑 1）：jsdom 桩下 `measureText` 返回 0 宽，**Text 元素命中不可靠**；Rect 经 hitCanvas 的命中在桩下恒真（假 2d context 全 truthy）。所以命中类单测只断言 data 标记与结构，真实命中判定归 e2e（真实浏览器）。

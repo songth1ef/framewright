@@ -3,6 +3,8 @@ import { Group, Rect as LeaferRect, type IUI } from 'leafer-ui'
 import type { CanvasInteractionPreview } from './canvas-interaction'
 
 const SELECTION_COLOR = '#5B8091'
+const SELECTION_WIDTH_CSS_PX = 2
+const HOVER_COLOR = 'rgba(91, 128, 145, 0.45)'
 const MARQUEE_FILL = 'rgba(91, 128, 145, 0.15)'
 const HANDLE_FILL = '#FFFFFF'
 
@@ -15,7 +17,25 @@ export interface InteractionOverlayInput {
   preview: CanvasInteractionPreview
   /** 选中集各节点的画布绝对包围盒（长度 1 = 单选） */
   selectionBounds: ReadonlyArray<{ fwId: string; rect: Rect }>
+  /** 悬停节点的画布绝对包围盒 */
+  hoverBounds: { fwId: string; rect: Rect } | null
   viewportScale: number
+}
+
+function unionRects(items: ReadonlyArray<{ rect: Rect }>): Rect | null {
+  if (items.length === 0) return null
+  const first = items[0]!.rect
+  let left = first.x
+  let top = first.y
+  let right = first.x + first.width
+  let bottom = first.y + first.height
+  for (const { rect } of items.slice(1)) {
+    left = Math.min(left, rect.x)
+    top = Math.min(top, rect.y)
+    right = Math.max(right, rect.x + rect.width)
+    bottom = Math.max(bottom, rect.y + rect.height)
+  }
+  return { x: left, y: top, width: right - left, height: bottom - top }
 }
 
 /**
@@ -45,6 +65,42 @@ export function buildInteractionOverlay(input: InteractionOverlayInput): IUI {
     })
     element.data = { fwSelectionMarquee: true }
     layer.add(element)
+  }
+
+  // 悬停描边：1px 淡色（视觉像素，下同）
+  if (input.hoverBounds !== null) {
+    const { rect } = input.hoverBounds
+    const hover = new LeaferRect({
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      stroke: HOVER_COLOR,
+      strokeWidth: 1 / input.viewportScale,
+      hittable: false,
+    })
+    hover.data = { fwHoverOutline: true }
+    layer.add(hover)
+  }
+
+  // 选中描边：单选与多选都是整个选中集的联合包围框（多选首版只展示、不给控制点，
+  // interaction-spec §3 裁定）；shape 自身不画选中描边（选中视觉统一收在这里，
+  // 才能做 1/scale 补偿——scaleFixed 对 strokeWidth 不生效，lessons 踩坑 2）
+  const selectionRect = unionRects(input.selectionBounds)
+  if (selectionRect !== null) {
+    const outline = new LeaferRect({
+      x: selectionRect.x,
+      y: selectionRect.y,
+      width: selectionRect.width,
+      height: selectionRect.height,
+      stroke: SELECTION_COLOR,
+      strokeWidth: SELECTION_WIDTH_CSS_PX / input.viewportScale,
+      hittable: false,
+    })
+    outline.data = {
+      fwSelectionOutline: input.selectionBounds.length === 1 ? 'single' : 'group',
+    }
+    layer.add(outline)
   }
 
   // 🔴 只给四角控制点，不给边中点（interaction-spec §3：生成结果不允许被自由拉伸变形）；
