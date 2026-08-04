@@ -77,7 +77,13 @@ function groupOps(ops: readonly CanvasOp[]): CanvasOp | null {
   return { kind: 'batch', ops: ops as Exclude<CanvasOp, { kind: 'batch' }>[] }
 }
 
-export function RendererHost({ documentId }: { documentId?: string }) {
+export function RendererHost({
+  documentId,
+  initialRoot,
+}: {
+  documentId?: string
+  initialRoot?: FrameNode
+}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const adapterRef = useRef<RendererAdapter | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -85,7 +91,7 @@ export function RendererHost({ documentId }: { documentId?: string }) {
   // 会话状态住在这里，不在渲染器内部——切换时原样传给新渲染器
   const [selection, setSelection] = useState<readonly string[]>(['box-front'])
   const [viewport, setViewport] = useState(DEFAULT_VIEWPORT)
-  const [root, setRoot] = useState(createDemoDocument)
+  const [root, setRoot] = useState(() => initialRoot ?? createDemoDocument())
   const [lastAction, setLastAction] = useState('')
   const rootRef = useRef(root)
   const historyRef = useRef(createMemoryHistory())

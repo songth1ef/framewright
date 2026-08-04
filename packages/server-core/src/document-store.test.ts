@@ -43,6 +43,20 @@ describe('Document store', () => {
     await expect(store.getDocument('missing')).resolves.toBeNull()
   })
 
+  it('listDocuments 按最近更新时间倒序列出画布', async () => {
+    const root = createFrameNode({ fwId: 'root' })
+    await store.createDocument({ id: 'doc-a', name: '画布 A', root })
+    await store.createDocument({ id: 'doc-b', name: '画布 B', root })
+    await store.saveDocument('doc-a', { name: '画布 A+', root, historySeq: 0 })
+
+    const documents = await store.listDocuments()
+
+    expect(documents.map(({ id, name }) => ({ id, name }))).toEqual([
+      { id: 'doc-a', name: '画布 A+' },
+      { id: 'doc-b', name: '画布 B' },
+    ])
+  })
+
   it('saveDocument 覆盖当前树、名称与 historySeq，保留同一 document id', async () => {
     const initialRoot = createFrameNode({ fwId: 'root' })
     await store.createDocument({ id: 'doc-a', name: '初始', root: initialRoot })

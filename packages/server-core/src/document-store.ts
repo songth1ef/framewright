@@ -24,6 +24,7 @@ export interface SaveDocumentInput {
 }
 
 export interface DocumentStore {
+  listDocuments(): Promise<StoredDocument[]>
   getDocument(documentId: string): Promise<StoredDocument | null>
   createDocument(input: CreateDocumentInput): Promise<StoredDocument>
   saveDocument(documentId: string, input: SaveDocumentInput): Promise<StoredDocument>
@@ -46,6 +47,13 @@ function toStoredDocument(document: PrismaDocument): StoredDocument {
 
 export function createDocumentStore(client: PrismaClient): DocumentStore {
   return {
+    async listDocuments() {
+      const documents = await client.document.findMany({
+        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+      })
+      return documents.map(toStoredDocument)
+    },
+
     async getDocument(documentId) {
       const document = await client.document.findUnique({ where: { id: documentId } })
       return document === null ? null : toStoredDocument(document)
@@ -78,6 +86,7 @@ export function createDocumentStore(client: PrismaClient): DocumentStore {
 
 const defaultStore = createDocumentStore(prisma)
 
+export const listDocuments = defaultStore.listDocuments
 export const getDocument = defaultStore.getDocument
 export const createDocument = defaultStore.createDocument
 export const saveDocument = defaultStore.saveDocument
