@@ -20,16 +20,17 @@ function screenRect(rect: Rect, viewport: Viewport): CSSProperties {
 }
 
 export function InteractionOverlay({ preview, viewport }: InteractionOverlayProps): ReactNode {
+  const marquee = preview.marquee ?? null
   return (
     <div
       data-fw-interaction-overlay="true"
       style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}
     >
-      {preview.marquee === null ? null : (
+      {marquee === null ? null : (
         <div
           data-fw-selection-marquee="true"
           style={{
-            ...screenRect(preview.marquee, viewport),
+            ...screenRect(marquee, viewport),
             border: '1px solid #5B8091',
             background: 'rgba(91, 128, 145, 0.15)',
           }}

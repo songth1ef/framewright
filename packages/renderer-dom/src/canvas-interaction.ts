@@ -4,9 +4,11 @@ import {
   findNodeById,
   hitTestPoint,
   isFrameNode,
+  computeMoves,
   rectFromPoints,
   screenToCanvas,
   type Point,
+  type NodeMove,
   type Rect,
   type RenderContext,
 } from '@framewright/core'
@@ -14,10 +16,11 @@ import {
 const DRAG_THRESHOLD_CSS_PX = 4
 
 export interface CanvasInteractionPreview {
-  marquee: Rect | null
+  marquee?: Rect | null
+  moves?: readonly NodeMove[]
 }
 
-export const EMPTY_INTERACTION_PREVIEW: CanvasInteractionPreview = { marquee: null }
+export const EMPTY_INTERACTION_PREVIEW: CanvasInteractionPreview = {}
 
 interface CanvasInteractionOptions {
   onPreview(preview: CanvasInteractionPreview): void
@@ -39,6 +42,7 @@ interface BlankGesture {
 interface NodeGesture {
   kind: 'node'
   startScreen: Point
+  startCanvas: Point
   fwId: string
   shiftKey: boolean
   wasSelected: boolean
@@ -117,6 +121,7 @@ export function createCanvasInteraction(
     gesture = {
       kind: 'node',
       startScreen,
+      startCanvas,
       fwId: hit,
       shiftKey: event.shiftKey,
       wasSelected,
@@ -131,10 +136,21 @@ export function createCanvasInteraction(
     if (!gesture.dragging && exceededThreshold(gesture.startScreen, currentScreen)) {
       gesture.dragging = true
     }
-    if (gesture.kind !== 'blank' || !gesture.dragging) return
-
     const currentCanvas = screenToCanvas(ctx.viewport, currentScreen)
-    options.onPreview({ marquee: rectFromPoints(gesture.startCanvas, currentCanvas) })
+    if (gesture.kind === 'blank') {
+      if (gesture.dragging) {
+        options.onPreview({ marquee: rectFromPoints(gesture.startCanvas, currentCanvas) })
+      }
+      return
+    }
+    if (gesture.dragging) {
+      options.onPreview({
+        moves: computeMoves(ctx.root, gesture.gestureSelection, {
+          x: currentCanvas.x - gesture.startCanvas.x,
+          y: currentCanvas.y - gesture.startCanvas.y,
+        }),
+      })
+    }
   }
 
   const onPointerUp = (event: PointerEvent): void => {
@@ -156,6 +172,16 @@ export function createCanvasInteraction(
 
     if (!finished.dragging && finished.shiftKey && finished.wasSelected) {
       ctx.callbacks.onSelectionRequest([finished.fwId], 'toggle')
+      return
+    }
+    if (finished.dragging) {
+      const endCanvas = screenToCanvas(ctx.viewport, localScreenPoint(container, event))
+      const moves = computeMoves(ctx.root, finished.gestureSelection, {
+        x: endCanvas.x - finished.startCanvas.x,
+        y: endCanvas.y - finished.startCanvas.y,
+      })
+      if (moves.length > 0) ctx.callbacks.onNodesMove(moves)
+      resetPreview()
     }
   }
 

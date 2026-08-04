@@ -190,3 +190,54 @@ describe('框选状态机', () => {
     expect(callbacks.onSelectionRequest).toHaveBeenCalledWith(['box-a'], 'replace')
   })
 })
+
+describe('节点拖拽移动', () => {
+  it('超过 4 CSS px 后逐帧只预览，pointerup 才提交一次父相对坐标', () => {
+    const box = addTarget('box-a')
+    const { callbacks, onPreview } = setup(makeContext(['box-a']))
+
+    pointer(box, 'pointerdown', 15, 15)
+    pointer(window, 'pointermove', 25, 20)
+
+    expect(onPreview).toHaveBeenLastCalledWith({
+      moves: [{ fwId: 'box-a', parentFwId: 'root', x: 20, y: 15 }],
+    })
+    expect(callbacks.onNodesMove).not.toHaveBeenCalled()
+
+    pointer(window, 'pointerup', 30, 25)
+    expect(callbacks.onNodesMove).toHaveBeenCalledOnce()
+    expect(callbacks.onNodesMove).toHaveBeenCalledWith([
+      { fwId: 'box-a', parentFwId: 'root', x: 25, y: 20 },
+    ])
+  })
+
+  it('拖未选节点时用 pointerdown 得到的新选中集移动，不拖旧选中集', () => {
+    const nested = addTarget('nested')
+    const { callbacks } = setup(makeContext(['box-b']))
+
+    pointer(nested, 'pointerdown', 106, 16)
+    pointer(window, 'pointermove', 116, 26)
+    pointer(window, 'pointerup', 116, 26)
+
+    expect(callbacks.onSelectionRequest).toHaveBeenNthCalledWith(1, ['nested'], 'replace')
+    expect(callbacks.onNodesMove).toHaveBeenCalledWith([
+      { fwId: 'nested', parentFwId: 'transparent-frame', x: 15, y: 15 },
+    ])
+  })
+
+  it('未超过阈值不提交移动，pointercancel 丢弃预览且不提交', () => {
+    const box = addTarget('box-a')
+    const { callbacks, onPreview } = setup(makeContext(['box-a']))
+
+    pointer(box, 'pointerdown', 15, 15)
+    pointer(window, 'pointermove', 19, 15)
+    pointer(window, 'pointerup', 19, 15)
+    expect(callbacks.onNodesMove).not.toHaveBeenCalled()
+
+    pointer(box, 'pointerdown', 15, 15)
+    pointer(window, 'pointermove', 25, 20)
+    pointer(window, 'pointercancel', 25, 20)
+    expect(callbacks.onNodesMove).not.toHaveBeenCalled()
+    expect(onPreview).toHaveBeenLastCalledWith({})
+  })
+})

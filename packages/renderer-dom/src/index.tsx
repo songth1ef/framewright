@@ -25,13 +25,15 @@ function renderNode(
   parentAbsolute: Point,
   parentVisible: boolean,
   selection: readonly string[],
+  previewMoves: ReadonlyMap<string, { x: number; y: number }>,
   bounds: Map<string, Rect>,
   visibleNodeIds: string[],
   onNodeAction: RenderContext['callbacks']['onNodeAction'],
   connectionLayer?: ReactNode,
 ): ReactNode {
-  const absolute: Point = { x: parentAbsolute.x + node.x, y: parentAbsolute.y + node.y }
-  const position: Point = { x: node.x, y: node.y }
+  const previewPosition = previewMoves.get(node.fwId)
+  const position: Point = previewPosition ?? { x: node.x, y: node.y }
+  const absolute: Point = { x: parentAbsolute.x + position.x, y: parentAbsolute.y + position.y }
   const visible = parentVisible && node.visible
   bounds.set(node.fwId, {
     x: absolute.x,
@@ -52,6 +54,7 @@ function renderNode(
               absolute,
               visible,
               selection,
+              previewMoves,
               bounds,
               visibleNodeIds,
               onNodeAction,
@@ -90,6 +93,9 @@ export function createDomRenderer(): RendererAdapter {
     bounds = new Map<string, Rect>()
     visibleNodeIds = []
     const { scale, offsetX, offsetY } = ctx.viewport
+    const previewMoves = new Map(
+      (interactionPreview.moves ?? []).map((move) => [move.fwId, { x: move.x, y: move.y }]),
+    )
     const rootBounds: Rect = {
       x: ctx.root.x,
       y: ctx.root.y,
@@ -121,6 +127,7 @@ export function createDomRenderer(): RendererAdapter {
             { x: 0, y: 0 },
             true,
             ctx.selection,
+            previewMoves,
             bounds,
             visibleNodeIds,
             ctx.callbacks.onNodeAction,
