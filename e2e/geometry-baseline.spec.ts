@@ -13,6 +13,11 @@ const CASES = [
   { label: 'LeaferJS', switches: 1, snapshot: 'bounds-leafer.json' },
 ] as const
 
+test('几何基线路径与运行平台无关', async ({}, testInfo) => {
+  const snapshotPath = testInfo.snapshotPath('bounds-dom.json').replaceAll('\\', '/')
+  expect(snapshotPath).toMatch(/\/geometry-baseline\.spec\.ts-snapshots\/bounds-dom\.json$/)
+})
+
 for (const testCase of CASES) {
   test(`几何基线：${testCase.label}`, async ({ page }) => {
     await page.goto('/')
