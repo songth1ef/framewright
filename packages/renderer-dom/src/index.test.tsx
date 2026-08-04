@@ -292,10 +292,14 @@ describe('createDomRenderer', () => {
 
   it('单选显示四角缩放控制点，多选只保留选区而不显示控制点', async () => {
     const renderer = await mountRenderer(makeContext(['box-front']))
-    expect(container!.querySelectorAll('[data-fw-resize-handle]')).toHaveLength(4)
+    await vi.waitFor(() => {
+      expect(container!.querySelectorAll('[data-fw-resize-handle]')).toHaveLength(4)
+    })
 
     await act(async () => renderer.update(makeContext(['box-front', 'box-back'])))
-    expect(container!.querySelectorAll('[data-fw-resize-handle]')).toHaveLength(0)
+    await vi.waitFor(() => {
+      expect(container!.querySelectorAll('[data-fw-resize-handle]')).toHaveLength(0)
+    })
     await act(async () => renderer.destroy())
   })
 
