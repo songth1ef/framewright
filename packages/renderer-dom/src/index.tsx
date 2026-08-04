@@ -14,6 +14,7 @@ import {
   createCanvasInteraction,
   EMPTY_INTERACTION_PREVIEW,
   type CanvasInteraction,
+  type CanvasCursor,
   type CanvasInteractionPreview,
   type NodeResize,
 } from './canvas-interaction'
@@ -93,6 +94,13 @@ export function createDomRenderer(): RendererAdapter {
   let interactionPreview: CanvasInteractionPreview = EMPTY_INTERACTION_PREVIEW
   let bounds = new Map<string, Rect>()
   let visibleNodeIds: string[] = []
+  let canvasCursor: CanvasCursor = 'default'
+  let viewportCursor: 'grab' | 'grabbing' | null = null
+  let cursorContainer: HTMLElement | null = null
+
+  const applyCursor = (): void => {
+    if (cursorContainer !== null) cursorContainer.style.cursor = viewportCursor ?? canvasCursor
+  }
 
   const draw = (ctx: RenderContext): void => {
     if (root === null) return
@@ -162,6 +170,7 @@ export function createDomRenderer(): RendererAdapter {
 
     mount(container, ctx) {
       root = createRoot(container)
+      cursorContainer = container
       currentContext = ctx
       draw(ctx)
       interaction = createViewportInteraction(container, ctx.viewport, {
@@ -170,11 +179,19 @@ export function createDomRenderer(): RendererAdapter {
           if (currentContext === null) return
           draw({ ...currentContext, viewport })
         },
+        onCursorChange: (cursor) => {
+          viewportCursor = cursor
+          applyCursor()
+        },
       })
       canvasInteraction = createCanvasInteraction(container, ctx, {
         onPreview: (preview) => {
           interactionPreview = preview
           if (currentContext !== null) draw(currentContext)
+        },
+        onCursorChange: (cursor) => {
+          canvasCursor = cursor
+          applyCursor()
         },
       })
     },
@@ -197,6 +214,10 @@ export function createDomRenderer(): RendererAdapter {
       interactionPreview = EMPTY_INTERACTION_PREVIEW
       bounds = new Map<string, Rect>()
       visibleNodeIds = []
+      canvasCursor = 'default'
+      viewportCursor = null
+      if (cursorContainer !== null) cursorContainer.style.cursor = ''
+      cursorContainer = null
     },
 
     getRenderedBounds() {

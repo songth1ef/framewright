@@ -1,5 +1,6 @@
 import {
   applySelection,
+  collectVisibleNodeIds,
   collectNodesInRect,
   findNodeById,
   hitTestPoint,
@@ -9,6 +10,7 @@ import {
   rectFromPoints,
   resizeProportional,
   screenToCanvas,
+  walkTree,
   type CanvasNode,
   type Corner,
   type FrameNode,
@@ -35,7 +37,15 @@ export const EMPTY_INTERACTION_PREVIEW: CanvasInteractionPreview = {}
 
 interface CanvasInteractionOptions {
   onPreview(preview: CanvasInteractionPreview): void
+  onCursorChange?(cursor: CanvasCursor): void
 }
+
+export type CanvasCursor =
+  | 'default'
+  | 'move'
+  | 'crosshair'
+  | 'nwse-resize'
+  | 'nesw-resize'
 
 export interface CanvasInteraction {
   update(ctx: RenderContext): void
@@ -94,6 +104,17 @@ function shouldIgnore(target: EventTarget | null): boolean {
   )
 }
 
+function isEditableActiveElement(): boolean {
+  const active = document.activeElement
+  if (!(active instanceof HTMLElement)) return false
+  return (
+    active.isContentEditable ||
+    active.contentEditable === 'true' ||
+    active.getAttribute('contenteditable') === 'true' ||
+    /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(active.tagName)
+  )
+}
+
 function closestResizeHandle(
   target: EventTarget | null,
 ): { fwId: string; corner: Corner } | null {
@@ -135,6 +156,38 @@ export function createCanvasInteraction(
 ): CanvasInteraction {
   let ctx = initialContext
   let gesture: Gesture | null = null
+  const previousCursor = container.style.cursor
+
+  const setCursor = (cursor: CanvasCursor): void => {
+    if (options.onCursorChange !== undefined) {
+      options.onCursorChange(cursor)
+    } else {
+      container.style.cursor = cursor
+    }
+  }
+
+  const cursorForCorner = (corner: Corner): CanvasCursor =>
+    corner === 'nw' || corner === 'se' ? 'nwse-resize' : 'nesw-resize'
+
+  const updateHoverCursor = (target: EventTarget | null): void => {
+    const handle = closestResizeHandle(target)
+    if (handle !== null) {
+      setCursor(cursorForCorner(handle.corner))
+      return
+    }
+    const fwId = closestFwId(target)
+    const node = fwId === null ? null : findNodeById(ctx.root, fwId)
+    if (
+      node !== null &&
+      node.fwId !== ctx.root.fwId &&
+      !node.locked &&
+      !(isFrameNode(node) && node.background === null)
+    ) {
+      setCursor('move')
+      return
+    }
+    setCursor('default')
+  }
 
   const resetPreview = (): void => options.onPreview(EMPTY_INTERACTION_PREVIEW)
 
@@ -191,6 +244,7 @@ export function createCanvasInteraction(
         corner: resizeHandle.corner,
         dragging: false,
       }
+      setCursor(cursorForCorner(resizeHandle.corner))
       return
     }
     if (shouldIgnore(event.target)) return
@@ -205,6 +259,7 @@ export function createCanvasInteraction(
         shiftKey: event.shiftKey,
         dragging: false,
       }
+      setCursor('default')
       return
     }
 
@@ -225,26 +280,33 @@ export function createCanvasInteraction(
       dragging: false,
       gestureSelection,
     }
+    setCursor('move')
   }
 
   const onPointerMove = (event: PointerEvent): void => {
-    if (gesture === null) return
+    if (gesture === null) {
+      updateHoverCursor(event.target)
+      return
+    }
     const currentScreen = localScreenPoint(container, event)
     if (!gesture.dragging && exceededThreshold(gesture.startScreen, currentScreen)) {
       gesture.dragging = true
     }
     const currentCanvas = screenToCanvas(ctx.viewport, currentScreen)
     if (gesture.kind === 'resize') {
+      setCursor(cursorForCorner(gesture.corner))
       if (gesture.dragging) options.onPreview({ resizes: [resizeAt(gesture, currentScreen)] })
       return
     }
     if (gesture.kind === 'blank') {
       if (gesture.dragging) {
+        setCursor('crosshair')
         options.onPreview({ marquee: rectFromPoints(gesture.startCanvas, currentCanvas) })
       }
       return
     }
     if (gesture.dragging) {
+      setCursor('move')
       options.onPreview({
         moves: computeMoves(ctx.root, gesture.gestureSelection, {
           x: currentCanvas.x - gesture.startCanvas.x,
@@ -264,6 +326,7 @@ export function createCanvasInteraction(
         ctx.callbacks.onNodesResize([resizeAt(finished, localScreenPoint(container, event))])
       }
       resetPreview()
+      updateHoverCursor(event.target)
       return
     }
 
@@ -276,11 +339,13 @@ export function createCanvasInteraction(
         ctx.callbacks.onSelectionRequest([], 'replace')
       }
       resetPreview()
+      updateHoverCursor(event.target)
       return
     }
 
     if (!finished.dragging && finished.shiftKey && finished.wasSelected) {
       ctx.callbacks.onSelectionRequest([finished.fwId], 'toggle')
+      updateHoverCursor(event.target)
       return
     }
     if (finished.dragging) {
@@ -292,12 +357,67 @@ export function createCanvasInteraction(
       if (moves.length > 0) ctx.callbacks.onNodesMove(moves)
       resetPreview()
     }
+    updateHoverCursor(event.target)
   }
 
   const cancelGesture = (): void => {
     if (gesture === null) return
     gesture = null
     resetPreview()
+    setCursor('default')
+  }
+
+  const collectSelectableIds = (): readonly string[] => {
+    const visible = new Set(collectVisibleNodeIds(ctx.root))
+    const ids: string[] = []
+    walkTree(ctx.root, (node) => {
+      if (node.fwId !== ctx.root.fwId && !node.locked && visible.has(node.fwId)) {
+        ids.push(node.fwId)
+      }
+    })
+    return ids
+  }
+
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (event.isComposing || isEditableActiveElement()) return
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      cancelGesture()
+      ctx.callbacks.onSelectionRequest([], 'replace')
+      return
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+      event.preventDefault()
+      ctx.callbacks.onSelectionRequest(collectSelectableIds(), 'replace')
+      return
+    }
+
+    const step = event.shiftKey ? 10 : 1
+    const delta =
+      event.key === 'ArrowLeft'
+        ? { x: -step, y: 0 }
+        : event.key === 'ArrowRight'
+          ? { x: step, y: 0 }
+          : event.key === 'ArrowUp'
+            ? { x: 0, y: -step }
+            : event.key === 'ArrowDown'
+              ? { x: 0, y: step }
+              : null
+    if (delta !== null) {
+      event.preventDefault()
+      const moves = computeMoves(ctx.root, ctx.selection, delta)
+      if (moves.length > 0) ctx.callbacks.onNodesMove(moves)
+      return
+    }
+
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      event.preventDefault()
+      const deletable = ctx.selection.filter((fwId) => {
+        const node = findNodeById(ctx.root, fwId)
+        return node !== null && node.fwId !== ctx.root.fwId && !node.locked
+      })
+      if (deletable.length > 0) ctx.callbacks.onNodesDelete(deletable)
+    }
   }
 
   container.addEventListener('pointerdown', onPointerDown)
@@ -305,6 +425,7 @@ export function createCanvasInteraction(
   window.addEventListener('pointerup', onPointerUp)
   window.addEventListener('pointercancel', cancelGesture)
   window.addEventListener('blur', cancelGesture)
+  window.addEventListener('keydown', onKeyDown)
 
   return {
     update(nextContext) {
@@ -318,6 +439,9 @@ export function createCanvasInteraction(
       window.removeEventListener('pointerup', onPointerUp)
       window.removeEventListener('pointercancel', cancelGesture)
       window.removeEventListener('blur', cancelGesture)
+      window.removeEventListener('keydown', onKeyDown)
+      if (options.onCursorChange !== undefined) options.onCursorChange('default')
+      else container.style.cursor = previousCursor
     },
   }
 }

@@ -298,6 +298,36 @@ describe('createDomRenderer', () => {
     await act(async () => renderer.destroy())
   })
 
+  it('空格平移光标优先于节点 hover，pointercancel 后回到 grab，松键后复位', async () => {
+    const renderer = await mountRenderer(makeContext())
+    const node = container!.querySelector('[data-fw-id="box-front"]') as HTMLElement
+
+    await act(async () => {
+      node.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }))
+    })
+    expect(container!.style.cursor).toBe('move')
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }))
+      container!.dispatchEvent(
+        new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }),
+      )
+      window.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, buttons: 1 }))
+    })
+    expect(container!.style.cursor).toBe('grabbing')
+
+    await act(async () => {
+      window.dispatchEvent(new MouseEvent('pointercancel', { bubbles: true }))
+    })
+    expect(container!.style.cursor).toBe('grab')
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', key: ' ' }))
+    })
+    expect(container!.style.cursor).toBe('default')
+    await act(async () => renderer.destroy())
+  })
+
   it('原生 wheel 监听阻止默认滚动并把 viewport 逐帧上报给 host', async () => {
     let animationFrame: FrameRequestCallback | null = null
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {

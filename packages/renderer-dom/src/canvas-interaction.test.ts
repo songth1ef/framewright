@@ -92,6 +92,18 @@ function pointer(
   return event
 }
 
+function keydown(key: string, init: KeyboardEventInit = {}): KeyboardEvent {
+  const event = new KeyboardEvent('keydown', {
+    key,
+    code: key === ' ' ? 'Space' : key,
+    bubbles: true,
+    cancelable: true,
+    ...init,
+  })
+  window.dispatchEvent(event)
+  return event
+}
+
 function setup(ctx = makeContext()) {
   const onPreview = vi.fn()
   interaction = createCanvasInteraction(container, ctx, { onPreview })
@@ -317,5 +329,99 @@ describe('单选等比缩放', () => {
     pointer(window, 'pointercancel', 0, 0)
     expect(single.callbacks.onNodesResize).not.toHaveBeenCalled()
     expect(single.onPreview).toHaveBeenLastCalledWith({})
+  })
+})
+
+describe('键盘操作', () => {
+  it('方向键移动 1px，Shift + 方向键移动 10px', () => {
+    const { callbacks } = setup(makeContext(['nested']))
+
+    keydown('ArrowRight')
+    keydown('ArrowDown', { shiftKey: true })
+
+    expect(callbacks.onNodesMove).toHaveBeenNthCalledWith(1, [
+      { fwId: 'nested', parentFwId: 'transparent-frame', x: 6, y: 5 },
+    ])
+    expect(callbacks.onNodesMove).toHaveBeenNthCalledWith(2, [
+      { fwId: 'nested', parentFwId: 'transparent-frame', x: 5, y: 15 },
+    ])
+  })
+
+  it('Delete/Backspace 删除选中集，Ctrl+A 阻止浏览器默认行为并全选可选节点', () => {
+    const { callbacks } = setup(makeContext(['box-a', 'box-b']))
+
+    keydown('Delete')
+    keydown('Backspace')
+    const selectAll = keydown('a', { code: 'KeyA', ctrlKey: true })
+
+    expect(callbacks.onNodesDelete).toHaveBeenNthCalledWith(1, ['box-a', 'box-b'])
+    expect(callbacks.onNodesDelete).toHaveBeenNthCalledWith(2, ['box-a', 'box-b'])
+    expect(selectAll.defaultPrevented).toBe(true)
+    expect(callbacks.onSelectionRequest).toHaveBeenCalledWith(
+      ['box-a', 'box-b', 'transparent-frame', 'nested', 'resize-node'],
+      'replace',
+    )
+  })
+
+  it('Esc 清空选中并取消手势预览，IME composing 时不处理快捷键', () => {
+    const box = addTarget('box-a')
+    const { callbacks, onPreview } = setup(makeContext(['box-a']))
+    pointer(box, 'pointerdown', 15, 15)
+    pointer(window, 'pointermove', 25, 20)
+
+    keydown('Escape')
+    keydown('Delete', { isComposing: true })
+
+    expect(onPreview).toHaveBeenLastCalledWith({})
+    expect(callbacks.onSelectionRequest).toHaveBeenCalledWith([], 'replace')
+    expect(callbacks.onNodesDelete).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['input', document.createElement('input')],
+    ['textarea', document.createElement('textarea')],
+    ['contenteditable', Object.assign(document.createElement('div'), { contentEditable: 'true', tabIndex: 0 })],
+  ])('document.activeElement 在 %s 时方向键、Delete 与 Ctrl+A 均不劫持', (_name, editable) => {
+    container.appendChild(editable)
+    editable.focus()
+    expect(document.activeElement).toBe(editable)
+    const { callbacks } = setup(makeContext(['box-a']))
+
+    keydown('ArrowLeft')
+    keydown('Delete')
+    const selectAll = keydown('a', { code: 'KeyA', ctrlKey: true })
+
+    expect(callbacks.onNodesMove).not.toHaveBeenCalled()
+    expect(callbacks.onNodesDelete).not.toHaveBeenCalled()
+    expect(callbacks.onSelectionRequest).not.toHaveBeenCalled()
+    expect(selectAll.defaultPrevented).toBe(false)
+  })
+})
+
+describe('光标反馈', () => {
+  it('空白、业务单元与四角控制点使用对应光标', () => {
+    const box = addTarget('box-a')
+    const nw = addResizeHandle('box-a', 'nw')
+    const ne = addResizeHandle('box-a', 'ne')
+    setup(makeContext(['box-a']))
+
+    pointer(box, 'pointermove', 15, 15)
+    expect(container.style.cursor).toBe('move')
+    pointer(nw, 'pointermove', 10, 10)
+    expect(container.style.cursor).toBe('nwse-resize')
+    pointer(ne, 'pointermove', 30, 10)
+    expect(container.style.cursor).toBe('nesw-resize')
+    pointer(container, 'pointermove', 200, 100)
+    expect(container.style.cursor).toBe('default')
+  })
+
+  it('框选中为 crosshair，pointercancel 后复位 default', () => {
+    setup()
+    pointer(container, 'pointerdown', 200, 100)
+    pointer(window, 'pointermove', 210, 110)
+    expect(container.style.cursor).toBe('crosshair')
+
+    pointer(window, 'pointercancel', 210, 110)
+    expect(container.style.cursor).toBe('default')
   })
 })

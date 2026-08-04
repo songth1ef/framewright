@@ -12,6 +12,7 @@ const ZOOM_STEP = 1.1
 interface ViewportInteractionOptions {
   onViewportChange: RendererCallbacks['onViewportChange']
   onPreview(viewport: Viewport): void
+  onCursorChange?(cursor: 'grab' | 'grabbing' | null): void
 }
 
 export interface ViewportInteraction {
@@ -72,7 +73,12 @@ export function createViewportInteraction(
   }
 
   const updateCursor = (): void => {
-    container.style.cursor = panPointer !== null ? 'grabbing' : spacePressed ? 'grab' : previousCursor
+    const cursor = panPointer !== null ? 'grabbing' : spacePressed ? 'grab' : null
+    if (options.onCursorChange !== undefined) {
+      options.onCursorChange(cursor)
+    } else {
+      container.style.cursor = cursor ?? previousCursor
+    }
   }
 
   const onWheel = (event: WheelEvent): void => {
@@ -199,7 +205,8 @@ export function createViewportInteraction(
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
-      container.style.cursor = previousCursor
+      if (options.onCursorChange !== undefined) options.onCursorChange(null)
+      else container.style.cursor = previousCursor
     },
   }
 }
