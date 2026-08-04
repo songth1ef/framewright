@@ -15,21 +15,15 @@ const S = GEN_UNIT_STYLE
 
 type GenUnitNode = AiImageNode | AiVideoNode
 
-type OnNodeAction = (fwId: string, action: string) => void
-
 /**
- * 内部动作按钮（点击生成 / 重试）：标记 `data.fwInternalAction` 供命中分派排除，
- * 命中时只上报 `onNodeAction` 并 stop 事件——不触发选中、拖拽、双击（M1 §5）。
- * onNodeAction 要等 D0 把 callbacks 加进 RenderContext 后才由 index 注入；
- * 未注入时按钮静默不动作，不许报错。
+ * 内部动作按钮（点击生成 / 重试）：只打 `data.fwInternalAction` 标记，
+ * 供命中分派按「内部交互、不参与选中/拖拽/双击」排除（M1 §5）。
+ * 点击行为（onNodeAction）按 2026-08-04 裁定延期到 D0-min——
+ * RenderContext.callbacks 尚不存在，本轮不许自造临时回调通道。
  */
-function wireAction(ui: IUI, fwId: string, action: NodeActionName, onNodeAction?: OnNodeAction): void {
+function markInternalAction(ui: IUI, action: NodeActionName): void {
   ui.data = { fwInternalAction: action }
   ui.cursor = 'pointer'
-  ui.on('tap', (event: { stop(): void }) => {
-    event.stop()
-    onNodeAction?.(fwId, action)
-  })
 }
 
 // ---------------------------------------------------------------------------
@@ -86,7 +80,7 @@ function timestamp(): number {
 // 四态内部结构（M1 §3）。内部坐标一律相对容器左上角；容器尺寸 = node 尺寸。
 // ---------------------------------------------------------------------------
 
-function buildEmpty(container: IUI, node: GenUnitNode, onNodeAction?: OnNodeAction): void {
+function buildEmpty(container: IUI, node: GenUnitNode): void {
   container.add(new Rect({ x: 0, y: 0, width: node.width, height: node.height, fill: S.emptyBackground }))
   const labelHeight = S.emptyFontSize + 8
   const label = new Text({
@@ -100,7 +94,7 @@ function buildEmpty(container: IUI, node: GenUnitNode, onNodeAction?: OnNodeActi
     textAlign: 'center',
     verticalAlign: 'middle',
   })
-  wireAction(label, node.fwId, NODE_ACTIONS.generate, onNodeAction)
+  markInternalAction(label, NODE_ACTIONS.generate)
   container.add(label)
 }
 
@@ -161,7 +155,7 @@ function buildSucceeded(container: IUI, node: GenUnitNode): void {
   container.add(badge)
 }
 
-function buildFailed(container: IUI, node: GenUnitNode, onNodeAction?: OnNodeAction): void {
+function buildFailed(container: IUI, node: GenUnitNode): void {
   container.add(new Rect({ x: 0, y: 0, width: node.width, height: node.height, fill: S.failedBackground }))
   const message = node.errorMessage === null || node.errorMessage === '' ? '生成失败' : node.errorMessage
   const lineHeight = 20
@@ -191,7 +185,7 @@ function buildFailed(container: IUI, node: GenUnitNode, onNodeAction?: OnNodeAct
     textAlign: 'center',
     verticalAlign: 'middle',
   })
-  wireAction(retry, node.fwId, NODE_ACTIONS.retry, onNodeAction)
+  markInternalAction(retry, NODE_ACTIONS.retry)
   container.add(retry)
 }
 
@@ -201,7 +195,7 @@ function buildFailed(container: IUI, node: GenUnitNode, onNodeAction?: OnNodeAct
  * 几何、颜色、字号、层次按 M1 实现；布局手段（绝对定位）是本侧自由发挥的部分。
  */
 export function createGenerationUnitShape(): ShapeFactory {
-  return ({ node, position, selected, onNodeAction }) => {
+  return ({ node, position, selected }) => {
     if (!isAiImageNode(node) && !isAiVideoNode(node)) {
       throw new Error(`createGenerationUnitShape 只接受 ai-image/ai-video，收到 ${node.fwType}`)
     }
@@ -215,7 +209,7 @@ export function createGenerationUnitShape(): ShapeFactory {
     })
     switch (node.status) {
       case 'empty':
-        buildEmpty(container, node, onNodeAction)
+        buildEmpty(container, node)
         break
       case 'pending':
       case 'running':
@@ -225,7 +219,7 @@ export function createGenerationUnitShape(): ShapeFactory {
         buildSucceeded(container, node)
         break
       case 'failed':
-        buildFailed(container, node, onNodeAction)
+        buildFailed(container, node)
         break
     }
     return applySelection(container, selected)

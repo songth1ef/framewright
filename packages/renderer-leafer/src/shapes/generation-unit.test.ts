@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '../leafer-test-stub'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   GEN_UNIT_STYLE,
   NODE_ACTIONS,
@@ -17,8 +17,8 @@ const factory = createGenerationUnitShape()
 
 type GenNode = AiImageNode | AiVideoNode
 
-function build(node: GenNode, onNodeAction?: (fwId: string, action: string) => void): IUI {
-  return factory({ node, position: { x: 0, y: 0 }, selected: false, onNodeAction })
+function build(node: GenNode): IUI {
+  return factory({ node, position: { x: 0, y: 0 }, selected: false })
 }
 
 function collectAll(root: IUI): IUI[] {
@@ -185,38 +185,29 @@ describe('C1-leafer 生成单元四态', () => {
   })
 })
 
-describe('C1-leafer 内部按钮', () => {
-  it('「点击生成」只触发 onNodeAction(generate)，事件被 stop', () => {
-    const onNodeAction = vi.fn()
+describe('C1-leafer 内部按钮标记', () => {
+  // 按 2026-08-04 裁定：本轮只打「内部交互、不参与选中/拖拽/双击」的语义标记，
+  // 点击行为（onNodeAction）延到 D0-min，不许自造临时回调通道。
+  it('「点击生成」带 fwInternalAction=generate 标记', () => {
     const node = createAiImageNode({ fwId: 'g10', status: 'empty' })
-    const ui = build(node, onNodeAction)
+    const ui = build(node)
     const button = findText(ui, '点击生成') as unknown as IUI
     expect((button.data as Record<string, unknown>)['fwInternalAction']).toBe(
       NODE_ACTIONS.generate,
     )
-    // 处理器只依赖 event.stop()，用最小事件桩即可；leafer 自身的事件分派由探针另行验证过
-    const stop = vi.fn()
-    button.emit('tap', { stop } as never)
-    expect(onNodeAction).toHaveBeenCalledWith('g10', NODE_ACTIONS.generate)
-    expect(onNodeAction).toHaveBeenCalledTimes(1)
-    expect(stop).toHaveBeenCalled()
   })
 
-  it('「重试」只触发 onNodeAction(retry)', () => {
-    const onNodeAction = vi.fn()
+  it('「重试」带 fwInternalAction=retry 标记', () => {
     const node = createAiImageNode({ fwId: 'g11', status: 'failed', errorMessage: 'x' })
-    const ui = build(node, onNodeAction)
+    const ui = build(node)
     const button = findText(ui, '重试') as unknown as IUI
     expect((button.data as Record<string, unknown>)['fwInternalAction']).toBe(NODE_ACTIONS.retry)
-    button.emit('tap', { stop: () => {} } as never)
-    expect(onNodeAction).toHaveBeenCalledWith('g11', NODE_ACTIONS.retry)
-    expect(onNodeAction).toHaveBeenCalledTimes(1)
   })
 
-  it('未注入 onNodeAction 时点击不报错（callbacks 属 D0，尚未进 RenderContext）', () => {
-    const node = createAiImageNode({ fwId: 'g12', status: 'empty' })
+  it('按钮以外的内部元素不带动作标记', () => {
+    const node = createAiImageNode({ fwId: 'g12', status: 'failed', errorMessage: 'x' })
     const ui = build(node)
-    const button = findText(ui, '点击生成') as unknown as IUI
-    expect(() => button.emit('tap', { stop: () => {} } as never)).not.toThrow()
+    const message = findText(ui, 'x') as unknown as IUI
+    expect((message.data as Record<string, unknown> | undefined)?.['fwInternalAction']).toBeUndefined()
   })
 })
