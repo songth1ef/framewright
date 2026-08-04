@@ -6,3 +6,6 @@ test-results/
 playwright-report/
 .env
 .env.local
+
+# agent 之间的异步信箱：过程通信，不是项目资产。协议见 docs/agents-mail.md
+docs/agents-mail/
