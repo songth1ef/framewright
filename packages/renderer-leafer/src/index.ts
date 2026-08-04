@@ -9,18 +9,32 @@ import {
   type RendererAdapter,
 } from '@framewright/core'
 import { Leafer, PointerEvent, type IUI } from 'leafer-ui'
+import { assertBuiltinGesturesInert } from './builtin-gesture-guard'
 import { buildConnectionLayer } from './connections'
 import { dispatchNodeActionTap } from './node-action'
 import { LEAFER_SHAPES } from './shapes/registry'
+import { createViewportInteraction, type ViewportInteraction } from './viewport-interaction'
 
 export function createLeaferRenderer(): RendererAdapter {
   assertShapeCoverage('leafer', LEAFER_SHAPES)
 
   let leafer: Leafer | null = null
+  let interaction: ViewportInteraction | null = null
   let bounds = new Map<string, CoreRect>()
   let visibleNodeIds: string[] = []
   /** 最近一次 draw 的 ctx：tap 分派只读 callbacks，用它避免闭包抓住过期 ctx */
   let currentCtx: RenderContext | null = null
+
+  /**
+   * 只改 transform 的轻量预览：手势进行中逐帧调用，不重建场景图。
+   * 连线描边等的缩放补偿由紧随其后的 host 回流 draw 补齐（最多差一帧）。
+   */
+  const applyViewport = (viewport: RenderContext['viewport']): void => {
+    if (leafer === null) return
+    leafer.scale = viewport.scale
+    leafer.x = viewport.offsetX
+    leafer.y = viewport.offsetY
+  }
 
   const buildNode = (
     node: CanvasNode,
@@ -67,9 +81,7 @@ export function createLeaferRenderer(): RendererAdapter {
     leafer.clear()
     bounds = new Map<string, CoreRect>()
     visibleNodeIds = []
-    leafer.scale = ctx.viewport.scale
-    leafer.x = ctx.viewport.offsetX
-    leafer.y = ctx.viewport.offsetY
+    applyViewport(ctx.viewport)
     // 连线不是 node：不进 node 树、不进 getRenderedBounds，只作为 root 的底层装饰注入
     const connectionLayer = buildConnectionLayer(
       collectConnectionItems(ctx.root),
@@ -85,18 +97,30 @@ export function createLeaferRenderer(): RendererAdapter {
 
     mount(container, ctx) {
       leafer = new Leafer({ view: container })
+      // 建实例时显式确认内建手势为关（renderer-contract §3.1）：
+      // 我们只把 Leafer 当感知器，视口手势由下面的原生事件状态机实现
+      assertBuiltinGesturesInert(leafer)
       // 内部按钮（点击生成 / 重试）：只上报 onNodeAction，不参与选中/拖拽/双击（M1 §5）
       leafer.on(PointerEvent.TAP, (e) => {
         if (currentCtx !== null) dispatchNodeActionTap(e.target as IUI, currentCtx.callbacks)
+      })
+      // Leafer 不上抛 wheel，且内建 wheel handler 对 transform 是 no-op——
+      // 手势监听走 container 原生事件（wheel 必须 passive:false + preventDefault）
+      interaction = createViewportInteraction(container, ctx.viewport, {
+        onViewportChange: ctx.callbacks.onViewportChange,
+        onPreview: applyViewport,
       })
       draw(ctx)
     },
 
     update(ctx) {
+      interaction?.update(ctx.viewport, ctx.callbacks.onViewportChange)
       draw(ctx)
     },
 
     destroy() {
+      interaction?.destroy()
+      interaction = null
       leafer?.destroy()
       leafer = null
       currentCtx = null
