@@ -20,10 +20,12 @@ export function createLeaferRenderer(): RendererAdapter {
   const buildNode = (
     node: CanvasNode,
     parentAbsolute: Point,
+    parentVisible: boolean,
     selection: readonly string[],
     parent: IUI | Leafer,
   ): void => {
     const absolute: Point = { x: parentAbsolute.x + node.x, y: parentAbsolute.y + node.y }
+    const visible = parentVisible && node.visible
     bounds.set(node.fwId, {
       x: absolute.x,
       y: absolute.y,
@@ -32,14 +34,17 @@ export function createLeaferRenderer(): RendererAdapter {
     })
 
     const factory = LEAFER_SHAPES[node.fwType]
-    const ui = factory({ node, absolute, selected: selection.includes(node.fwId) })
+    const ui = factory({
+      node,
+      position: { x: node.x, y: node.y },
+      selected: selection.includes(node.fwId),
+    })
     parent.add(ui)
-    if (node.visible) visibleNodeIds.push(node.fwId)
+    if (visible) visibleNodeIds.push(node.fwId)
 
     if (isFrameNode(node)) {
-      // 子节点同样使用画布绝对坐标，故父级传 leafer 根而非 ui，避免双重偏移
       for (const child of node.children) {
-        buildNode(child, absolute, selection, leafer as Leafer)
+        buildNode(child, absolute, visible, selection, ui)
       }
     }
   }
@@ -52,7 +57,7 @@ export function createLeaferRenderer(): RendererAdapter {
     leafer.scale = ctx.viewport.scale
     leafer.x = ctx.viewport.offsetX
     leafer.y = ctx.viewport.offsetY
-    buildNode(ctx.root, { x: 0, y: 0 }, ctx.selection, leafer)
+    buildNode(ctx.root, { x: 0, y: 0 }, true, ctx.selection, leafer)
   }
 
   return {

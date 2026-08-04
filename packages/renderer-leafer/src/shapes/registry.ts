@@ -11,7 +11,7 @@ import { toLeaferProps } from '../node-props'
 
 export interface ShapeContext {
   node: CanvasNode
-  absolute: Point
+  position: Point
   selected: boolean
 }
 
@@ -28,18 +28,18 @@ function applySelection(ui: IUI, selected: boolean): IUI {
   return ui
 }
 
-const createFrame: ShapeFactory = ({ node, absolute, selected }) => {
+const createFrame: ShapeFactory = ({ node, position, selected }) => {
   const box = new Box({
-    ...toLeaferProps(node, absolute),
+    ...toLeaferProps(node, position),
     fill: isFrameNode(node) && node.background !== null ? node.background : undefined,
     overflow: isFrameNode(node) && node.clip ? 'hide' : 'show',
   })
   return applySelection(box, selected)
 }
 
-const createBox: ShapeFactory = ({ node, absolute, selected }) => {
+const createBox: ShapeFactory = ({ node, position, selected }) => {
   const rect = new Rect({
-    ...toLeaferProps(node, absolute),
+    ...toLeaferProps(node, position),
     fill: isBoxNode(node) ? node.fill : undefined,
     cornerRadius: isBoxNode(node) ? node.cornerRadius : 0,
   })
@@ -51,9 +51,9 @@ const createBox: ShapeFactory = ({ node, absolute, selected }) => {
  * 留空会让 assertShapeCoverage 报错，这是刻意的。
  */
 function makeUnsupportedShape(): ShapeFactory {
-  return ({ node, absolute, selected }) => {
+  return ({ node, position, selected }) => {
     const rect = new Rect({
-      ...toLeaferProps(node, absolute),
+      ...toLeaferProps(node, position),
       fill: '#DDDDDD',
       stroke: '#999999',
       strokeWidth: 1,

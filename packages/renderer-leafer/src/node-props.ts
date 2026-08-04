@@ -17,10 +17,10 @@ export interface LeaferBaseProps {
  * visible/name/children 与我方字段全部同名，展开会静默覆盖并让新增字段泄漏。
  * 见 docs/domain.md §3.3 规则 7。
  */
-export function toLeaferProps(node: CanvasNode, absolute: Point): LeaferBaseProps {
+export function toLeaferProps(node: CanvasNode, position: Point): LeaferBaseProps {
   return {
-    x: absolute.x,
-    y: absolute.y,
+    x: position.x,
+    y: position.y,
     width: node.width,
     height: node.height,
     rotation: node.rotation,

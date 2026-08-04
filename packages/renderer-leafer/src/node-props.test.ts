@@ -3,11 +3,11 @@ import { createBoxNode, createFrameNode } from '@framewright/core'
 import { toLeaferProps } from './node-props'
 
 describe('toLeaferProps', () => {
-  it('用绝对坐标，几何字段逐个映射', () => {
+  it('用父相对坐标，几何字段逐个映射', () => {
     const box = createBoxNode({ fwId: 'b', x: 10, y: 20, width: 30, height: 40 })
-    const props = toLeaferProps(box, { x: 110, y: 220 })
-    expect(props.x).toBe(110)
-    expect(props.y).toBe(220)
+    const props = toLeaferProps(box, { x: 10, y: 20 })
+    expect(props.x).toBe(10)
+    expect(props.y).toBe(20)
     expect(props.width).toBe(30)
     expect(props.height).toBe(40)
   })
