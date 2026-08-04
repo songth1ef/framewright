@@ -289,6 +289,15 @@ describe('createDomRenderer', () => {
     await act(async () => renderer.destroy())
   })
 
+  it('单选显示四角缩放控制点，多选只保留选区而不显示控制点', async () => {
+    const renderer = await mountRenderer(makeContext(['box-front']))
+    expect(container!.querySelectorAll('[data-fw-resize-handle]')).toHaveLength(4)
+
+    await act(async () => renderer.update(makeContext(['box-front', 'box-back'])))
+    expect(container!.querySelectorAll('[data-fw-resize-handle]')).toHaveLength(0)
+    await act(async () => renderer.destroy())
+  })
+
   it('原生 wheel 监听阻止默认滚动并把 viewport 逐帧上报给 host', async () => {
     let animationFrame: FrameRequestCallback | null = null
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {

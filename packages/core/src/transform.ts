@@ -4,6 +4,12 @@ import type { Rect } from './renderer-adapter'
 
 export type Corner = 'nw' | 'ne' | 'sw' | 'se'
 
+/**
+ * 节点缩放的最小尺寸（画布 px，宽高分别钳制）。
+ * 两侧必须 import 本常量，避免缩放手感分叉。
+ */
+export const MIN_NODE_SIZE = 32
+
 export interface NodeMove {
   fwId: string
   parentFwId: string

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { createBoxNode, createFrameNode, type FrameNode } from './node-schema'
-import { computeMoves, resizeProportional } from './transform'
+import { computeMoves, MIN_NODE_SIZE, resizeProportional } from './transform'
+
+describe('MIN_NODE_SIZE', () => {
+  it('统一为 32 画布 px', () => {
+    expect(MIN_NODE_SIZE).toBe(32)
+  })
+})
 
 /**
  * root(0,0)

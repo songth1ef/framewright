@@ -15,6 +15,7 @@ import {
   EMPTY_INTERACTION_PREVIEW,
   type CanvasInteraction,
   type CanvasInteractionPreview,
+  type NodeResize,
 } from './canvas-interaction'
 import { InteractionOverlay } from './interaction-overlay'
 import { DOM_SHAPES } from './shapes/registry'
@@ -26,20 +27,23 @@ function renderNode(
   parentVisible: boolean,
   selection: readonly string[],
   previewMoves: ReadonlyMap<string, { x: number; y: number }>,
+  previewResizes: ReadonlyMap<string, NodeResize>,
   bounds: Map<string, Rect>,
   visibleNodeIds: string[],
   onNodeAction: RenderContext['callbacks']['onNodeAction'],
   connectionLayer?: ReactNode,
 ): ReactNode {
+  const previewResize = previewResizes.get(node.fwId)
   const previewPosition = previewMoves.get(node.fwId)
-  const position: Point = previewPosition ?? { x: node.x, y: node.y }
+  const position: Point = previewResize ?? previewPosition ?? { x: node.x, y: node.y }
+  const size = previewResize ?? { width: node.width, height: node.height }
   const absolute: Point = { x: parentAbsolute.x + position.x, y: parentAbsolute.y + position.y }
   const visible = parentVisible && node.visible
   bounds.set(node.fwId, {
     x: absolute.x,
     y: absolute.y,
-    width: node.width,
-    height: node.height,
+    width: size.width,
+    height: size.height,
   })
   if (visible) visibleNodeIds.push(node.fwId)
 
@@ -55,6 +59,7 @@ function renderNode(
               visible,
               selection,
               previewMoves,
+              previewResizes,
               bounds,
               visibleNodeIds,
               onNodeAction,
@@ -69,6 +74,7 @@ function renderNode(
       key={node.fwId}
       node={node}
       position={position}
+      size={size}
       selected={selection.includes(node.fwId)}
       onNodeAction={onNodeAction}
     >
@@ -95,6 +101,9 @@ export function createDomRenderer(): RendererAdapter {
     const { scale, offsetX, offsetY } = ctx.viewport
     const previewMoves = new Map(
       (interactionPreview.moves ?? []).map((move) => [move.fwId, { x: move.x, y: move.y }]),
+    )
+    const previewResizes = new Map(
+      (interactionPreview.resizes ?? []).map((resize) => [resize.fwId, resize]),
     )
     const rootBounds: Rect = {
       x: ctx.root.x,
@@ -128,13 +137,21 @@ export function createDomRenderer(): RendererAdapter {
             true,
             ctx.selection,
             previewMoves,
+            previewResizes,
             bounds,
             visibleNodeIds,
             ctx.callbacks.onNodeAction,
             connectionLayer,
           )}
         </div>
-        <InteractionOverlay preview={interactionPreview} viewport={ctx.viewport} />
+        <InteractionOverlay
+          preview={interactionPreview}
+          viewport={ctx.viewport}
+          selectionBounds={ctx.selection.flatMap((fwId) => {
+            const rect = bounds.get(fwId)
+            return rect === undefined ? [] : [{ fwId, rect }]
+          })}
+        />
       </div>,
     )
   }

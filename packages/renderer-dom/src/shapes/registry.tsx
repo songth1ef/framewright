@@ -17,6 +17,7 @@ import { GenerationUnit } from './generation-unit'
 export interface ShapeProps {
   node: CanvasNode
   position: Point
+  size?: { width: number; height: number }
   selected: boolean
   onNodeAction: RendererCallbacks['onNodeAction']
   children?: ReactNode
@@ -30,8 +31,8 @@ function withSelection(style: CSSProperties, selected: boolean): CSSProperties {
   return selected ? { ...style, outline: SELECTED_OUTLINE } : style
 }
 
-function FrameShape({ node, position, selected, children }: ShapeProps): ReactNode {
-  const base = toNodeStyle(node, position)
+function FrameShape({ node, position, size, selected, children }: ShapeProps): ReactNode {
+  const base = toNodeStyle(node, position, size)
   const style: CSSProperties = {
     ...base,
     background: isFrameNode(node) && node.background !== null ? node.background : 'transparent',
@@ -44,8 +45,8 @@ function FrameShape({ node, position, selected, children }: ShapeProps): ReactNo
   )
 }
 
-function BoxShape({ node, position, selected }: ShapeProps): ReactNode {
-  const base = toNodeStyle(node, position)
+function BoxShape({ node, position, size, selected }: ShapeProps): ReactNode {
+  const base = toNodeStyle(node, position, size)
   const style: CSSProperties = {
     ...base,
     background: isBoxNode(node) ? node.fill : 'transparent',
@@ -54,12 +55,13 @@ function BoxShape({ node, position, selected }: ShapeProps): ReactNode {
   return <div data-fw-id={node.fwId} data-fw-type="box" style={withSelection(style, selected)} />
 }
 
-function GenerationUnitShape({ node, position, selected, onNodeAction }: ShapeProps): ReactNode {
+function GenerationUnitShape({ node, position, size, selected, onNodeAction }: ShapeProps): ReactNode {
   if (!isAiImageNode(node) && !isAiVideoNode(node)) return null
   return (
     <GenerationUnit
       node={node}
       position={position}
+      size={size}
       selected={selected}
       onNodeAction={onNodeAction}
     />
@@ -72,9 +74,9 @@ function GenerationUnitShape({ node, position, selected, onNodeAction }: ShapePr
  * 正好喂给 docs/architecture.md §8.2 的实现成本对照表。
  */
 function makeUnsupportedShape(type: ShapeType): ShapeComponent {
-  return function UnsupportedShape({ node, position, selected }: ShapeProps): ReactNode {
+  return function UnsupportedShape({ node, position, size, selected }: ShapeProps): ReactNode {
     const style: CSSProperties = {
-      ...toNodeStyle(node, position),
+      ...toNodeStyle(node, position, size),
       background: 'repeating-linear-gradient(45deg,#EEE,#EEE 8px,#DDD 8px,#DDD 16px)',
       border: '1px dashed #999',
     }

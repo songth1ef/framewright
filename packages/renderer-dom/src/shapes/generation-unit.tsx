@@ -14,6 +14,7 @@ type GenerationNode = AiImageNode | AiVideoNode
 export interface GenerationUnitProps {
   node: GenerationNode
   position: Point
+  size?: { width: number; height: number }
   selected: boolean
   onNodeAction(fwId: string, action: string): void
 }
@@ -219,13 +220,14 @@ function renderContent(
 export function GenerationUnit({
   node,
   position,
+  size,
   selected,
   onNodeAction,
 }: GenerationUnitProps): ReactNode {
   const isEmpty = node.status === 'empty'
   const isFailed = node.status === 'failed'
   const style: CSSProperties = {
-    ...toNodeStyle(node, position),
+    ...toNodeStyle(node, position, size),
     overflow: 'hidden',
     borderWidth: `${GEN_UNIT_STYLE.borderWidth}px`,
     borderStyle: isEmpty ? 'dashed' : 'solid',

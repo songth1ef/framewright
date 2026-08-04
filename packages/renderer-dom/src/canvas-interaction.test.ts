@@ -26,7 +26,10 @@ const root = createFrameNode({
       width: 60,
       height: 60,
       background: null,
-      children: [createBoxNode({ fwId: 'nested', x: 5, y: 5, width: 10, height: 10 })],
+      children: [
+        createBoxNode({ fwId: 'nested', x: 5, y: 5, width: 10, height: 10 }),
+        createBoxNode({ fwId: 'resize-node', x: 20, y: 20, width: 40, height: 20 }),
+      ],
     }),
   ],
 })
@@ -56,6 +59,14 @@ function makeContext(
 
 function addTarget(fwId: string): HTMLElement {
   const element = document.createElement('div')
+  element.dataset.fwId = fwId
+  container.appendChild(element)
+  return element
+}
+
+function addResizeHandle(fwId: string, corner: 'nw' | 'ne' | 'sw' | 'se'): HTMLElement {
+  const element = document.createElement('div')
+  element.dataset.fwResizeHandle = corner
   element.dataset.fwId = fwId
   container.appendChild(element)
   return element
@@ -239,5 +250,72 @@ describe('节点拖拽移动', () => {
     pointer(window, 'pointercancel', 25, 20)
     expect(callbacks.onNodesMove).not.toHaveBeenCalled()
     expect(onPreview).toHaveBeenLastCalledWith({})
+  })
+})
+
+describe('单选等比缩放', () => {
+  it('拖动四角控制点只预览，pointerup 才提交一次父相对坐标', () => {
+    const handle = addResizeHandle('resize-node', 'se')
+    const { callbacks, onPreview } = setup(makeContext(['resize-node']))
+
+    pointer(handle, 'pointerdown', 160, 50)
+    pointer(window, 'pointermove', 200, 70)
+
+    expect(onPreview).toHaveBeenLastCalledWith({
+      resizes: [
+        {
+          fwId: 'resize-node',
+          parentFwId: 'transparent-frame',
+          x: 20,
+          y: 20,
+          width: 80,
+          height: 40,
+        },
+      ],
+    })
+    expect(callbacks.onNodesResize).not.toHaveBeenCalled()
+
+    pointer(window, 'pointerup', 220, 80)
+    expect(callbacks.onNodesResize).toHaveBeenCalledOnce()
+    expect(callbacks.onNodesResize).toHaveBeenCalledWith([
+      {
+        fwId: 'resize-node',
+        parentFwId: 'transparent-frame',
+        x: 20,
+        y: 20,
+        width: 100,
+        height: 50,
+      },
+    ])
+  })
+
+  it('使用 core 的 32 画布 px 最小尺寸钳制', () => {
+    const handle = addResizeHandle('box-a', 'se')
+    const { callbacks } = setup(makeContext(['box-a']))
+
+    pointer(handle, 'pointerdown', 30, 30)
+    pointer(window, 'pointermove', 11, 11)
+    pointer(window, 'pointerup', 11, 11)
+
+    expect(callbacks.onNodesResize).toHaveBeenCalledWith([
+      { fwId: 'box-a', parentFwId: 'root', x: 10, y: 10, width: 32, height: 32 },
+    ])
+  })
+
+  it('多选不启动缩放，pointercancel 丢弃缩放预览且不提交', () => {
+    const handle = addResizeHandle('box-a', 'nw')
+    const multi = setup(makeContext(['box-a', 'box-b']))
+    pointer(handle, 'pointerdown', 10, 10)
+    pointer(window, 'pointermove', 0, 0)
+    pointer(window, 'pointerup', 0, 0)
+    expect(multi.callbacks.onNodesResize).not.toHaveBeenCalled()
+
+    interaction?.destroy()
+    const single = setup(makeContext(['box-a']))
+    pointer(handle, 'pointerdown', 10, 10)
+    pointer(window, 'pointermove', 0, 0)
+    pointer(window, 'pointercancel', 0, 0)
+    expect(single.callbacks.onNodesResize).not.toHaveBeenCalled()
+    expect(single.onPreview).toHaveBeenLastCalledWith({})
   })
 })

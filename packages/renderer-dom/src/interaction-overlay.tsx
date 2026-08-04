@@ -5,6 +5,7 @@ import type { CanvasInteractionPreview } from './canvas-interaction'
 interface InteractionOverlayProps {
   preview: CanvasInteractionPreview
   viewport: Viewport
+  selectionBounds: ReadonlyArray<{ fwId: string; rect: Rect }>
 }
 
 function screenRect(rect: Rect, viewport: Viewport): CSSProperties {
@@ -19,8 +20,22 @@ function screenRect(rect: Rect, viewport: Viewport): CSSProperties {
   }
 }
 
-export function InteractionOverlay({ preview, viewport }: InteractionOverlayProps): ReactNode {
+const HANDLE_CORNERS = ['nw', 'ne', 'sw', 'se'] as const
+
+const HANDLE_CURSOR = {
+  nw: 'nwse-resize',
+  ne: 'nesw-resize',
+  sw: 'nesw-resize',
+  se: 'nwse-resize',
+} as const
+
+export function InteractionOverlay({
+  preview,
+  viewport,
+  selectionBounds,
+}: InteractionOverlayProps): ReactNode {
   const marquee = preview.marquee ?? null
+  const singleSelection = selectionBounds.length === 1 ? selectionBounds[0]! : null
   return (
     <div
       data-fw-interaction-overlay="true"
@@ -36,6 +51,33 @@ export function InteractionOverlay({ preview, viewport }: InteractionOverlayProp
           }}
         />
       )}
+      {singleSelection === null
+        ? null
+        : HANDLE_CORNERS.map((corner) => {
+            const rect = screenRect(singleSelection.rect, viewport)
+            const isRight = corner === 'ne' || corner === 'se'
+            const isBottom = corner === 'sw' || corner === 'se'
+            return (
+              <div
+                key={corner}
+                data-fw-id={singleSelection.fwId}
+                data-fw-resize-handle={corner}
+                style={{
+                  position: 'absolute',
+                  left: isRight ? `calc(${rect.left} + ${rect.width})` : rect.left,
+                  top: isBottom ? `calc(${rect.top} + ${rect.height})` : rect.top,
+                  width: '8px',
+                  height: '8px',
+                  border: '1px solid #5B8091',
+                  background: '#FFFFFF',
+                  boxSizing: 'border-box',
+                  cursor: HANDLE_CURSOR[corner],
+                  pointerEvents: 'auto',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              />
+            )
+          })}
     </div>
   )
 }
