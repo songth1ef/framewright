@@ -1,6 +1,8 @@
 import {
   SHAPE_TYPES,
   assertShapeCoverage,
+  isAiImageNode,
+  isAiVideoNode,
   isBoxNode,
   isFrameNode,
   type CanvasNode,
@@ -9,6 +11,7 @@ import {
 } from '@framewright/core'
 import type { CSSProperties, ReactNode } from 'react'
 import { toNodeStyle } from '../node-style'
+import { GenerationUnit } from './generation-unit'
 
 export interface ShapeProps {
   node: CanvasNode
@@ -49,6 +52,11 @@ function BoxShape({ node, position, selected }: ShapeProps): ReactNode {
   return <div data-fw-id={node.fwId} data-fw-type="box" style={withSelection(style, selected)} />
 }
 
+function GenerationUnitShape({ node, position, selected }: ShapeProps): ReactNode {
+  if (!isAiImageNode(node) && !isAiVideoNode(node)) return null
+  return <GenerationUnit node={node} position={position} selected={selected} />
+}
+
 /**
  * P0 尚未实现的 shape 的显式占位。
  * 不留空——留空会让 assertShapeCoverage 报错，而「暂不支持」是一种被记录的状态，
@@ -77,8 +85,8 @@ export const DOM_SHAPES: Record<ShapeType, ShapeComponent> = {
   box: BoxShape,
   img: makeUnsupportedShape('img'),
   video: makeUnsupportedShape('video'),
-  'ai-image': makeUnsupportedShape('ai-image'),
-  'ai-video': makeUnsupportedShape('ai-video'),
+  'ai-image': GenerationUnitShape,
+  'ai-video': GenerationUnitShape,
 }
 
 assertShapeCoverage('dom', DOM_SHAPES)
