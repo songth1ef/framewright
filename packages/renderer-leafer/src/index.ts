@@ -10,7 +10,15 @@ import {
 } from '@framewright/core'
 import { Leafer, PointerEvent, type IUI } from 'leafer-ui'
 import { assertBuiltinGesturesInert } from './builtin-gesture-guard'
+import {
+  createCanvasInteraction,
+  EMPTY_INTERACTION_PREVIEW,
+  type CanvasInteraction,
+  type CanvasInteractionPreview,
+} from './canvas-interaction'
 import { buildConnectionLayer } from './connections'
+import { createLeaferHitProbe } from './hit-probe'
+import { buildInteractionOverlay } from './interaction-overlay'
 import { dispatchNodeActionTap } from './node-action'
 import { LEAFER_SHAPES } from './shapes/registry'
 import { createViewportInteraction, type ViewportInteraction } from './viewport-interaction'
@@ -20,6 +28,8 @@ export function createLeaferRenderer(): RendererAdapter {
 
   let leafer: Leafer | null = null
   let interaction: ViewportInteraction | null = null
+  let canvasInteraction: CanvasInteraction | null = null
+  let interactionPreview: CanvasInteractionPreview = EMPTY_INTERACTION_PREVIEW
   let bounds = new Map<string, CoreRect>()
   let visibleNodeIds: string[] = []
   /** 最近一次 draw 的 ctx：tap 分派只读 callbacks，用它避免闭包抓住过期 ctx */
@@ -89,6 +99,10 @@ export function createLeaferRenderer(): RendererAdapter {
       ctx.viewport.scale,
     )
     buildNode(ctx.root, { x: 0, y: 0 }, true, ctx.selection, leafer, connectionLayer)
+    // 交互 overlay（框选框/选中描边/控制点）加在所有节点之上——不是 node，不进 bounds
+    leafer.add(
+      buildInteractionOverlay({ preview: interactionPreview, viewportScale: ctx.viewport.scale }),
+    )
   }
 
   return {
@@ -110,17 +124,29 @@ export function createLeaferRenderer(): RendererAdapter {
         onViewportChange: ctx.callbacks.onViewportChange,
         onPreview: applyViewport,
       })
+      // 注册顺序是约定：viewport 的 pointerdown 先跑（中键/空格平移 preventDefault），
+      // 画布手势检查 defaultPrevented 让位——与 DOM 侧同一互锁机制
+      canvasInteraction = createCanvasInteraction(container, createLeaferHitProbe(leafer), ctx, {
+        onPreview: (preview) => {
+          interactionPreview = preview
+          if (currentCtx !== null) draw(currentCtx)
+        },
+      })
       draw(ctx)
     },
 
     update(ctx) {
       interaction?.update(ctx.viewport, ctx.callbacks.onViewportChange)
+      canvasInteraction?.update(ctx)
       draw(ctx)
     },
 
     destroy() {
       interaction?.destroy()
       interaction = null
+      canvasInteraction?.destroy()
+      canvasInteraction = null
+      interactionPreview = EMPTY_INTERACTION_PREVIEW
       leafer?.destroy()
       leafer = null
       currentCtx = null
