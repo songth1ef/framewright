@@ -201,13 +201,35 @@ LeaferJS 有现成生态（`leafer-editor` 等提供选中框、变换、辅助�
 
 对标产品实图显示，视频节点**内嵌真实播放器**（播放/暂停、进度条、时间、音量、截图），且能在画布上直接播放。两侧代价差距极大：
 
+> ⚠️ **本节 2026-08-04 大幅订正**。原判断「Canvas 无 `<video>`，只能逐帧取纹理或叠 DOM」**过于悲观，已被实测推翻**。
+
+**实测（读 `node_modules` 里 `leafer-ui@2.2.9` 的类型定义，即我们实际依赖的版本）**：LeaferJS **有一等公民的视频抽象**——
+
+```ts
+interface IVideoDecoder {
+  width; height; duration; currentTime; volume
+  readonly paused; readonly ended; loop
+  load(): Promise<void>;  play(): void;  pause(): void
+  render(canvas, x, y, width, height, leaf, paint, imageScaleX, imageScaleY): void
+  destroyDecoder(): void;  close(): void
+}
+type IVideoFileType = 'mp4' | 'webm' | 'ogv'
+interface IVideoPlayOptions { autoplay?; muted?; loop?; paused? }
+```
+
+外加 `LeaferVideo extends LeaferImage`、`ImageManager.loadVideo()`、`IMultimediaType = 'image' | 'film' | 'video'`（`film` 是另一套逐帧序列的解码器）。
+
+**修正后的判断**：
+
 | | `renderer-dom` | `renderer-leafer` |
 |---|---|---|
-| 播放器本体 | 一个 `<video>` 标签 | Canvas 无 `<video>`。要么逐帧取纹理绘制，要么在 canvas 上叠一层 DOM |
-| 播放控件 | HTML 元素直接可用 | **进度条、按钮、音量全要自绘 + 自做命中测试** |
-| 多视频同时播放 | 浏览器管理 | 逐帧纹理上传，性能与内存自己扛 |
+| 播放能力（播放/暂停/seek/音量/循环） | `<video>` 原生 | ✅ **`IVideoDecoder` 一等公民支持**，不是自己搭 |
+| **播放控件 UI**（进度条、按钮、时间、音量滑块） | HTML 元素直接可用 | ⚠️ **仍要自绘 + 自做命中测试** |
+| 多视频同时播放 | 浏览器管理 | 🟡 **未实测**——Leafer 的解码路径在多路并发下的性能与内存表现未知 |
 
-**这大概率是整个选型里成本差距最大的一项**，比帧率数字更能决定结论。
+**所以差异从「能力有无」缩小到「控件 UI 与并发表现」**——仍然值得测，但**不再是我原先判断的「决定性差异」**。
+
+⚠️ **本条修正的来源值得记**：是用户凭印象提出「Leafer 应该支持视频」，我去查了实际安装版本的类型定义才发现原判断错了。**我此前那句「Canvas 里没有 `<video>`」是从通用常识推的，没有查过 LeaferJS 本身。**
 
 ⚠️ **必须提前到 P1 验证，不要拖到 P3。** 理由：如果 Leafer 在这一项上代价高到不可接受，那结论在 P1 就已经出来了，后面两个阶段的双版本投入可以及时止损；反过来，等 P3 才发现等于白做两个阶段。
 
