@@ -42,6 +42,12 @@ export interface RendererAdapter {
    * 只能由渲染器自报。见 docs/architecture.md §8.1。
    */
   getRenderedBounds(): Map<string, Rect>
+  /**
+   * 自报「我实际画出来了哪些节点」，用于断言可见性级联。
+   * 断言时各自与 core.collectVisibleNodeIds() 的独立计算比对，
+   * 不拿两侧自报互相比，避免「两侧一致地错、测试照样绿」。
+   */
+  getVisibleNodeIds(): readonly string[]
 }
 
 /**

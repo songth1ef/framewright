@@ -8,7 +8,7 @@ import {
 } from '@framewright/core'
 import { createDomRenderer } from '@framewright/renderer-dom'
 import { createLeaferRenderer } from '@framewright/renderer-leafer'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type Factory = () => RendererAdapter
 
@@ -26,7 +26,7 @@ export function RendererHost() {
   // 会话状态住在这里，不在渲染器内部——切换时原样传给新渲染器
   const [selection, setSelection] = useState<readonly string[]>(['box-front'])
   const [viewport] = useState(DEFAULT_VIEWPORT)
-  const root = useMemo(() => createDemoDocument(), [])
+  const [root, setRoot] = useState(createDemoDocument)
 
   const ctx: RenderContext = { root, selection, viewport }
   const ctxRef = useRef(ctx)
@@ -46,6 +46,8 @@ export function RendererHost() {
       adapter.mount(container, ctxRef.current)
       ;(window as unknown as Record<string, unknown>)['__fwGetBounds'] = () =>
         Object.fromEntries(adapter.getRenderedBounds())
+      ;(window as unknown as Record<string, unknown>)['__fwGetVisible'] = () =>
+        adapter.getVisibleNodeIds()
     })
 
     return () => {
@@ -55,6 +57,7 @@ export function RendererHost() {
       adapterRef.current = null
       queueMicrotask(() => adapter.destroy())
       delete (window as unknown as Record<string, unknown>)['__fwGetBounds']
+      delete (window as unknown as Record<string, unknown>)['__fwGetVisible']
     }
   }, [activeIndex])
 
@@ -85,6 +88,21 @@ export function RendererHost() {
           选中底层方块
         </button>
         <span data-testid="selection">{selection.join(',')}</span>
+        <button
+          type="button"
+          data-testid="toggle-inner-frame"
+          onClick={() =>
+            setRoot((current) => ({
+              ...current,
+              children: current.children.map((node) =>
+                node.fwId === 'inner-frame' ? { ...node, visible: !node.visible } : node,
+              ),
+            }))
+          }
+          style={{ padding: '6px 14px', cursor: 'pointer' }}
+        >
+          切换内层画框可见性
+        </button>
       </div>
 
       <div

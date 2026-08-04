@@ -14,21 +14,27 @@ import { DOM_SHAPES } from './shapes/registry'
 function renderNode(
   node: CanvasNode,
   parentAbsolute: Point,
+  parentVisible: boolean,
   selection: readonly string[],
   bounds: Map<string, Rect>,
+  visibleNodeIds: string[],
 ): ReactNode {
   const absolute: Point = { x: parentAbsolute.x + node.x, y: parentAbsolute.y + node.y }
   const position: Point = { x: node.x, y: node.y }
+  const visible = parentVisible && node.visible
   bounds.set(node.fwId, {
     x: absolute.x,
     y: absolute.y,
     width: node.width,
     height: node.height,
   })
+  if (visible) visibleNodeIds.push(node.fwId)
 
   const Shape = DOM_SHAPES[node.fwType]
   const children = isFrameNode(node)
-    ? node.children.map((child) => renderNode(child, absolute, selection, bounds))
+    ? node.children.map((child) =>
+        renderNode(child, absolute, visible, selection, bounds, visibleNodeIds),
+      )
     : undefined
 
   return (
@@ -48,10 +54,12 @@ export function createDomRenderer(): RendererAdapter {
 
   let root: Root | null = null
   let bounds = new Map<string, Rect>()
+  let visibleNodeIds: string[] = []
 
   const draw = (ctx: RenderContext): void => {
     if (root === null) return
     bounds = new Map<string, Rect>()
+    visibleNodeIds = []
     const { scale, offsetX, offsetY } = ctx.viewport
     root.render(
       <div
@@ -64,7 +72,7 @@ export function createDomRenderer(): RendererAdapter {
           transformOrigin: 'top left',
         }}
       >
-        {renderNode(ctx.root, { x: 0, y: 0 }, ctx.selection, bounds)}
+        {renderNode(ctx.root, { x: 0, y: 0 }, true, ctx.selection, bounds, visibleNodeIds)}
       </div>,
     )
   }
@@ -86,10 +94,15 @@ export function createDomRenderer(): RendererAdapter {
       root?.unmount()
       root = null
       bounds = new Map<string, Rect>()
+      visibleNodeIds = []
     },
 
     getRenderedBounds() {
       return new Map(bounds)
+    },
+
+    getVisibleNodeIds() {
+      return [...visibleNodeIds]
     },
   }
 }

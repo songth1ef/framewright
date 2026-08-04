@@ -148,6 +148,16 @@ export interface RendererCallbacks {
 **🔴 回流幂等（Leafer 侧提出，DOM 侧未提，同样必须遵守）**：
 渲染器用 `ctx.viewport` 设置自身 transform。当 host 把渲染器**自己刚上报的** viewport 回灌进来时，渲染器**必须做相等性短路、不重复应用**，否则会抖动或形成回环。
 
+### 2.2 可见性量具 `getVisibleNodeIds()`
+
+`RendererAdapter.getVisibleNodeIds()` 自报渲染器**实际画出来的节点**。有效可见性统一由
+`core.collectVisibleNodeIds()` 定义：节点自身与全部祖先都 `visible` 时才可见。
+
+测试不拿两个渲染器的自报结果互相比，而是让每一侧分别与 core 的独立计算比对。这样能
+避开 `getRenderedBounds()` 已存在的盲区：若两侧都用同一套错误的手工累加值自报，互比
+仍会变绿。两个渲染器必须从自己的实际 DOM / 场景图行为采集本方法结果，**不得直接转调
+`collectVisibleNodeIds()`**，否则断言退化为 core 自己与自己比较。
+
 ## 3. 🔴 红线：渲染器不许自己改状态
 
 这条是最核心铁律（`AGENTS.md` §4）在交互上的具体化。**Leafer 侧报的第 1 号风险就是它的实际形态。**

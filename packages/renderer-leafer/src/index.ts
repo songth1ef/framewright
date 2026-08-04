@@ -15,6 +15,7 @@ export function createLeaferRenderer(): RendererAdapter {
 
   let leafer: Leafer | null = null
   let bounds = new Map<string, CoreRect>()
+  let visibleNodeIds: string[] = []
 
   const buildNode = (
     node: CanvasNode,
@@ -33,6 +34,7 @@ export function createLeaferRenderer(): RendererAdapter {
     const factory = LEAFER_SHAPES[node.fwType]
     const ui = factory({ node, absolute, selected: selection.includes(node.fwId) })
     parent.add(ui)
+    if (node.visible) visibleNodeIds.push(node.fwId)
 
     if (isFrameNode(node)) {
       // 子节点同样使用画布绝对坐标，故父级传 leafer 根而非 ui，避免双重偏移
@@ -46,6 +48,7 @@ export function createLeaferRenderer(): RendererAdapter {
     if (leafer === null) return
     leafer.clear()
     bounds = new Map<string, CoreRect>()
+    visibleNodeIds = []
     leafer.scale = ctx.viewport.scale
     leafer.x = ctx.viewport.offsetX
     leafer.y = ctx.viewport.offsetY
@@ -69,10 +72,15 @@ export function createLeaferRenderer(): RendererAdapter {
       leafer?.destroy()
       leafer = null
       bounds = new Map<string, CoreRect>()
+      visibleNodeIds = []
     },
 
     getRenderedBounds() {
       return new Map(bounds)
+    },
+
+    getVisibleNodeIds() {
+      return [...visibleNodeIds]
     },
   }
 }
