@@ -9,3 +9,6 @@ playwright-report/
 
 # agent 之间的异步信箱：过程通信，不是项目资产。协议见 docs/agents-mail.md
 docs/agents-mail/
+
+# 演示视频产物,不入库
+demo-video/
