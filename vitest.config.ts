@@ -35,7 +35,12 @@ export default defineConfig({
         test: {
           name: 'web',
           environment: 'node',
-          include: ['apps/web/**/*.test.{ts,tsx}'],
+          // 动态路由目录（如 [id]）必须由 ** 匹配；不要把字面量 [id]
+          // 写进 glob，否则方括号会被解释为字符集，测试会静默漏出全量门禁。
+          include: [
+            'apps/web/app/**/*.test.{ts,tsx}',
+            'apps/web/components/**/*.test.{ts,tsx}',
+          ],
         },
       },
     ],
