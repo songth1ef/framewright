@@ -11,6 +11,7 @@
     "@framewright/core": "workspace:*",
     "@framewright/renderer-dom": "workspace:*",
     "@framewright/renderer-leafer": "workspace:*",
+    "@framewright/server-core": "workspace:*",
     "next": "15.5.22",
     "react": "19.2.8",
     "react-dom": "19.2.8"

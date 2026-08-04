@@ -31,6 +31,13 @@ export default defineConfig({
           include: ['packages/server-core/src/**/*.test.ts'],
         },
       },
+      {
+        test: {
+          name: 'web',
+          environment: 'node',
+          include: ['apps/web/**/*.test.{ts,tsx}'],
+        },
+      },
     ],
   },
 })

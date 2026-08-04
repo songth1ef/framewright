@@ -41,6 +41,9 @@ importers:
       '@framewright/renderer-leafer':
         specifier: workspace:*
         version: link:../../packages/renderer-leafer
+      '@framewright/server-core':
+        specifier: workspace:*
+        version: link:../../packages/server-core
       next:
         specifier: 15.5.22
         version: 15.5.22(@playwright/test@1.62.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
