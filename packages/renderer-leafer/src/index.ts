@@ -1,5 +1,6 @@
 import {
   assertShapeCoverage,
+  collectConnectionItems,
   isFrameNode,
   type CanvasNode,
   type Point,
@@ -8,7 +9,7 @@ import {
   type RendererAdapter,
 } from '@framewright/core'
 import { Leafer, type IUI } from 'leafer-ui'
-import { buildConnectionLayer, collectConnectionItems } from './connections'
+import { buildConnectionLayer } from './connections'
 import { LEAFER_SHAPES } from './shapes/registry'
 
 export function createLeaferRenderer(): RendererAdapter {
