@@ -7,6 +7,7 @@ import {
   isFrameNode,
   type CanvasNode,
   type Point,
+  type RendererCallbacks,
   type ShapeType,
 } from '@framewright/core'
 import type { CSSProperties, ReactNode } from 'react'
@@ -17,6 +18,7 @@ export interface ShapeProps {
   node: CanvasNode
   position: Point
   selected: boolean
+  onNodeAction: RendererCallbacks['onNodeAction']
   children?: ReactNode
 }
 
@@ -52,9 +54,16 @@ function BoxShape({ node, position, selected }: ShapeProps): ReactNode {
   return <div data-fw-id={node.fwId} data-fw-type="box" style={withSelection(style, selected)} />
 }
 
-function GenerationUnitShape({ node, position, selected }: ShapeProps): ReactNode {
+function GenerationUnitShape({ node, position, selected, onNodeAction }: ShapeProps): ReactNode {
   if (!isAiImageNode(node) && !isAiVideoNode(node)) return null
-  return <GenerationUnit node={node} position={position} selected={selected} />
+  return (
+    <GenerationUnit
+      node={node}
+      position={position}
+      selected={selected}
+      onNodeAction={onNodeAction}
+    />
+  )
 }
 
 /**

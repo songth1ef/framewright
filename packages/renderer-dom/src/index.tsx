@@ -19,6 +19,7 @@ function renderNode(
   selection: readonly string[],
   bounds: Map<string, Rect>,
   visibleNodeIds: string[],
+  onNodeAction: RenderContext['callbacks']['onNodeAction'],
   connectionLayer?: ReactNode,
 ): ReactNode {
   const absolute: Point = { x: parentAbsolute.x + node.x, y: parentAbsolute.y + node.y }
@@ -38,7 +39,15 @@ function renderNode(
         <>
           {connectionLayer}
           {node.children.map((child) =>
-            renderNode(child, absolute, visible, selection, bounds, visibleNodeIds),
+            renderNode(
+              child,
+              absolute,
+              visible,
+              selection,
+              bounds,
+              visibleNodeIds,
+              onNodeAction,
+            ),
           )}
         </>
       )
@@ -50,6 +59,7 @@ function renderNode(
       node={node}
       position={position}
       selected={selection.includes(node.fwId)}
+      onNodeAction={onNodeAction}
     >
       {children}
     </Shape>
@@ -100,6 +110,7 @@ export function createDomRenderer(): RendererAdapter {
           ctx.selection,
           bounds,
           visibleNodeIds,
+          ctx.callbacks.onNodeAction,
           connectionLayer,
         )}
       </div>,

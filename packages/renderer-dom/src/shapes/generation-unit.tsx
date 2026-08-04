@@ -15,6 +15,7 @@ export interface GenerationUnitProps {
   node: GenerationNode
   position: Point
   selected: boolean
+  onNodeAction(fwId: string, action: string): void
 }
 
 const SELECTED_OUTLINE = '2px solid #5B8091'
@@ -39,7 +40,7 @@ const interactionButtonStyle: CSSProperties = {
   cursor: 'pointer',
 }
 
-function EmptyContent(): ReactNode {
+function EmptyContent({ onAction }: { onAction(): void }): ReactNode {
   return (
     <div
       style={{
@@ -49,7 +50,15 @@ function EmptyContent(): ReactNode {
         fontSize: `${GEN_UNIT_STYLE.emptyFontSize}px`,
       }}
     >
-      <button data-fw-interaction="ignore" style={interactionButtonStyle} type="button">
+      <button
+        data-fw-interaction="ignore"
+        style={interactionButtonStyle}
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation()
+          onAction()
+        }}
+      >
         点击生成
       </button>
     </div>
@@ -156,7 +165,7 @@ function SucceededContent({ node }: { node: GenerationNode }): ReactNode {
   )
 }
 
-function FailedContent({ node }: { node: GenerationNode }): ReactNode {
+function FailedContent({ node, onAction }: { node: GenerationNode; onAction(): void }): ReactNode {
   return (
     <div
       style={{
@@ -175,28 +184,44 @@ function FailedContent({ node }: { node: GenerationNode }): ReactNode {
       >
         {node.errorMessage || '生成失败'}
       </div>
-      <button data-fw-interaction="ignore" style={interactionButtonStyle} type="button">
+      <button
+        data-fw-interaction="ignore"
+        style={interactionButtonStyle}
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation()
+          onAction()
+        }}
+      >
         重试
       </button>
     </div>
   )
 }
 
-function renderContent(node: GenerationNode): ReactNode {
+function renderContent(
+  node: GenerationNode,
+  onNodeAction: GenerationUnitProps['onNodeAction'],
+): ReactNode {
   switch (node.status) {
     case 'empty':
-      return <EmptyContent />
+      return <EmptyContent onAction={() => onNodeAction(node.fwId, 'generate')} />
     case 'pending':
     case 'running':
       return <GeneratingContent />
     case 'succeeded':
       return <SucceededContent node={node} />
     case 'failed':
-      return <FailedContent node={node} />
+      return <FailedContent node={node} onAction={() => onNodeAction(node.fwId, 'retry')} />
   }
 }
 
-export function GenerationUnit({ node, position, selected }: GenerationUnitProps): ReactNode {
+export function GenerationUnit({
+  node,
+  position,
+  selected,
+  onNodeAction,
+}: GenerationUnitProps): ReactNode {
   const isEmpty = node.status === 'empty'
   const isFailed = node.status === 'failed'
   const style: CSSProperties = {
@@ -221,7 +246,7 @@ export function GenerationUnit({ node, position, selected }: GenerationUnitProps
           50% { transform: translateX(285%); }
         }
       `}</style>
-      {renderContent(node)}
+      {renderContent(node, onNodeAction)}
     </div>
   )
 }

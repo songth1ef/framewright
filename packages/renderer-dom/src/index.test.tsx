@@ -10,6 +10,7 @@ import {
   createDemoDocument,
   createFrameNode,
   type RenderContext,
+  type RendererCallbacks,
 } from '@framewright/core'
 import { createDomRenderer } from './index'
 
@@ -31,7 +32,9 @@ function normalizedCssColor(color: string): string {
   return element.style.color
 }
 
-function makeGenerationContext(): RenderContext {
+function makeGenerationContext(
+  callbacks: RendererCallbacks = NOOP_RENDERER_CALLBACKS,
+): RenderContext {
   return {
     root: createFrameNode({
       fwId: 'root',
@@ -86,7 +89,7 @@ function makeGenerationContext(): RenderContext {
     }),
     selection: [],
     viewport: DEFAULT_VIEWPORT,
-    callbacks: NOOP_RENDERER_CALLBACKS,
+    callbacks,
   }
 }
 
@@ -221,6 +224,35 @@ describe('createDomRenderer', () => {
     expect(button.textContent).toBe('重试')
     expect(button.dataset.fwInteraction).toBe('ignore')
     expect(node.querySelector('[data-fw-generation-footer]')).toBeNull()
+    await act(async () => renderer.destroy())
+  })
+
+  it.each([
+    ['empty-image', 'generate'],
+    ['failed-video', 'retry'],
+  ])('内部按钮 %s 只上报 onNodeAction(%s)', async (fwId, action) => {
+    const callbacks: RendererCallbacks = {
+      onSelectionRequest: vi.fn(),
+      onNodesMove: vi.fn(),
+      onNodesResize: vi.fn(),
+      onNodesDelete: vi.fn(),
+      onViewportChange: vi.fn(),
+      onNodeActivate: vi.fn(),
+      onNodeAction: vi.fn(),
+    }
+    const renderer = await mountRenderer(makeGenerationContext(callbacks))
+    const button = container!.querySelector(`[data-fw-id="${fwId}"] button`) as HTMLButtonElement
+
+    await act(async () => button.click())
+
+    expect(callbacks.onNodeAction).toHaveBeenCalledOnce()
+    expect(callbacks.onNodeAction).toHaveBeenCalledWith(fwId, action)
+    expect(callbacks.onSelectionRequest).not.toHaveBeenCalled()
+    expect(callbacks.onNodesMove).not.toHaveBeenCalled()
+    expect(callbacks.onNodesResize).not.toHaveBeenCalled()
+    expect(callbacks.onNodesDelete).not.toHaveBeenCalled()
+    expect(callbacks.onViewportChange).not.toHaveBeenCalled()
+    expect(callbacks.onNodeActivate).not.toHaveBeenCalled()
     await act(async () => renderer.destroy())
   })
 
