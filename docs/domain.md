@@ -178,17 +178,15 @@ interface AiGeneratedNode extends BaseNode {
 
 源节点被删除时，把它的 `fwId` 从所有引用者的 `sourceFwIds` 里移除，连线随之消失。**不级联删除派生节点**——那三个视频本身是有价值的产物，不该因为删了参考图而消失。
 
-⚠️ **这给撤销带来一个隐蔽要求**：`remove-node` 操作必须**同时记录被清理掉的那些引用**，否则撤销删除时连线恢复不回来。`docs/domain.md` §4.5 的 `CanvasOp` 需相应扩展：
+⚠️ **这给撤销带来一个隐蔽要求**：删除操作必须**同时记录被清理掉的那些引用**，否则撤销删除时连线恢复不回来。落地形态见 §4.5 的 `InboundRef` —— **`add-node` 与 `remove-node` 对称持有 `inboundRefs`**。
 
-```ts
-| {
-    kind: 'remove-node'
-    slot: NodeSlot
-    node: CanvasNode
-    /** 被删除节点在其它节点 sourceFwIds 里的引用，撤销时需一并恢复 */
-    detachedRefs: ReadonlyArray<{ fwId: string; index: number }>
-  }
-```
+> **这里 2026-08-04 改过一次，原设计不闭环。**
+>
+> 初版只给 `remove-node` 加了 `detachedRefs`。Codex 实现 `U1a` 时先写红测，发现 §4.5 那句「**每个 op 自带反推逆操作所需的全部信息**」**在 remove 上根本不成立**——`remove-node` 的逆是 `add-node`，而 `add-node` 没有这个字段，**信息必然丢失**，`applyOp(invertOp(removeOp))` 恢复不了连线，round-trip 测试过不去。它按纪律停下上报，没擅自扩类型。
+>
+> **为什么改成对称持有，而不是给 `add-node` 加一个可选字段**（Codex 提的是后者）：`add-node` 与 `remove-node` **本来就是同一个操作的两个方向**。「只在它作为逆操作时才有意义」的字段是设计气味；而「一个节点的入边引用清单」对两个方向**都是真实语义**——remove 时摘除、add 时恢复、新建时为空。对称之后 `invertOp` 退化成纯粹的 kind 翻转，零信息丢失。
+>
+> 名字也从 `detachedRefs` 改成方向中性的 `inboundRefs`——前者只在 remove 方向读得通。
 
 #### 为什么这个方案够用
 
@@ -268,10 +266,19 @@ interface NodeSlot {
   y: number
 }
 
+/**
+ * 「其它节点的 sourceFwIds 中指向本节点」的引用位置。
+ * remove 时这些引用被摘除，add 时按原位恢复；新建节点时为空数组。
+ */
+interface InboundRef {
+  fwId: string    // 引用方节点
+  index: number   // 在其 sourceFwIds 数组里的位置
+}
+
 type CanvasOp =
-  | { kind: 'add-node'; slot: NodeSlot; node: CanvasNode }
-  | { kind: 'remove-node'; slot: NodeSlot; node: CanvasNode }
-  | { kind: 'move-node'; fwId: string; from: NodeSlot; to: NodeSlot }
+  | { kind: 'add-node';    slot: NodeSlot; node: CanvasNode; inboundRefs: readonly InboundRef[] }
+  | { kind: 'remove-node'; slot: NodeSlot; node: CanvasNode; inboundRefs: readonly InboundRef[] }
+  | { kind: 'move-node';   fwId: string; from: NodeSlot; to: NodeSlot }
   | { kind: 'update-node'; fwId: string; before: Partial<CanvasNode>; after: Partial<CanvasNode> }
 
 interface HistoryEntry {
