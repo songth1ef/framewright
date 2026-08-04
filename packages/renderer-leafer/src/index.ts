@@ -24,6 +24,7 @@ export function createLeaferRenderer(): RendererAdapter {
     parentVisible: boolean,
     selection: readonly string[],
     parent: IUI | Leafer,
+    rootUnderlay?: IUI,
   ): void => {
     const absolute: Point = { x: parentAbsolute.x + node.x, y: parentAbsolute.y + node.y }
     const visible = parentVisible && node.visible
@@ -44,6 +45,10 @@ export function createLeaferRenderer(): RendererAdapter {
     if (visible) visibleNodeIds.push(node.fwId)
 
     if (isFrameNode(node)) {
+      // 溯源连线层只挂在 root frame 里、作为第一个孩子（connection-spec §2）：
+      // 在 root 自己的 background（画布底色）之上、一切业务节点之下。
+      // 若加在 root 之外，会被 root 的白色背景整个盖住。
+      if (rootUnderlay !== undefined) ui.add(rootUnderlay)
       for (const child of node.children) {
         buildNode(child, absolute, visible, selection, ui)
       }
@@ -58,11 +63,13 @@ export function createLeaferRenderer(): RendererAdapter {
     leafer.scale = ctx.viewport.scale
     leafer.x = ctx.viewport.offsetX
     leafer.y = ctx.viewport.offsetY
-    // 溯源连线层：视口 transform 之内、所有节点之下（connection-spec §2），不是 node
-    leafer.add(
-      buildConnectionLayer(collectConnectionItems(ctx.root), ctx.selection, ctx.viewport.scale),
+    // 连线不是 node：不进 node 树、不进 getRenderedBounds，只作为 root 的底层装饰注入
+    const connectionLayer = buildConnectionLayer(
+      collectConnectionItems(ctx.root),
+      ctx.selection,
+      ctx.viewport.scale,
     )
-    buildNode(ctx.root, { x: 0, y: 0 }, true, ctx.selection, leafer)
+    buildNode(ctx.root, { x: 0, y: 0 }, true, ctx.selection, leafer, connectionLayer)
   }
 
   return {
