@@ -24,6 +24,13 @@ export default defineConfig({
           include: ['packages/renderer-leafer/src/**/*.test.ts'],
         },
       },
+      {
+        test: {
+          name: 'server-core',
+          environment: 'node',
+          include: ['packages/server-core/src/**/*.test.ts'],
+        },
+      },
     ],
   },
 })

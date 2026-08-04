@@ -7,20 +7,10 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@prisma/adapter-better-sqlite3':
-        specifier: ^6.19.3
-        version: 6.19.3
-      '@prisma/client':
-        specifier: ^6.19.3
-        version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
     devDependencies:
       '@playwright/test':
         specifier: ^1.62.1
         version: 1.62.1
-      '@types/better-sqlite3':
-        specifier: ^9.6.0
-        version: 9.6.0
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.1
@@ -97,6 +87,22 @@ importers:
       leafer-ui:
         specifier: 2.2.9
         version: 2.2.9
+
+  packages/server-core:
+    dependencies:
+      '@framewright/core':
+        specifier: workspace:*
+        version: link:../core
+      '@prisma/adapter-better-sqlite3':
+        specifier: ^6.19.3
+        version: 6.19.3
+      '@prisma/client':
+        specifier: ^6.19.3
+        version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^9.6.0
+        version: 9.6.0
 
 packages:
 

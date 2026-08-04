@@ -3,6 +3,7 @@
   "references": [
     { "path": "./packages/core" },
     { "path": "./packages/renderer-dom" },
-    { "path": "./packages/renderer-leafer" }
+    { "path": "./packages/renderer-leafer" },
+    { "path": "./packages/server-core" }
   ]
 }
