@@ -26,13 +26,14 @@ export function RendererHost() {
 
   // 会话状态住在这里，不在渲染器内部——切换时原样传给新渲染器
   const [selection, setSelection] = useState<readonly string[]>(['box-front'])
-  const [viewport] = useState(DEFAULT_VIEWPORT)
+  const [viewport, setViewport] = useState(DEFAULT_VIEWPORT)
   const [root, setRoot] = useState(createDemoDocument)
   const [lastAction, setLastAction] = useState('')
 
   const callbacks = useMemo(
     () => ({
       ...NOOP_RENDERER_CALLBACKS,
+      onViewportChange: setViewport,
       onNodeAction: (fwId: string, action: string) => setLastAction(`${fwId}:${action}`),
     }),
     [],
@@ -98,6 +99,7 @@ export function RendererHost() {
           选中底层方块
         </button>
         <span data-testid="selection">{selection.join(',')}</span>
+        <span data-testid="viewport-scale">{Math.round(viewport.scale * 100)}%</span>
         <span data-testid="last-node-action">{lastAction}</span>
         <button
           type="button"
@@ -119,7 +121,13 @@ export function RendererHost() {
       <div
         ref={containerRef}
         data-testid="canvas-container"
-        style={{ width: 800, height: 450, border: '1px solid #DDD', position: 'relative' }}
+        style={{
+          width: 800,
+          height: 450,
+          overflow: 'hidden',
+          border: '1px solid #DDD',
+          position: 'relative',
+        }}
       />
     </main>
   )

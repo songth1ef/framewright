@@ -97,6 +97,7 @@ export function createDomRenderer(): RendererAdapter {
     )
     root.render(
       <div
+        data-fw-viewport="true"
         style={{
           position: 'relative',
           width: '100%',
