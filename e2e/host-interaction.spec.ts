@@ -55,6 +55,59 @@ test('Delete 删除节点后节点与溯源连线一起消失', async ({ page })
   await expect(page.getByTestId('selection-count')).toHaveText('0')
 })
 
+test('拖动节点后 Ctrl+Z 恢复原位置，Ctrl+Shift+Z 重做移动', async ({ page }) => {
+  const node = page.locator('[data-fw-id="box-back"]')
+  const box = await node.boundingBox()
+  expect(box).not.toBeNull()
+
+  await page.mouse.move(box!.x + 20, box!.y + 20)
+  await page.mouse.down()
+  await page.mouse.move(box!.x + 50, box!.y + 45)
+  await page.mouse.up()
+  await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 70, y: 65 })
+
+  await page.keyboard.press('Control+z')
+  await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 40, y: 40 })
+
+  await page.keyboard.press('Control+Shift+z')
+  await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 70, y: 65 })
+})
+
+test('删除后 Ctrl+Z 同时恢复节点与溯源连线', async ({ page }) => {
+  const canvas = page.getByTestId('canvas-container')
+  await canvas.locator('[data-fw-id="ai-image-1"]').click({ position: { x: 20, y: 20 } })
+  await page.keyboard.press('Delete')
+  await expect(canvas.locator('[data-fw-id="ai-image-1"]')).toHaveCount(0)
+  await expect(canvas.locator('[data-fw-connection-from="ai-image-1"]')).toHaveCount(0)
+
+  await page.keyboard.press('Control+z')
+  await expect(canvas.locator('[data-fw-id="ai-image-1"]')).toHaveCount(1)
+  await expect(canvas.locator('[data-fw-connection-from="ai-image-1"]')).toHaveCount(2)
+})
+
+test('撤销后再操作会丢弃重做栈', async ({ page }) => {
+  const node = page.locator('[data-fw-id="box-back"][data-fw-type="box"]')
+  let box = await node.boundingBox()
+  expect(box).not.toBeNull()
+
+  await page.mouse.move(box!.x + 20, box!.y + 20)
+  await page.mouse.down()
+  await page.mouse.move(box!.x + 50, box!.y + 45)
+  await page.mouse.up()
+  await page.keyboard.press('Control+z')
+
+  box = await node.boundingBox()
+  expect(box).not.toBeNull()
+  await page.mouse.move(box!.x + 20, box!.y + 20)
+  await page.mouse.down()
+  await page.mouse.move(box!.x + 35, box!.y + 30)
+  await page.mouse.up()
+  await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 55, y: 50 })
+
+  await page.keyboard.press('Control+Shift+z')
+  await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 55, y: 50 })
+})
+
 test('工具栏显示最近一次业务节点动作', async ({ page }) => {
   await page.locator('[data-fw-id="ai-video-2"] button').click()
   await expect(page.getByTestId('last-node-action')).toHaveText('ai-video-2:retry')

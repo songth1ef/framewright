@@ -2,12 +2,21 @@
 
 import {
   DEFAULT_VIEWPORT,
-  applyNodeMoves,
-  applyNodeResizes,
+  applyOp,
   applySelection,
+  createMemoryHistory,
   collectNodeIds,
   createDemoDocument,
-  deleteNodes,
+  findNodeById,
+  isAiImageNode,
+  isAiVideoNode,
+  isFrameNode,
+  walkTree,
+  type CanvasNode,
+  type CanvasOp,
+  type FrameNode,
+  type InboundRef,
+  type NodeSlot,
   type RenderContext,
   type RendererAdapter,
   type RendererCallbacks,
@@ -24,6 +33,41 @@ const RENDERERS: ReadonlyArray<{ id: string; label: string; create: Factory }> =
   { id: 'leafer', label: 'LeaferJS', create: createLeaferRenderer },
 ]
 
+interface NodeLocation {
+  node: CanvasNode
+  slot: NodeSlot
+}
+
+function findNodeLocation(root: FrameNode, fwId: string): NodeLocation | null {
+  const visit = (parent: FrameNode): NodeLocation | null => {
+    for (const [index, node] of parent.children.entries()) {
+      if (node.fwId === fwId) {
+        return {
+          node,
+          slot: { parentFwId: parent.fwId, index, x: node.x, y: node.y },
+        }
+      }
+      if (isFrameNode(node)) {
+        const found = visit(node)
+        if (found !== null) return found
+      }
+    }
+    return null
+  }
+  return visit(root)
+}
+
+function collectInboundRefs(root: FrameNode, targetFwId: string): InboundRef[] {
+  const refs: InboundRef[] = []
+  walkTree(root, (node) => {
+    if (!isAiImageNode(node) && !isAiVideoNode(node)) return
+    node.sourceFwIds.forEach((fwId, index) => {
+      if (fwId === targetFwId) refs.push({ fwId: node.fwId, index })
+    })
+  })
+  return refs
+}
+
 export function RendererHost() {
   const containerRef = useRef<HTMLDivElement>(null)
   const adapterRef = useRef<RendererAdapter | null>(null)
@@ -35,7 +79,19 @@ export function RendererHost() {
   const [root, setRoot] = useState(createDemoDocument)
   const [lastAction, setLastAction] = useState('')
   const rootRef = useRef(root)
+  const historyRef = useRef(createMemoryHistory())
   rootRef.current = root
+
+  const commitOps = (ops: readonly CanvasOp[]): void => {
+    if (ops.length === 0) return
+    let next = rootRef.current
+    for (const op of ops) {
+      next = applyOp(next, op)
+      historyRef.current.record(op)
+    }
+    rootRef.current = next
+    setRoot(next)
+  }
 
   const callbacks = useMemo<RendererCallbacks>(
     () => ({
@@ -43,21 +99,50 @@ export function RendererHost() {
         setSelection((current) => applySelection(current, fwIds, mode))
       },
       onNodesMove: (moves) => {
-        setRoot((current) => {
-          const next = applyNodeMoves(current, moves)
-          rootRef.current = next
-          return next
+        const ops = moves.flatMap<CanvasOp>((move) => {
+          const location = findNodeLocation(rootRef.current, move.fwId)
+          if (location === null || location.slot.parentFwId !== move.parentFwId) return []
+          return [{
+            kind: 'move-node',
+            fwId: move.fwId,
+            from: location.slot,
+            to: { ...location.slot, x: move.x, y: move.y },
+          }]
         })
+        commitOps(ops)
       },
       onNodesResize: (resizes) => {
-        setRoot((current) => {
-          const next = applyNodeResizes(current, resizes)
-          rootRef.current = next
-          return next
+        const ops = resizes.flatMap<CanvasOp>((resize) => {
+          const node = findNodeById(rootRef.current, resize.fwId)
+          if (node === null) return []
+          return [{
+            kind: 'update-node',
+            fwId: resize.fwId,
+            before: { x: node.x, y: node.y, width: node.width, height: node.height },
+            after: {
+              x: resize.x,
+              y: resize.y,
+              width: resize.width,
+              height: resize.height,
+            },
+          }]
         })
+        commitOps(ops)
       },
       onNodesDelete: (fwIds) => {
-        const next = deleteNodes(rootRef.current, fwIds)
+        let next = rootRef.current
+        for (const fwId of fwIds) {
+          const location = findNodeLocation(next, fwId)
+          if (location === null || location.node.locked) continue
+          const op: CanvasOp = {
+            kind: 'remove-node',
+            slot: location.slot,
+            node: location.node,
+            inboundRefs: collectInboundRefs(next, fwId),
+          }
+          next = applyOp(next, op)
+          historyRef.current.record(op)
+        }
         rootRef.current = next
         setRoot(next)
         const remaining = new Set(collectNodeIds(next))
@@ -69,6 +154,30 @@ export function RendererHost() {
     }),
     [],
   )
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (!event.ctrlKey || event.key.toLowerCase() !== 'z') return
+      const target = event.target
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) return
+
+      const op = event.shiftKey ? historyRef.current.redo() : historyRef.current.undo()
+      if (op === null) return
+      event.preventDefault()
+      const next = applyOp(rootRef.current, op)
+      rootRef.current = next
+      setRoot(next)
+      const remaining = new Set(collectNodeIds(next))
+      setSelection((current) => current.filter((fwId) => remaining.has(fwId)))
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   const ctx: RenderContext = { root, selection, viewport, callbacks }
   const ctxRef = useRef(ctx)
