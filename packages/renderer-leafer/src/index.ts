@@ -8,6 +8,7 @@ import {
   type RendererAdapter,
 } from '@framewright/core'
 import { Leafer, type IUI } from 'leafer-ui'
+import { buildConnectionLayer, collectConnectionItems } from './connections'
 import { LEAFER_SHAPES } from './shapes/registry'
 
 export function createLeaferRenderer(): RendererAdapter {
@@ -57,6 +58,10 @@ export function createLeaferRenderer(): RendererAdapter {
     leafer.scale = ctx.viewport.scale
     leafer.x = ctx.viewport.offsetX
     leafer.y = ctx.viewport.offsetY
+    // 溯源连线层：视口 transform 之内、所有节点之下（connection-spec §2），不是 node
+    leafer.add(
+      buildConnectionLayer(collectConnectionItems(ctx.root), ctx.selection, ctx.viewport.scale),
+    )
     buildNode(ctx.root, { x: 0, y: 0 }, true, ctx.selection, leafer)
   }
 
