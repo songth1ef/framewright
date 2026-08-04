@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   CONNECTION_STYLE,
   DEFAULT_VIEWPORT,
+  NOOP_RENDERER_CALLBACKS,
   createAiImageNode,
   createBoxNode,
   createDemoDocument,
@@ -38,6 +39,7 @@ function demoContext(
     root: createDemoDocument(),
     selection,
     viewport: { ...DEFAULT_VIEWPORT, scale },
+    callbacks: NOOP_RENDERER_CALLBACKS,
   }
 }
 

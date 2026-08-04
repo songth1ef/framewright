@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   DEFAULT_VIEWPORT,
   GEN_UNIT_STYLE,
+  NOOP_RENDERER_CALLBACKS,
   createAiImageNode,
   createAiVideoNode,
   createDemoDocument,
@@ -16,7 +17,12 @@ import { createDomRenderer } from './index'
   true
 
 function makeContext(selection: readonly string[] = []): RenderContext {
-  return { root: createDemoDocument(), selection, viewport: DEFAULT_VIEWPORT }
+  return {
+    root: createDemoDocument(),
+    selection,
+    viewport: DEFAULT_VIEWPORT,
+    callbacks: NOOP_RENDERER_CALLBACKS,
+  }
 }
 
 function normalizedCssColor(color: string): string {
@@ -80,6 +86,7 @@ function makeGenerationContext(): RenderContext {
     }),
     selection: [],
     viewport: DEFAULT_VIEWPORT,
+    callbacks: NOOP_RENDERER_CALLBACKS,
   }
 }
 

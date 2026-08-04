@@ -2,13 +2,14 @@
 
 import {
   DEFAULT_VIEWPORT,
+  NOOP_RENDERER_CALLBACKS,
   createDemoDocument,
   type RenderContext,
   type RendererAdapter,
 } from '@framewright/core'
 import { createDomRenderer } from '@framewright/renderer-dom'
 import { createLeaferRenderer } from '@framewright/renderer-leafer'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 type Factory = () => RendererAdapter
 
@@ -27,8 +28,17 @@ export function RendererHost() {
   const [selection, setSelection] = useState<readonly string[]>(['box-front'])
   const [viewport] = useState(DEFAULT_VIEWPORT)
   const [root, setRoot] = useState(createDemoDocument)
+  const [lastAction, setLastAction] = useState('')
 
-  const ctx: RenderContext = { root, selection, viewport }
+  const callbacks = useMemo(
+    () => ({
+      ...NOOP_RENDERER_CALLBACKS,
+      onNodeAction: (fwId: string, action: string) => setLastAction(`${fwId}:${action}`),
+    }),
+    [],
+  )
+
+  const ctx: RenderContext = { root, selection, viewport, callbacks }
   const ctxRef = useRef(ctx)
   ctxRef.current = ctx
 
@@ -88,6 +98,7 @@ export function RendererHost() {
           选中底层方块
         </button>
         <span data-testid="selection">{selection.join(',')}</span>
+        <span data-testid="last-node-action">{lastAction}</span>
         <button
           type="button"
           data-testid="toggle-inner-frame"

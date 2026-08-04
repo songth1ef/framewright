@@ -1,4 +1,5 @@
 import { SHAPE_TYPES, type FrameNode } from './node-schema'
+import type { SelectionMode } from './selection'
 
 export type RendererId = 'dom' | 'leafer'
 
@@ -11,6 +12,38 @@ export interface Viewport {
 
 export const DEFAULT_VIEWPORT: Viewport = { scale: 1, offsetX: 0, offsetY: 0 }
 
+export interface RendererCallbacks {
+  onSelectionRequest(fwIds: readonly string[], mode: SelectionMode): void
+  onNodesMove(
+    moves: ReadonlyArray<{ fwId: string; parentFwId: string; x: number; y: number }>,
+  ): void
+  onNodesResize(
+    resizes: ReadonlyArray<{
+      fwId: string
+      parentFwId: string
+      x: number
+      y: number
+      width: number
+      height: number
+    }>,
+  ): void
+  onNodesDelete(fwIds: readonly string[]): void
+  onViewportChange(viewport: Viewport): void
+  onNodeActivate(fwId: string): void
+  onNodeAction(fwId: string, action: string): void
+}
+
+/** 尚未接入的回调使用稳定空实现，避免渲染器自行持有业务状态。 */
+export const NOOP_RENDERER_CALLBACKS: RendererCallbacks = {
+  onSelectionRequest: () => undefined,
+  onNodesMove: () => undefined,
+  onNodesResize: () => undefined,
+  onNodesDelete: () => undefined,
+  onViewportChange: () => undefined,
+  onNodeActivate: () => undefined,
+  onNodeAction: () => undefined,
+}
+
 export interface Rect {
   x: number
   y: number
@@ -21,12 +54,12 @@ export interface Rect {
 /**
  * 渲染所需的全部输入。渲染器是这份数据的无状态投影，
  * 销毁重建不丢东西——这正是运行时切换成立的前提。
- * P0 不含交互回调（无交互），P2 交互补齐时扩展。
  */
 export interface RenderContext {
   root: FrameNode
   selection: readonly string[]
   viewport: Viewport
+  callbacks: RendererCallbacks
 }
 
 export interface RendererAdapter {

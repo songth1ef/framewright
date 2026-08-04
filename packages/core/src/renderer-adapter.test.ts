@@ -1,12 +1,51 @@
 import { describe, expect, it } from 'vitest'
 import { SHAPE_TYPES, isAiImageNode, isAiVideoNode } from './node-schema'
-import { DEFAULT_VIEWPORT, assertShapeCoverage } from './renderer-adapter'
+import {
+  DEFAULT_VIEWPORT,
+  assertShapeCoverage,
+  type RendererCallbacks,
+} from './renderer-adapter'
 import { createDemoDocument } from './demo-document'
 import { collectNodeIds, findNodeById } from './node-tree'
 
 describe('DEFAULT_VIEWPORT', () => {
   it('缩放 1、无偏移', () => {
     expect(DEFAULT_VIEWPORT).toEqual({ scale: 1, offsetX: 0, offsetY: 0 })
+  })
+})
+
+describe('RendererCallbacks', () => {
+  it('完整覆盖渲染器合同规定的七条回调签名', () => {
+    const calls: string[] = []
+    const callbacks: RendererCallbacks = {
+      onSelectionRequest: (fwIds, mode) => calls.push(`select:${fwIds.join(',')}:${mode}`),
+      onNodesMove: (moves) => calls.push(`move:${moves.length}`),
+      onNodesResize: (resizes) => calls.push(`resize:${resizes.length}`),
+      onNodesDelete: (fwIds) => calls.push(`delete:${fwIds.join(',')}`),
+      onViewportChange: (viewport) => calls.push(`viewport:${viewport.scale}`),
+      onNodeActivate: (fwId) => calls.push(`activate:${fwId}`),
+      onNodeAction: (fwId, action) => calls.push(`action:${fwId}:${action}`),
+    }
+
+    callbacks.onSelectionRequest(['node-1'], 'toggle')
+    callbacks.onNodesMove([{ fwId: 'node-1', parentFwId: 'root', x: 1, y: 2 }])
+    callbacks.onNodesResize([
+      { fwId: 'node-1', parentFwId: 'root', x: 1, y: 2, width: 3, height: 4 },
+    ])
+    callbacks.onNodesDelete(['node-1'])
+    callbacks.onViewportChange({ scale: 2, offsetX: 3, offsetY: 4 })
+    callbacks.onNodeActivate('node-1')
+    callbacks.onNodeAction('node-1', 'retry')
+
+    expect(calls).toEqual([
+      'select:node-1:toggle',
+      'move:1',
+      'resize:1',
+      'delete:node-1',
+      'viewport:2',
+      'activate:node-1',
+      'action:node-1:retry',
+    ])
   })
 })
 
