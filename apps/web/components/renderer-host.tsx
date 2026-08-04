@@ -57,15 +57,23 @@ function findNodeLocation(root: FrameNode, fwId: string): NodeLocation | null {
   return visit(root)
 }
 
-function collectInboundRefs(root: FrameNode, targetFwId: string): InboundRef[] {
+function collectInboundRefs(root: FrameNode, target: CanvasNode): InboundRef[] {
+  const targetFwIds = new Set<string>()
+  walkTree(target, (node) => targetFwIds.add(node.fwId))
   const refs: InboundRef[] = []
   walkTree(root, (node) => {
-    if (!isAiImageNode(node) && !isAiVideoNode(node)) return
-    node.sourceFwIds.forEach((fwId, index) => {
-      if (fwId === targetFwId) refs.push({ fwId: node.fwId, index })
+    if (targetFwIds.has(node.fwId) || (!isAiImageNode(node) && !isAiVideoNode(node))) return
+    node.sourceFwIds.forEach((targetFwId, index) => {
+      if (targetFwIds.has(targetFwId)) refs.push({ fwId: node.fwId, index, targetFwId })
     })
   })
   return refs
+}
+
+function groupOps(ops: readonly CanvasOp[]): CanvasOp | null {
+  if (ops.length === 0) return null
+  if (ops.length === 1) return ops[0]!
+  return { kind: 'batch', ops: ops as Exclude<CanvasOp, { kind: 'batch' }>[] }
 }
 
 export function RendererHost() {
@@ -83,12 +91,10 @@ export function RendererHost() {
   rootRef.current = root
 
   const commitOps = (ops: readonly CanvasOp[]): void => {
-    if (ops.length === 0) return
-    let next = rootRef.current
-    for (const op of ops) {
-      next = applyOp(next, op)
-      historyRef.current.record(op)
-    }
+    const op = groupOps(ops)
+    if (op === null) return
+    const next = applyOp(rootRef.current, op)
+    historyRef.current.record(op)
     rootRef.current = next
     setRoot(next)
   }
@@ -131,6 +137,7 @@ export function RendererHost() {
       },
       onNodesDelete: (fwIds) => {
         let next = rootRef.current
+        const ops: CanvasOp[] = []
         for (const fwId of fwIds) {
           const location = findNodeLocation(next, fwId)
           if (location === null || location.node.locked) continue
@@ -138,11 +145,14 @@ export function RendererHost() {
             kind: 'remove-node',
             slot: location.slot,
             node: location.node,
-            inboundRefs: collectInboundRefs(next, fwId),
+            inboundRefs: collectInboundRefs(next, location.node),
           }
           next = applyOp(next, op)
-          historyRef.current.record(op)
+          ops.push(op)
         }
+        const historyOp = groupOps(ops)
+        if (historyOp === null) return
+        historyRef.current.record(historyOp)
         rootRef.current = next
         setRoot(next)
         const remaining = new Set(collectNodeIds(next))

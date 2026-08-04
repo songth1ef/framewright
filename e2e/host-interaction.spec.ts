@@ -73,6 +73,29 @@ test('拖动节点后 Ctrl+Z 恢复原位置，Ctrl+Shift+Z 重做移动', async
   await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 70, y: 65 })
 })
 
+test('一次移动三个选中节点，Ctrl+Z 一次全部回退', async ({ page }) => {
+  const canvas = await page.getByTestId('canvas-container').boundingBox()
+  expect(canvas).not.toBeNull()
+
+  await page.mouse.click(canvas!.x + 50, canvas!.y + 50)
+  await page.keyboard.down('Shift')
+  await page.mouse.click(canvas!.x + 130, canvas!.y + 110)
+  await page.mouse.click(canvas!.x + 390, canvas!.y + 70)
+  await page.keyboard.up('Shift')
+  await expect(page.getByTestId('selection-count')).toHaveText('3')
+  await expect(page.locator('[data-fw-selection-outline="group"]')).toBeVisible()
+
+  await page.keyboard.press('ArrowRight')
+  await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 41, y: 40 })
+  await expect.poll(async () => (await readBounds(page))['box-front']).toMatchObject({ x: 121, y: 100 })
+  await expect.poll(async () => (await readBounds(page))['inner-frame']).toMatchObject({ x: 381, y: 60 })
+
+  await page.keyboard.press('Control+z')
+  await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 40, y: 40 })
+  await expect.poll(async () => (await readBounds(page))['box-front']).toMatchObject({ x: 120, y: 100 })
+  await expect.poll(async () => (await readBounds(page))['inner-frame']).toMatchObject({ x: 380, y: 60 })
+})
+
 test('删除后 Ctrl+Z 同时恢复节点与溯源连线', async ({ page }) => {
   const canvas = page.getByTestId('canvas-container')
   await canvas.locator('[data-fw-id="ai-image-1"]').click({ position: { x: 20, y: 20 } })

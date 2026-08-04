@@ -41,7 +41,7 @@ describe('applyOp / invertOp', () => {
       kind: 'add-node',
       slot: slot('frame-a', 0, 30, 40),
       node: createBoxNode({ fwId: 'box-new', x: 999, y: 999 }),
-      inboundRefs: [{ fwId: 'video-a', index: 1 }],
+      inboundRefs: [{ fwId: 'video-a', index: 1, targetFwId: 'box-new' }],
     }
 
     const next = applyOp(root, op)
@@ -64,12 +64,44 @@ describe('applyOp / invertOp', () => {
       kind: 'remove-node',
       slot: slot('root', 0, 10, 20),
       node: root.children[0]!,
-      inboundRefs: [{ fwId: 'video-a', index: 1 }],
+      inboundRefs: [{ fwId: 'video-a', index: 1, targetFwId: 'box-a' }],
     }
 
     const next = applyOp(root, op)
     expect(next.children.map((node) => node.fwId)).toEqual(['frame-a', 'video-a'])
     expect(next.children[1]).toMatchObject({ sourceFwIds: ['external', 'tail'] })
+    expect(applyOp(next, invertOp(op))).toEqual(root)
+  })
+
+  it('remove-node 删除 frame 时清理指向后代的外部引用，逆操作完整恢复', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      children: [
+        createFrameNode({
+          fwId: 'frame-a',
+          children: [createBoxNode({ fwId: 'box-b' }), createBoxNode({ fwId: 'box-c' })],
+        }),
+        createAiVideoNode({
+          fwId: 'video-a',
+          sourceFwIds: ['box-b', 'external', 'frame-a', 'box-c'],
+        }),
+      ],
+    })
+    const op: CanvasOp = {
+      kind: 'remove-node',
+      slot: slot('root', 0, 0, 0),
+      node: root.children[0]!,
+      inboundRefs: [
+        { fwId: 'video-a', index: 0, targetFwId: 'box-b' },
+        { fwId: 'video-a', index: 2, targetFwId: 'frame-a' },
+        { fwId: 'video-a', index: 3, targetFwId: 'box-c' },
+      ],
+    }
+
+    const next = applyOp(root, op)
+    expect(next.children).toEqual([
+      expect.objectContaining({ fwId: 'video-a', sourceFwIds: ['external'] }),
+    ])
     expect(applyOp(next, invertOp(op))).toEqual(root)
   })
 
@@ -104,6 +136,34 @@ describe('applyOp / invertOp', () => {
 
     const next = applyOp(root, op)
     expect(next.children[0]).toMatchObject({ x: 30, y: 40, fill: '#abcdef' })
+    expect(applyOp(next, invertOp(op))).toEqual(root)
+  })
+
+  it('batch 按原顺序应用，取逆时反序并逐项取逆', () => {
+    const first: CanvasOp = {
+      kind: 'add-node',
+      slot: slot('root', 0, 10, 20),
+      node: createFrameNode({ fwId: 'frame-new' }),
+      inboundRefs: [],
+    }
+    const second: CanvasOp = {
+      kind: 'add-node',
+      slot: slot('frame-new', 0, 5, 6),
+      node: createBoxNode({ fwId: 'box-new' }),
+      inboundRefs: [],
+    }
+    const op: CanvasOp = { kind: 'batch', ops: [first, second] }
+    const root = createFrameNode({ fwId: 'root' })
+
+    const next = applyOp(root, op)
+    expect(next.children[0]).toMatchObject({
+      fwId: 'frame-new',
+      children: [{ fwId: 'box-new', x: 5, y: 6 }],
+    })
+    expect(invertOp(op)).toEqual({
+      kind: 'batch',
+      ops: [invertOp(second), invertOp(first)],
+    })
     expect(applyOp(next, invertOp(op))).toEqual(root)
   })
 })

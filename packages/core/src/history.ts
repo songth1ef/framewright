@@ -16,9 +16,10 @@ export interface NodeSlot {
 export interface InboundRef {
   fwId: string
   index: number
+  targetFwId: string
 }
 
-export type CanvasOp =
+type AtomicCanvasOp =
   | {
       kind: 'add-node'
       slot: NodeSlot
@@ -38,6 +39,8 @@ export type CanvasOp =
       before: Partial<CanvasNode>
       after: Partial<CanvasNode>
     }
+
+export type CanvasOp = AtomicCanvasOp | { kind: 'batch'; ops: readonly AtomicCanvasOp[] }
 
 function updateNode(root: FrameNode, fwId: string, update: (node: CanvasNode) => CanvasNode): FrameNode {
   const visit = (node: CanvasNode): CanvasNode => {
@@ -72,7 +75,17 @@ function insertIntoParent(root: FrameNode, slot: NodeSlot, node: CanvasNode): Fr
   })
 }
 
-function removeInboundRefs(root: FrameNode, targetFwId: string): FrameNode {
+function collectSubtreeFwIds(node: CanvasNode): Set<string> {
+  const fwIds = new Set<string>()
+  const visit = (current: CanvasNode): void => {
+    fwIds.add(current.fwId)
+    if (isFrameNode(current)) current.children.forEach(visit)
+  }
+  visit(node)
+  return fwIds
+}
+
+function removeInboundRefs(root: FrameNode, targetFwIds: ReadonlySet<string>): FrameNode {
   const visit = (node: CanvasNode): CanvasNode => {
     let next = node
     if (isFrameNode(next)) {
@@ -85,7 +98,7 @@ function removeInboundRefs(root: FrameNode, targetFwId: string): FrameNode {
       if (changed) next = { ...next, children }
     }
     if (isAiImageNode(next) || isAiVideoNode(next)) {
-      const sourceFwIds = next.sourceFwIds.filter((fwId) => fwId !== targetFwId)
+      const sourceFwIds = next.sourceFwIds.filter((fwId) => !targetFwIds.has(fwId))
       if (sourceFwIds.length !== next.sourceFwIds.length) next = { ...next, sourceFwIds }
     }
     return next
@@ -96,23 +109,22 @@ function removeInboundRefs(root: FrameNode, targetFwId: string): FrameNode {
 
 function restoreInboundRefs(
   root: FrameNode,
-  targetFwId: string,
   inboundRefs: readonly InboundRef[],
 ): FrameNode {
-  const refsByNode = new Map<string, number[]>()
+  const refsByNode = new Map<string, Array<{ index: number; targetFwId: string }>>()
   for (const ref of inboundRefs) {
     const indices = refsByNode.get(ref.fwId) ?? []
-    indices.push(ref.index)
+    indices.push({ index: ref.index, targetFwId: ref.targetFwId })
     refsByNode.set(ref.fwId, indices)
   }
 
   let next = root
-  for (const [fwId, indices] of refsByNode) {
+  for (const [fwId, refs] of refsByNode) {
     next = updateNode(next, fwId, (node) => {
       if (!isAiImageNode(node) && !isAiVideoNode(node)) return node
       const sourceFwIds = [...node.sourceFwIds]
-      for (const index of indices.sort((left, right) => left - right)) {
-        sourceFwIds.splice(index, 0, targetFwId)
+      for (const ref of refs.sort((left, right) => left.index - right.index)) {
+        sourceFwIds.splice(ref.index, 0, ref.targetFwId)
       }
       return { ...node, sourceFwIds }
     })
@@ -123,15 +135,11 @@ function restoreInboundRefs(
 export function applyOp(root: FrameNode, op: CanvasOp): FrameNode {
   switch (op.kind) {
     case 'add-node':
-      return restoreInboundRefs(
-        insertIntoParent(root, op.slot, op.node),
-        op.node.fwId,
-        op.inboundRefs,
-      )
+      return restoreInboundRefs(insertIntoParent(root, op.slot, op.node), op.inboundRefs)
     case 'remove-node':
       return removeInboundRefs(
         removeFromParent(root, op.slot.parentFwId, op.node.fwId),
-        op.node.fwId,
+        collectSubtreeFwIds(op.node),
       )
     case 'move-node': {
       const node = findNode(root, op.fwId)
@@ -140,6 +148,11 @@ export function applyOp(root: FrameNode, op: CanvasOp): FrameNode {
     }
     case 'update-node':
       return updateNode(root, op.fwId, (node) => ({ ...node, ...op.after }) as CanvasNode)
+    case 'batch': {
+      let next = root
+      for (const childOp of op.ops) next = applyOp(next, childOp)
+      return next
+    }
   }
 }
 
@@ -163,6 +176,8 @@ export function invertOp(op: CanvasOp): CanvasOp {
       return { ...op, from: op.to, to: op.from }
     case 'update-node':
       return { ...op, before: op.after, after: op.before }
+    case 'batch':
+      return { kind: 'batch', ops: [...op.ops].reverse().map(invertOp) as AtomicCanvasOp[] }
   }
 }
 
