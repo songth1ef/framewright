@@ -25,13 +25,7 @@ export interface ShapeProps {
 
 export type ShapeComponent = (props: ShapeProps) => ReactNode
 
-const SELECTED_OUTLINE = '2px solid #5B8091'
-
-function withSelection(style: CSSProperties, selected: boolean): CSSProperties {
-  return selected ? { ...style, outline: SELECTED_OUTLINE } : style
-}
-
-function FrameShape({ node, position, size, selected, children }: ShapeProps): ReactNode {
+function FrameShape({ node, position, size, children }: ShapeProps): ReactNode {
   const base = toNodeStyle(node, position, size)
   const style: CSSProperties = {
     ...base,
@@ -39,20 +33,20 @@ function FrameShape({ node, position, size, selected, children }: ShapeProps): R
     overflow: isFrameNode(node) && node.clip ? 'hidden' : 'visible',
   }
   return (
-    <div data-fw-id={node.fwId} data-fw-type="frame" style={withSelection(style, selected)}>
+    <div data-fw-id={node.fwId} data-fw-type="frame" style={style}>
       {children}
     </div>
   )
 }
 
-function BoxShape({ node, position, size, selected }: ShapeProps): ReactNode {
+function BoxShape({ node, position, size }: ShapeProps): ReactNode {
   const base = toNodeStyle(node, position, size)
   const style: CSSProperties = {
     ...base,
     background: isBoxNode(node) ? node.fill : 'transparent',
     borderRadius: isBoxNode(node) ? `${node.cornerRadius}px` : undefined,
   }
-  return <div data-fw-id={node.fwId} data-fw-type="box" style={withSelection(style, selected)} />
+  return <div data-fw-id={node.fwId} data-fw-type="box" style={style} />
 }
 
 function GenerationUnitShape({ node, position, size, selected, onNodeAction }: ShapeProps): ReactNode {
@@ -74,7 +68,7 @@ function GenerationUnitShape({ node, position, size, selected, onNodeAction }: S
  * 正好喂给 docs/architecture.md §8.2 的实现成本对照表。
  */
 function makeUnsupportedShape(type: ShapeType): ShapeComponent {
-  return function UnsupportedShape({ node, position, size, selected }: ShapeProps): ReactNode {
+  return function UnsupportedShape({ node, position, size }: ShapeProps): ReactNode {
     const style: CSSProperties = {
       ...toNodeStyle(node, position, size),
       background: 'repeating-linear-gradient(45deg,#EEE,#EEE 8px,#DDD 8px,#DDD 16px)',
@@ -85,7 +79,7 @@ function makeUnsupportedShape(type: ShapeType): ShapeComponent {
         data-fw-id={node.fwId}
         data-fw-type={type}
         data-fw-unsupported="true"
-        style={withSelection(style, selected)}
+        style={style}
       />
     )
   }

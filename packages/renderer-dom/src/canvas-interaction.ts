@@ -26,6 +26,7 @@ export interface CanvasInteractionPreview {
   marquee?: Rect | null
   moves?: readonly NodeMove[]
   resizes?: readonly NodeResize[]
+  hoveredFwId?: string | null
 }
 
 export interface NodeResize extends Rect {
@@ -156,6 +157,7 @@ export function createCanvasInteraction(
 ): CanvasInteraction {
   let ctx = initialContext
   let gesture: Gesture | null = null
+  let hoveredFwId: string | null = null
   const previousCursor = container.style.cursor
 
   const setCursor = (cursor: CanvasCursor): void => {
@@ -166,12 +168,19 @@ export function createCanvasInteraction(
     }
   }
 
+  const setHovered = (fwId: string | null): void => {
+    if (fwId === hoveredFwId) return
+    hoveredFwId = fwId
+    options.onPreview(fwId === null ? EMPTY_INTERACTION_PREVIEW : { hoveredFwId: fwId })
+  }
+
   const cursorForCorner = (corner: Corner): CanvasCursor =>
     corner === 'nw' || corner === 'se' ? 'nwse-resize' : 'nesw-resize'
 
   const updateHoverCursor = (target: EventTarget | null): void => {
     const handle = closestResizeHandle(target)
     if (handle !== null) {
+      setHovered(null)
       setCursor(cursorForCorner(handle.corner))
       return
     }
@@ -183,13 +192,18 @@ export function createCanvasInteraction(
       !node.locked &&
       !(isFrameNode(node) && node.background === null)
     ) {
+      setHovered(node.fwId)
       setCursor('move')
       return
     }
+    setHovered(null)
     setCursor('default')
   }
 
-  const resetPreview = (): void => options.onPreview(EMPTY_INTERACTION_PREVIEW)
+  const resetPreview = (): void => {
+    hoveredFwId = null
+    options.onPreview(EMPTY_INTERACTION_PREVIEW)
+  }
 
   const resizeAt = (resize: ResizeGesture, screenPoint: Point): NodeResize => {
     const rect = resizeProportional(

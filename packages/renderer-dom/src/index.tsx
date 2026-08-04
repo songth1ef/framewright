@@ -157,8 +157,14 @@ export function createDomRenderer(): RendererAdapter {
           viewport={ctx.viewport}
           selectionBounds={ctx.selection.flatMap((fwId) => {
             const rect = bounds.get(fwId)
-            return rect === undefined ? [] : [{ fwId, rect }]
+              return rect === undefined ? [] : [{ fwId, rect }]
           })}
+          hoverBounds={(() => {
+            const fwId = interactionPreview.hoveredFwId
+            if (fwId === undefined || fwId === null) return null
+            const rect = bounds.get(fwId)
+            return rect === undefined ? null : { fwId, rect }
+          })()}
         />
       </div>,
     )

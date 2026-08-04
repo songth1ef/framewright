@@ -19,7 +19,6 @@ export interface GenerationUnitProps {
   onNodeAction(fwId: string, action: string): void
 }
 
-const SELECTED_OUTLINE = '2px solid #5B8091'
 const SKELETON_ANIMATION = 'fw-generation-skeleton-sweep'
 const PROGRESS_ANIMATION = 'fw-generation-progress-indeterminate'
 
@@ -221,7 +220,6 @@ export function GenerationUnit({
   node,
   position,
   size,
-  selected,
   onNodeAction,
 }: GenerationUnitProps): ReactNode {
   const isEmpty = node.status === 'empty'
@@ -233,7 +231,6 @@ export function GenerationUnit({
     borderStyle: isEmpty ? 'dashed' : 'solid',
     borderColor: isFailed ? GEN_UNIT_STYLE.failedBorderColor : GEN_UNIT_STYLE.borderColor,
     borderRadius: `${GEN_UNIT_STYLE.cornerRadius}px`,
-    outline: selected ? SELECTED_OUTLINE : undefined,
   }
 
   return (

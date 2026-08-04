@@ -281,11 +281,12 @@ describe('createDomRenderer', () => {
     expect(renderer.getRenderedBounds().size).toBe(0)
   })
 
-  it('update 换上选中态后，被选中节点带 outline', async () => {
+  it('update 换上选中态后，描边由根级 overlay 绘制而不写入节点', async () => {
     const renderer = await mountRenderer(makeContext())
     await act(async () => renderer.update(makeContext(['box-front'])))
     const el = container!.querySelector('[data-fw-id="box-front"]') as HTMLElement
-    expect(el.style.outline).toContain('#5B8091')
+    expect(el.style.outline).toBe('')
+    expect(container!.querySelector('[data-fw-selection-outline="single"]')).not.toBeNull()
     await act(async () => renderer.destroy())
   })
 
@@ -295,6 +296,65 @@ describe('createDomRenderer', () => {
 
     await act(async () => renderer.update(makeContext(['box-front', 'box-back'])))
     expect(container!.querySelectorAll('[data-fw-resize-handle]')).toHaveLength(0)
+    await act(async () => renderer.destroy())
+  })
+
+  it('选中 overlay 按 1/viewport.scale 反向补偿描边与控制点', async () => {
+    const zoomedIn = {
+      ...makeContext(['box-front']),
+      viewport: { scale: 4, offsetX: 0, offsetY: 0 },
+    }
+    const renderer = await mountRenderer(zoomedIn)
+    const outline = container!.querySelector('[data-fw-selection-outline="single"]') as HTMLElement
+    const handle = container!.querySelector('[data-fw-resize-handle="nw"]') as HTMLElement
+
+    expect(outline.style.borderWidth).toBe('0.5px')
+    expect(handle.style.width).toBe('2px')
+    expect(handle.style.height).toBe('2px')
+
+    await act(async () =>
+      renderer.update({ ...zoomedIn, viewport: { scale: 0.25, offsetX: 0, offsetY: 0 } }),
+    )
+    expect(
+      (container!.querySelector('[data-fw-selection-outline="single"]') as HTMLElement).style
+        .borderWidth,
+    ).toBe('8px')
+    expect(
+      (container!.querySelector('[data-fw-resize-handle="nw"]') as HTMLElement).style.width,
+    ).toBe('32px')
+    await act(async () => renderer.destroy())
+  })
+
+  it('多选只画联合包围框且不画控制点', async () => {
+    const renderer = await mountRenderer(makeContext(['box-back', 'box-front']))
+    const group = container!.querySelector('[data-fw-selection-outline="group"]') as HTMLElement
+
+    expect({ left: group.style.left, top: group.style.top, width: group.style.width, height: group.style.height }).toEqual({
+      left: '40px',
+      top: '40px',
+      width: '280px',
+      height: '200px',
+    })
+    expect(container!.querySelectorAll('[data-fw-selection-outline]')).toHaveLength(1)
+    expect(container!.querySelectorAll('[data-fw-resize-handle]')).toHaveLength(0)
+    await act(async () => renderer.destroy())
+  })
+
+  it('hover 业务单元显示 1px 视觉描边，移到空白后消失', async () => {
+    const renderer = await mountRenderer({
+      ...makeContext(),
+      viewport: { scale: 2, offsetX: 0, offsetY: 0 },
+    })
+    const node = container!.querySelector('[data-fw-id="box-front"]') as HTMLElement
+
+    await act(async () => node.dispatchEvent(new MouseEvent('pointermove', { bubbles: true })))
+    const hover = container!.querySelector('[data-fw-hover-outline]') as HTMLElement
+    expect(hover.style.borderWidth).toBe('0.5px')
+
+    await act(async () =>
+      container!.dispatchEvent(new MouseEvent('pointermove', { bubbles: true })),
+    )
+    expect(container!.querySelector('[data-fw-hover-outline]')).toBeNull()
     await act(async () => renderer.destroy())
   })
 

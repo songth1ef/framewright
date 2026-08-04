@@ -6,6 +6,7 @@ interface InteractionOverlayProps {
   preview: CanvasInteractionPreview
   viewport: Viewport
   selectionBounds: ReadonlyArray<{ fwId: string; rect: Rect }>
+  hoverBounds: { fwId: string; rect: Rect } | null
 }
 
 function screenRect(rect: Rect, viewport: Viewport): CSSProperties {
@@ -29,13 +30,43 @@ const HANDLE_CURSOR = {
   se: 'nwse-resize',
 } as const
 
+function unionRects(items: ReadonlyArray<{ rect: Rect }>): Rect | null {
+  if (items.length === 0) return null
+  const first = items[0]!.rect
+  let left = first.x
+  let top = first.y
+  let right = first.x + first.width
+  let bottom = first.y + first.height
+  for (const { rect } of items.slice(1)) {
+    left = Math.min(left, rect.x)
+    top = Math.min(top, rect.y)
+    right = Math.max(right, rect.x + rect.width)
+    bottom = Math.max(bottom, rect.y + rect.height)
+  }
+  return { x: left, y: top, width: right - left, height: bottom - top }
+}
+
+function canvasRect(rect: Rect): CSSProperties {
+  return {
+    position: 'absolute',
+    left: `${rect.x}px`,
+    top: `${rect.y}px`,
+    width: `${rect.width}px`,
+    height: `${rect.height}px`,
+    boxSizing: 'border-box',
+  }
+}
+
 export function InteractionOverlay({
   preview,
   viewport,
   selectionBounds,
+  hoverBounds,
 }: InteractionOverlayProps): ReactNode {
   const marquee = preview.marquee ?? null
   const singleSelection = selectionBounds.length === 1 ? selectionBounds[0]! : null
+  const selectionRect = unionRects(selectionBounds)
+  const inverseScale = 1 / viewport.scale
   return (
     <div
       data-fw-interaction-overlay="true"
@@ -51,33 +82,65 @@ export function InteractionOverlay({
           }}
         />
       )}
-      {singleSelection === null
-        ? null
-        : HANDLE_CORNERS.map((corner) => {
-            const rect = screenRect(singleSelection.rect, viewport)
-            const isRight = corner === 'ne' || corner === 'se'
-            const isBottom = corner === 'sw' || corner === 'se'
-            return (
-              <div
-                key={corner}
-                data-fw-id={singleSelection.fwId}
-                data-fw-resize-handle={corner}
-                style={{
-                  position: 'absolute',
-                  left: isRight ? `calc(${rect.left} + ${rect.width})` : rect.left,
-                  top: isBottom ? `calc(${rect.top} + ${rect.height})` : rect.top,
-                  width: '8px',
-                  height: '8px',
-                  border: '1px solid #5B8091',
-                  background: '#FFFFFF',
-                  boxSizing: 'border-box',
-                  cursor: HANDLE_CURSOR[corner],
-                  pointerEvents: 'auto',
-                  transform: 'translate(-50%, -50%)',
-                }}
-              />
-            )
-          })}
+      <div
+        data-fw-canvas-overlay="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          transform: `translate(${viewport.offsetX}px, ${viewport.offsetY}px) scale(${viewport.scale})`,
+          transformOrigin: 'top left',
+          pointerEvents: 'none',
+        }}
+      >
+        {hoverBounds === null ? null : (
+          <div
+            data-fw-hover-outline="true"
+            style={{
+              ...canvasRect(hoverBounds.rect),
+              borderStyle: 'solid',
+              borderWidth: `${inverseScale}px`,
+              borderColor: 'rgba(91, 128, 145, 0.45)',
+            }}
+          />
+        )}
+        {selectionRect === null ? null : (
+          <div
+            data-fw-selection-outline={singleSelection === null ? 'group' : 'single'}
+            style={{
+              ...canvasRect(selectionRect),
+              borderStyle: 'solid',
+              borderWidth: `${2 * inverseScale}px`,
+              borderColor: '#5B8091',
+            }}
+          />
+        )}
+        {singleSelection === null
+          ? null
+          : HANDLE_CORNERS.map((corner) => {
+              const isRight = corner === 'ne' || corner === 'se'
+              const isBottom = corner === 'sw' || corner === 'se'
+              return (
+                <div
+                  key={corner}
+                  data-fw-id={singleSelection.fwId}
+                  data-fw-resize-handle={corner}
+                  style={{
+                    position: 'absolute',
+                    left: `${singleSelection.rect.x + (isRight ? singleSelection.rect.width : 0)}px`,
+                    top: `${singleSelection.rect.y + (isBottom ? singleSelection.rect.height : 0)}px`,
+                    width: `${8 * inverseScale}px`,
+                    height: `${8 * inverseScale}px`,
+                    border: `${inverseScale}px solid #5B8091`,
+                    background: '#FFFFFF',
+                    boxSizing: 'border-box',
+                    cursor: HANDLE_CURSOR[corner],
+                    pointerEvents: 'auto',
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                />
+              )
+            })}
+      </div>
     </div>
   )
 }
