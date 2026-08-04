@@ -10,6 +10,13 @@ import {
 import type { ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { collectConnectionItems, ConnectionLayer } from './connections'
+import {
+  createCanvasInteraction,
+  EMPTY_INTERACTION_PREVIEW,
+  type CanvasInteraction,
+  type CanvasInteractionPreview,
+} from './canvas-interaction'
+import { InteractionOverlay } from './interaction-overlay'
 import { DOM_SHAPES } from './shapes/registry'
 import { createViewportInteraction, type ViewportInteraction } from './viewport-interaction'
 
@@ -72,7 +79,9 @@ export function createDomRenderer(): RendererAdapter {
 
   let root: Root | null = null
   let interaction: ViewportInteraction | null = null
+  let canvasInteraction: CanvasInteraction | null = null
   let currentContext: RenderContext | null = null
+  let interactionPreview: CanvasInteractionPreview = EMPTY_INTERACTION_PREVIEW
   let bounds = new Map<string, Rect>()
   let visibleNodeIds: string[] = []
 
@@ -96,27 +105,29 @@ export function createDomRenderer(): RendererAdapter {
       />
     )
     root.render(
-      <div
-        data-fw-viewport="true"
-        style={{
-          position: 'relative',
-          width: '100%',
-          height: '100%',
-          overflow: 'hidden',
-          transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
-          transformOrigin: 'top left',
-        }}
-      >
-        {renderNode(
-          ctx.root,
-          { x: 0, y: 0 },
-          true,
-          ctx.selection,
-          bounds,
-          visibleNodeIds,
-          ctx.callbacks.onNodeAction,
-          connectionLayer,
-        )}
+      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+        <div
+          data-fw-viewport="true"
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
+            transformOrigin: 'top left',
+          }}
+        >
+          {renderNode(
+            ctx.root,
+            { x: 0, y: 0 },
+            true,
+            ctx.selection,
+            bounds,
+            visibleNodeIds,
+            ctx.callbacks.onNodeAction,
+            connectionLayer,
+          )}
+        </div>
+        <InteractionOverlay preview={interactionPreview} viewport={ctx.viewport} />
       </div>,
     )
   }
@@ -136,20 +147,30 @@ export function createDomRenderer(): RendererAdapter {
           draw({ ...currentContext, viewport })
         },
       })
+      canvasInteraction = createCanvasInteraction(container, ctx, {
+        onPreview: (preview) => {
+          interactionPreview = preview
+          if (currentContext !== null) draw(currentContext)
+        },
+      })
     },
 
     update(ctx) {
       currentContext = ctx
       interaction?.update(ctx.viewport, ctx.callbacks.onViewportChange)
+      canvasInteraction?.update(ctx)
       draw(ctx)
     },
 
     destroy() {
       interaction?.destroy()
       interaction = null
+      canvasInteraction?.destroy()
+      canvasInteraction = null
       root?.unmount()
       root = null
       currentContext = null
+      interactionPreview = EMPTY_INTERACTION_PREVIEW
       bounds = new Map<string, Rect>()
       visibleNodeIds = []
     },
