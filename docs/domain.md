@@ -271,8 +271,9 @@ interface NodeSlot {
  * remove 时这些引用被摘除，add 时按原位恢复；新建节点时为空数组。
  */
 interface InboundRef {
-  fwId: string    // 引用方节点
-  index: number   // 在其 sourceFwIds 数组里的位置
+  fwId: string        // 引用方节点
+  index: number       // 在其 sourceFwIds 数组里的位置
+  targetFwId: string  // 被引用的节点 —— 可能是被删节点本身，也可能是它的后代
 }
 
 type CanvasOp =
@@ -280,6 +281,8 @@ type CanvasOp =
   | { kind: 'remove-node'; slot: NodeSlot; node: CanvasNode; inboundRefs: readonly InboundRef[] }
   | { kind: 'move-node';   fwId: string; from: NodeSlot; to: NodeSlot }
   | { kind: 'update-node'; fwId: string; before: Partial<CanvasNode>; after: Partial<CanvasNode> }
+  /** 一次用户手势产生的多个操作，**作为一个整体撤销**。禁止嵌套。 */
+  | { kind: 'batch';       ops: readonly CanvasOp[] }
 
 interface HistoryEntry {
   id: string
@@ -291,6 +294,22 @@ interface HistoryEntry {
 ```
 
 **关键性质：每个 op 自带反推逆操作所需的全部信息**，因此不需要另存一份 inverse。
+
+> ⚠️ **这句话已经被打脸两次，两次都是 Codex 在实现时发现的。** 记在这里提醒后来者：**「自带全部信息」是个需要逐个 op 验证的断言，不是写下来就成立的。**
+>
+> **第一次（`inboundRefs` 不对称）**：`remove-node` 带了引用清单，逆操作 `add-node` 却没有该字段 → 信息丢失，撤销删除时连线恢复不回来。已改为 add/remove 对称持有。
+>
+> **第二次（`InboundRef` 缺被引用目标）**：原设计隐含假设「所有 inboundRef 都指向被删节点本身」。但**删除一个 frame 时，外部节点可能引用的是它的后代**——一个 `remove-node` 无法表达「每条入边具体指向哪个后代」，于是**「清除悬空引用」与「无损 undo」不能同时满足**。已加 `targetFwId` 字段。
+
+### `batch` —— 一次手势 = 一次撤销
+
+**问题**：`onNodesMove` / `onNodesResize` / `onNodesDelete` 的参数都是数组。用户一次拖动三个节点会产生三个 `CanvasOp`，线性栈会让 `Ctrl+Z` **逐个撤销**——用户按了一次却只回退了三分之一，明显不符合预期。
+
+**裁定**：加 `{ kind: 'batch'; ops: readonly CanvasOp[] }`。
+
+- `applyOp(batch)` 按顺序应用；`invertOp(batch)` = **ops 反序 + 每个取逆**（顺序必须反，否则依赖关系错乱）
+- **禁止嵌套**：`batch.ops` 里不许再出现 `batch`。一次手势只有一层
+- 选它而不是「把栈条目改成 `CanvasOp[]`」的理由：**`HistoryEntry` 的形状不变**（仍是一条记录一个 `op`），持久化层零改动；且 `invertOp` 保持全函数——每个 op 都有逆
 
 | op | 逆操作 |
 |---|---|
