@@ -111,6 +111,33 @@ Move-Item docs\agents-mail\<自己的ID>\inbox\<文件名> docs\agents-mail\<自
 
 **什么时候查信**：每个任务开工前查一次、完成后查一次。别做成轮询循环。
 
+## 4.1 调度方式与权限（用户 2026-08-04 授权）
+
+CLI agent 是**回合制**的——跑完自己那一轮就停下等人敲字，**不会自己去查信箱**。所以信箱解决的是「消息传递」，不解决「唤醒」。
+
+**当前采用的唤醒方式 = Claude 当调度器**：由 Claude 用 `codex exec` / `kimi -p` 直接把任务派出去，收回报后再派下一批。信箱继续承担**任务规格的持久载体**与**审计留痕**——每次派发前把任务信写进对方 inbox，`exec` 的 prompt 只负责指路。
+
+**这套之所以成立，是因为一切都落在文档而不是会话上下文里**：每次 `exec` 都是全新会话、上下文从零，但读几个文件就知道自己是谁、该干什么、上一轮发生了什么。
+
+### 🔴 权限：用户已授权最高权限
+
+- **Codex**：`--dangerously-bypass-approvals-and-sandbox`
+- **Kimi**：`kimi -p`（本身即无沙箱；⚠️ `-p` 不能与 `-y` 同用，会报 `Cannot combine --prompt with --yolo`）
+
+**背景**：Codex 默认的 `workspace-write` 沙箱（身份 `CodexSandboxOffline`）**禁止执行工作区之外的任何可执行文件**，而本机 node 装在 `C:\Users\soull\AppData\Local\nvm\v22.23.1`（`C:\nvm4w\nodejs` 只是指向它的符号链接）。试过 `disk-full-read-access` —— 那给的是「读」不是「执行」，仍然跑不了 `node -v`。连续四轮零产出后由用户授权去掉沙箱。
+
+### ⚠️ 沙箱去掉之后，纪律全靠 prompt 与自觉
+
+沙箱原本兜底的那些，现在必须**每次派发都在 prompt 里写死**：
+
+1. **`git add` 只 add 自己范围内的文件，绝不许 `-A`** —— 工作区里同时有对方在飞的文件
+2. **绝不许 `git push`**
+3. 不许 `--no-verify`
+4. 不许改设计文档与任务板状态列
+5. **不许动本仓之外的任何目录**
+
+**这几条不是可省的客套话**——`--dangerously-bypass-approvals-and-sandbox` 之后它们是仅有的护栏。
+
 ---
 
 ## 5. 🔴 升级判据 —— 什么必须问人类
