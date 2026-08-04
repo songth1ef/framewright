@@ -8,8 +8,9 @@ import {
   type RenderContext,
   type RendererAdapter,
 } from '@framewright/core'
-import { Leafer, type IUI } from 'leafer-ui'
+import { Leafer, PointerEvent, type IUI } from 'leafer-ui'
 import { buildConnectionLayer } from './connections'
+import { dispatchNodeActionTap } from './node-action'
 import { LEAFER_SHAPES } from './shapes/registry'
 
 export function createLeaferRenderer(): RendererAdapter {
@@ -18,6 +19,8 @@ export function createLeaferRenderer(): RendererAdapter {
   let leafer: Leafer | null = null
   let bounds = new Map<string, CoreRect>()
   let visibleNodeIds: string[] = []
+  /** 最近一次 draw 的 ctx：tap 分派只读 callbacks，用它避免闭包抓住过期 ctx */
+  let currentCtx: RenderContext | null = null
 
   const buildNode = (
     node: CanvasNode,
@@ -42,6 +45,8 @@ export function createLeaferRenderer(): RendererAdapter {
       position: { x: node.x, y: node.y },
       selected: selection.includes(node.fwId),
     })
+    // node 容器打 fwId 标记：内部按钮的 tap 分派沿父链找它（见 node-action.ts）
+    ui.data = { ...(ui.data as Record<string, unknown> | undefined), fwId: node.fwId }
     parent.add(ui)
     if (visible) visibleNodeIds.push(node.fwId)
 
@@ -58,6 +63,7 @@ export function createLeaferRenderer(): RendererAdapter {
 
   const draw = (ctx: RenderContext): void => {
     if (leafer === null) return
+    currentCtx = ctx
     leafer.clear()
     bounds = new Map<string, CoreRect>()
     visibleNodeIds = []
@@ -79,6 +85,10 @@ export function createLeaferRenderer(): RendererAdapter {
 
     mount(container, ctx) {
       leafer = new Leafer({ view: container })
+      // 内部按钮（点击生成 / 重试）：只上报 onNodeAction，不参与选中/拖拽/双击（M1 §5）
+      leafer.on(PointerEvent.TAP, (e) => {
+        if (currentCtx !== null) dispatchNodeActionTap(e.target as IUI, currentCtx.callbacks)
+      })
       draw(ctx)
     },
 
@@ -89,6 +99,7 @@ export function createLeaferRenderer(): RendererAdapter {
     destroy() {
       leafer?.destroy()
       leafer = null
+      currentCtx = null
       bounds = new Map<string, CoreRect>()
       visibleNodeIds = []
     },

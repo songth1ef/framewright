@@ -18,8 +18,7 @@ type GenUnitNode = AiImageNode | AiVideoNode
 /**
  * 内部动作按钮（点击生成 / 重试）：只打 `data.fwInternalAction` 标记，
  * 供命中分派按「内部交互、不参与选中/拖拽/双击」排除（M1 §5）。
- * 点击行为（onNodeAction）按 2026-08-04 裁定延期到 D0-min——
- * RenderContext.callbacks 尚不存在，本轮不许自造临时回调通道。
+ * 点击由渲染器在 tap 时沿父链解析并上报 onNodeAction（见 ../node-action.ts，D0-min）。
  */
 function markInternalAction(ui: IUI, action: NodeActionName): void {
   ui.data = { fwInternalAction: action }
