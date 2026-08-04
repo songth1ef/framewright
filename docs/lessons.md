@@ -208,4 +208,22 @@ Leafer 侧关于 Leafer 内建手势的每一条都对（技术处境），关�
 
 ## 踩坑记录
 
-_(暂无)_
+### 1. leafer-ui 在 vitest 下 import 即崩，需桩 canvas API（2026-08-04，C1-leafer）
+
+**现象**：`import 'leafer-ui'` 在 node/jsdom 环境直接抛 `CanvasRenderingContext2D is not defined`（后续还有 `Path2D` / `DragEvent` / `getContext` 返回 null）。
+
+**结论**：leafer-ui 的 web 平台层在**模块加载时**就触碰浏览器 canvas API。要在单测里构造并检查 leafer 对象树（结构、属性、事件接线），先执行 `packages/renderer-leafer/src/leafer-test-stub.ts`（桩 `CanvasRenderingContext2D` / `Path2D` / `DragEvent` + 全 no-op 的假 2d context），且它必须是测试文件的**第一个 import**（ES 模块按 import 顺序求值）。
+
+**边界**：桩环境下不做任何真实渲染，几何与像素断言归 e2e（真实浏览器）。用 `// @vitest-environment jsdom` 提供 window/document。
+
+### 2. leafer 的 `scaleFixed` 对 `strokeWidth` 不生效（2026-08-04 实测，leafer-ui 2.2.9）
+
+**实测**：`strokeWidth: 10` 的 Rect，scale=4（分别挂在 Leafer 根与 Group 上两种配置），`scaleFixed: true` 与否描边视觉厚度都是 40px——**没有任何补偿**。源码佐证：`UIRender.ts` 里只有 `shadow.scaleFixed` 被读取，元素自身的 `scaleFixed` 不参与描边补偿。
+
+**结论**：「描边宽度不随缩放变粗」必须手写 `strokeWidth / viewport.scale` 反向补偿（连线层已这么做）。**D5 选中 overlay 同此**；且现有 frame/box 的选中描边（2px）目前会随缩放变粗，属 D5 要处理的已知项。
+
+### 3. root frame 的 background 是画布底色，会盖住先于它 add 的层（2026-08-04，C2-leafer）
+
+**现象**：溯源连线层 `leafer.add(连线层)` 先于 root frame，结果连线完全不可见——root 的白色 background 画在整个 800×450 上，把它盖住了。
+
+**结论**：「画在所有节点之下」的正确落点是**root frame 内部、作为第一个孩子**——在 root 自己的 background 之上、一切业务节点之下。后续的选中 overlay（D5）若也要「压在所有节点之上」，镜像地应作为 root 的**最后**一个孩子，而不是 add 到 leafer 根。
