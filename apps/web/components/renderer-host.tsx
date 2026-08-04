@@ -2,10 +2,15 @@
 
 import {
   DEFAULT_VIEWPORT,
-  NOOP_RENDERER_CALLBACKS,
+  applyNodeMoves,
+  applyNodeResizes,
+  applySelection,
+  collectNodeIds,
   createDemoDocument,
+  deleteNodes,
   type RenderContext,
   type RendererAdapter,
+  type RendererCallbacks,
 } from '@framewright/core'
 import { createDomRenderer } from '@framewright/renderer-dom'
 import { createLeaferRenderer } from '@framewright/renderer-leafer'
@@ -29,11 +34,37 @@ export function RendererHost() {
   const [viewport, setViewport] = useState(DEFAULT_VIEWPORT)
   const [root, setRoot] = useState(createDemoDocument)
   const [lastAction, setLastAction] = useState('')
+  const rootRef = useRef(root)
+  rootRef.current = root
 
-  const callbacks = useMemo(
+  const callbacks = useMemo<RendererCallbacks>(
     () => ({
-      ...NOOP_RENDERER_CALLBACKS,
+      onSelectionRequest: (fwIds, mode) => {
+        setSelection((current) => applySelection(current, fwIds, mode))
+      },
+      onNodesMove: (moves) => {
+        setRoot((current) => {
+          const next = applyNodeMoves(current, moves)
+          rootRef.current = next
+          return next
+        })
+      },
+      onNodesResize: (resizes) => {
+        setRoot((current) => {
+          const next = applyNodeResizes(current, resizes)
+          rootRef.current = next
+          return next
+        })
+      },
+      onNodesDelete: (fwIds) => {
+        const next = deleteNodes(rootRef.current, fwIds)
+        rootRef.current = next
+        setRoot(next)
+        const remaining = new Set(collectNodeIds(next))
+        setSelection((current) => current.filter((fwId) => remaining.has(fwId)))
+      },
       onViewportChange: setViewport,
+      onNodeActivate: (fwId) => setLastAction(`${fwId}:activate`),
       onNodeAction: (fwId: string, action: string) => setLastAction(`${fwId}:${action}`),
     }),
     [],
@@ -80,7 +111,10 @@ export function RendererHost() {
 
   return (
     <main style={{ fontFamily: 'system-ui, sans-serif', padding: 16 }}>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+      <div
+        data-testid="toolbar"
+        style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}
+      >
         <button
           type="button"
           data-testid="renderer-switch"
@@ -99,8 +133,13 @@ export function RendererHost() {
           选中底层方块
         </button>
         <span data-testid="selection">{selection.join(',')}</span>
+        <span>
+          已选 <span data-testid="selection-count">{selection.length}</span> 个
+        </span>
         <span data-testid="viewport-scale">{Math.round(viewport.scale * 100)}%</span>
-        <span data-testid="last-node-action">{lastAction}</span>
+        <span>
+          最近操作：<span data-testid="last-node-action">{lastAction}</span>
+        </span>
         <button
           type="button"
           data-testid="toggle-inner-frame"

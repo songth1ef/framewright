@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { createBoxNode, createFrameNode } from './node-schema'
+import { createAiVideoNode, createBoxNode, createFrameNode } from './node-schema'
 import {
+  applyNodeMoves,
+  applyNodeResizes,
   collectNodeIds,
+  deleteNodes,
   findNodeById,
   getAbsolutePosition,
   walkTree,
@@ -62,5 +65,50 @@ describe('walkTree', () => {
       ['inner', 100, 50],
       ['box', 110, 70],
     ])
+  })
+})
+
+describe('不可变树更新', () => {
+  it('移动只更新 parentFwId 指定父节点下的直接 child，并保留未变分支引用', () => {
+    const root = buildTree()
+    const originalInner = root.children[0]!
+    const next = applyNodeMoves(root, [
+      { fwId: 'box', parentFwId: 'inner', x: 35, y: 45 },
+      { fwId: 'inner', parentFwId: 'wrong-parent', x: 999, y: 999 },
+    ])
+
+    expect(next).not.toBe(root)
+    expect(next.children[0]).not.toBe(originalInner)
+    expect(findNodeById(next, 'box')).toMatchObject({ x: 35, y: 45 })
+    expect(findNodeById(next, 'inner')).toMatchObject({ x: 100, y: 50 })
+    expect(findNodeById(root, 'box')).toMatchObject({ x: 10, y: 20 })
+  })
+
+  it('缩放按父相对坐标更新几何，输入为空时保持根引用', () => {
+    const root = buildTree()
+    const next = applyNodeResizes(root, [
+      { fwId: 'box', parentFwId: 'inner', x: 5, y: 6, width: 70, height: 80 },
+    ])
+
+    expect(findNodeById(next, 'box')).toMatchObject({ x: 5, y: 6, width: 70, height: 80 })
+    expect(applyNodeResizes(root, [])).toBe(root)
+  })
+
+  it('删除 frame 会移除整棵子树，并清理其它生成节点的全部悬空 sourceFwIds', () => {
+    const nestedSource = createBoxNode({ fwId: 'nested-source' })
+    const deletedFrame = createFrameNode({ fwId: 'deleted-frame', children: [nestedSource] })
+    const kept = createBoxNode({ fwId: 'kept' })
+    const target = createAiVideoNode({
+      fwId: 'target',
+      sourceFwIds: ['deleted-frame', 'nested-source', 'kept'],
+    })
+    const root = createFrameNode({ fwId: 'root', children: [deletedFrame, kept, target] })
+    const next = deleteNodes(root, ['deleted-frame'])
+
+    expect(collectNodeIds(next)).toEqual(['root', 'kept', 'target'])
+    expect(findNodeById(next, 'target')).toMatchObject({ sourceFwIds: ['kept'] })
+    expect(findNodeById(root, 'target')).toMatchObject({
+      sourceFwIds: ['deleted-frame', 'nested-source', 'kept'],
+    })
   })
 })
