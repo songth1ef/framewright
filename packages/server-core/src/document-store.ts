@@ -4,6 +4,7 @@ import { prisma } from './prisma'
 
 export interface StoredDocument {
   id: string
+  projectId: string
   name: string
   root: FrameNode
   historySeq: number
@@ -13,6 +14,7 @@ export interface StoredDocument {
 
 export interface CreateDocumentInput {
   id?: string
+  projectId: string
   name: string
   root: FrameNode
 }
@@ -37,6 +39,7 @@ function toJson(root: FrameNode): Prisma.InputJsonValue {
 function toStoredDocument(document: PrismaDocument): StoredDocument {
   return {
     id: document.id,
+    projectId: document.projectId,
     name: document.name,
     root: document.root as unknown as FrameNode,
     historySeq: document.historySeq,
@@ -48,10 +51,16 @@ function toStoredDocument(document: PrismaDocument): StoredDocument {
 export function createDocumentStore(client: PrismaClient): DocumentStore {
   return {
     async listDocuments() {
-      const documents = await client.document.findMany({
-        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
-      })
-      return documents.map(toStoredDocument)
+      try {
+        const documents = await client.document.findMany({
+          orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+        })
+        return documents.map(toStoredDocument)
+      } catch (error) {
+        // TEMP-DEBUG: 打印 Next 运行时完整堆栈，定位后回退
+        console.error('LIST_DOCUMENTS_ERROR', error)
+        throw error
+      }
     },
 
     async getDocument(documentId) {
@@ -63,6 +72,7 @@ export function createDocumentStore(client: PrismaClient): DocumentStore {
       const document = await client.document.create({
         data: {
           ...(input.id === undefined ? {} : { id: input.id }),
+          projectId: input.projectId,
           name: input.name,
           root: toJson(input.root),
         },

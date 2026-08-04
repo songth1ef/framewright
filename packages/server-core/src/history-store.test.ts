@@ -3,11 +3,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   createDocumentStore,
   createHistoryStore,
-  createPrismaClient,
   HISTORY_LIMIT,
   type DocumentStore,
   type HistoryStore,
 } from './index'
+import { createTestPrismaClient } from './test-db'
 
 function makeMoveOp(x: number): CanvasOp {
   return {
@@ -19,40 +19,18 @@ function makeMoveOp(x: number): CanvasOp {
 }
 
 describe('History store', () => {
-  let prisma: ReturnType<typeof createPrismaClient>
+  let prisma: Awaited<ReturnType<typeof createTestPrismaClient>>
   let documents: DocumentStore
   let store: HistoryStore
 
   beforeEach(async () => {
-    prisma = createPrismaClient(':memory:')
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE "Document" (
-        "id" TEXT NOT NULL PRIMARY KEY,
-        "name" TEXT NOT NULL,
-        "root" JSONB NOT NULL,
-        "historySeq" INTEGER NOT NULL DEFAULT 0,
-        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" DATETIME NOT NULL
-      )
-    `)
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE "HistoryEntry" (
-        "id" TEXT NOT NULL PRIMARY KEY,
-        "documentId" TEXT NOT NULL,
-        "seq" INTEGER NOT NULL,
-        "op" JSONB NOT NULL,
-        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "HistoryEntry_documentId_fkey"
-          FOREIGN KEY ("documentId") REFERENCES "Document" ("id") ON DELETE CASCADE
-      )
-    `)
-    await prisma.$executeRawUnsafe(`
-      CREATE UNIQUE INDEX "HistoryEntry_documentId_seq_key" ON "HistoryEntry"("documentId", "seq")
-    `)
+    prisma = await createTestPrismaClient()
+    await prisma.project.create({ data: { id: 'proj-a', name: '测试项目' } })
     documents = createDocumentStore(prisma)
     store = createHistoryStore(prisma)
     await documents.createDocument({
       id: 'doc-a',
+      projectId: 'proj-a',
       name: '分镜 A',
       root: createFrameNode({ fwId: 'root' }),
     })
@@ -124,6 +102,7 @@ describe('History store', () => {
   it('裁剪只影响本 document，不波及其它 document', async () => {
     await documents.createDocument({
       id: 'doc-b',
+      projectId: 'proj-a',
       name: '分镜 B',
       root: createFrameNode({ fwId: 'root' }),
     })

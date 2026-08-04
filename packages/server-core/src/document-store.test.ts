@@ -1,23 +1,15 @@
 import { createBoxNode, createFrameNode } from '@framewright/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createDocumentStore, createPrismaClient, type DocumentStore } from './index'
+import { createDocumentStore, type DocumentStore } from './index'
+import { createTestPrismaClient } from './test-db'
 
 describe('Document store', () => {
-  let prisma: ReturnType<typeof createPrismaClient>
+  let prisma: Awaited<ReturnType<typeof createTestPrismaClient>>
   let store: DocumentStore
 
   beforeEach(async () => {
-    prisma = createPrismaClient(':memory:')
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE "Document" (
-        "id" TEXT NOT NULL PRIMARY KEY,
-        "name" TEXT NOT NULL,
-        "root" JSONB NOT NULL,
-        "historySeq" INTEGER NOT NULL DEFAULT 0,
-        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" DATETIME NOT NULL
-      )
-    `)
+    prisma = await createTestPrismaClient()
+    await prisma.project.create({ data: { id: 'proj-a', name: '测试项目' } })
     store = createDocumentStore(prisma)
   })
 
@@ -31,9 +23,20 @@ describe('Document store', () => {
       children: [createBoxNode({ fwId: 'box-a', x: 12, y: 34 })],
     })
 
-    const created = await store.createDocument({ id: 'doc-a', name: '分镜 A', root })
+    const created = await store.createDocument({
+      id: 'doc-a',
+      projectId: 'proj-a',
+      name: '分镜 A',
+      root,
+    })
 
-    expect(created).toMatchObject({ id: 'doc-a', name: '分镜 A', root, historySeq: 0 })
+    expect(created).toMatchObject({
+      id: 'doc-a',
+      projectId: 'proj-a',
+      name: '分镜 A',
+      root,
+      historySeq: 0,
+    })
     expect(created.createdAt).toBeInstanceOf(Date)
     expect(created.updatedAt).toBeInstanceOf(Date)
     await expect(store.getDocument('doc-a')).resolves.toEqual(created)
@@ -45,8 +48,8 @@ describe('Document store', () => {
 
   it('listDocuments 按最近更新时间倒序列出画布', async () => {
     const root = createFrameNode({ fwId: 'root' })
-    await store.createDocument({ id: 'doc-a', name: '画布 A', root })
-    await store.createDocument({ id: 'doc-b', name: '画布 B', root })
+    await store.createDocument({ id: 'doc-a', projectId: 'proj-a', name: '画布 A', root })
+    await store.createDocument({ id: 'doc-b', projectId: 'proj-a', name: '画布 B', root })
     await store.saveDocument('doc-a', { name: '画布 A+', root, historySeq: 0 })
 
     const documents = await store.listDocuments()
@@ -59,7 +62,7 @@ describe('Document store', () => {
 
   it('saveDocument 覆盖当前树、名称与 historySeq，保留同一 document id', async () => {
     const initialRoot = createFrameNode({ fwId: 'root' })
-    await store.createDocument({ id: 'doc-a', name: '初始', root: initialRoot })
+    await store.createDocument({ id: 'doc-a', projectId: 'proj-a', name: '初始', root: initialRoot })
     const nextRoot = createFrameNode({
       fwId: 'root',
       children: [createBoxNode({ fwId: 'box-next', x: 50 })],
@@ -73,6 +76,7 @@ describe('Document store', () => {
 
     expect(saved).toMatchObject({
       id: 'doc-a',
+      projectId: 'proj-a',
       name: '已更新',
       root: nextRoot,
       historySeq: 7,
