@@ -24,6 +24,7 @@ import {
 import { createDomRenderer } from '@framewright/renderer-dom'
 import { createLeaferRenderer } from '@framewright/renderer-leafer'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { loadServerHistory } from './server-history'
 
 type Factory = () => RendererAdapter
 
@@ -76,7 +77,7 @@ function groupOps(ops: readonly CanvasOp[]): CanvasOp | null {
   return { kind: 'batch', ops: ops as Exclude<CanvasOp, { kind: 'batch' }>[] }
 }
 
-export function RendererHost() {
+export function RendererHost({ documentId }: { documentId?: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const adapterRef = useRef<RendererAdapter | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -89,6 +90,25 @@ export function RendererHost() {
   const rootRef = useRef(root)
   const historyRef = useRef(createMemoryHistory())
   rootRef.current = root
+
+  // U2：给了 documentId 就把操作栈换成写后端的版本，刷新后仍能撤销；加载失败退回内存栈
+  useEffect(() => {
+    if (documentId === undefined) return
+    let cancelled = false
+    loadServerHistory(documentId, {
+      getRoot: () => rootRef.current,
+      onError: (error) => console.error('[framewright] 操作日志写后端失败', error),
+    })
+      .then((history) => {
+        if (!cancelled) historyRef.current = history
+      })
+      .catch((error: unknown) => {
+        console.error('[framewright] 撤销历史加载失败，退回内存操作栈', error)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [documentId])
 
   const commitOps = (ops: readonly CanvasOp[]): void => {
     const op = groupOps(ops)
