@@ -44,6 +44,15 @@ importers:
       '@framewright/server-core':
         specifier: workspace:*
         version: link:../../packages/server-core
+      '@prisma/adapter-better-sqlite3':
+        specifier: 6.19.3
+        version: 6.19.3
+      '@prisma/client':
+        specifier: 6.19.3
+        version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+      better-sqlite3:
+        specifier: 11.10.0
+        version: 11.10.0
       next:
         specifier: 15.5.22
         version: 15.5.22(@playwright/test@1.62.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

@@ -12,6 +12,9 @@
     "@framewright/renderer-dom": "workspace:*",
     "@framewright/renderer-leafer": "workspace:*",
     "@framewright/server-core": "workspace:*",
+    "@prisma/adapter-better-sqlite3": "6.19.3",
+    "@prisma/client": "6.19.3",
+    "better-sqlite3": "11.10.0",
     "next": "15.5.22",
     "react": "19.2.8",
     "react-dom": "19.2.8"
