@@ -2,6 +2,13 @@ import { createBoxNode, type CanvasOp } from '@framewright/core'
 import { describe, expect, it, vi } from 'vitest'
 import { createHistoryRouteHandlers, type HistoryRouteService } from './route-handler'
 
+const serverCore = vi.hoisted(() => ({
+  getEntries: vi.fn(),
+  appendOp: vi.fn(),
+}))
+
+vi.mock('@framewright/server-core', () => serverCore)
+
 const op: CanvasOp = {
   kind: 'move-node',
   fwId: 'box-a',
@@ -108,5 +115,30 @@ describe('POST /api/documents/[id]/history', () => {
 
     vi.mocked(service.appendHistory).mockRejectedValueOnce({ code: 'P2025' })
     expect((await POST(request(), context('missing'))).status).toBe(404)
+  })
+})
+
+describe('生产路由接线', () => {
+  it('GET/POST 使用 server-core 的 history store', async () => {
+    serverCore.getEntries.mockResolvedValueOnce([entry])
+    serverCore.appendOp.mockResolvedValueOnce(entry)
+    const { GET, POST } = await import('./route')
+
+    const getResponse = await GET(
+      new Request('http://localhost/api/documents/doc-a/history'),
+      context('doc-a'),
+    )
+    const postResponse = await POST(
+      new Request('http://localhost/api/documents/doc-a/history', {
+        method: 'POST',
+        body: JSON.stringify({ op }),
+      }),
+      context('doc-a'),
+    )
+
+    expect(serverCore.getEntries).toHaveBeenCalledWith('doc-a')
+    expect(serverCore.appendOp).toHaveBeenCalledWith('doc-a', op)
+    expect(getResponse.status).toBe(200)
+    expect(postResponse.status).toBe(201)
   })
 })
