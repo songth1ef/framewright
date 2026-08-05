@@ -32,6 +32,7 @@ function renderNode(
   bounds: Map<string, Rect>,
   visibleNodeIds: string[],
   onNodeAction: RenderContext['callbacks']['onNodeAction'],
+  activeVideoFwId: string | null,
   connectionLayer?: ReactNode,
 ): ReactNode {
   const previewResize = previewResizes.get(node.fwId)
@@ -64,6 +65,7 @@ function renderNode(
               bounds,
               visibleNodeIds,
               onNodeAction,
+              activeVideoFwId,
             ),
           )}
         </>
@@ -77,6 +79,7 @@ function renderNode(
       position={position}
       size={size}
       selected={selection.includes(node.fwId)}
+      active={node.fwId === activeVideoFwId}
       onNodeAction={onNodeAction}
     >
       {children}
@@ -96,6 +99,7 @@ export function createDomRenderer(): RendererAdapter {
   let visibleNodeIds: string[] = []
   let canvasCursor: CanvasCursor = 'default'
   let viewportCursor: 'grab' | 'grabbing' | null = null
+  let activeVideoFwId: string | null = null
   let cursorContainer: HTMLElement | null = null
 
   const applyCursor = (): void => {
@@ -149,6 +153,7 @@ export function createDomRenderer(): RendererAdapter {
             bounds,
             visibleNodeIds,
             ctx.callbacks.onNodeAction,
+            activeVideoFwId,
             connectionLayer,
           )}
         </div>
@@ -199,6 +204,10 @@ export function createDomRenderer(): RendererAdapter {
           canvasCursor = cursor
           applyCursor()
         },
+        onVideoActivationChange: (fwId) => {
+          activeVideoFwId = fwId
+          if (currentContext !== null) draw(currentContext)
+        },
       })
     },
 
@@ -222,6 +231,7 @@ export function createDomRenderer(): RendererAdapter {
       visibleNodeIds = []
       canvasCursor = 'default'
       viewportCursor = null
+      activeVideoFwId = null
       if (cursorContainer !== null) cursorContainer.style.cursor = ''
       cursorContainer = null
     },

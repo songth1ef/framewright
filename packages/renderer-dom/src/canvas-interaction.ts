@@ -4,6 +4,7 @@ import {
   collectNodesInRect,
   findNodeById,
   hitTestPoint,
+  isVideoNode,
   isFrameNode,
   MIN_NODE_SIZE,
   computeMoves,
@@ -39,6 +40,7 @@ export const EMPTY_INTERACTION_PREVIEW: CanvasInteractionPreview = {}
 interface CanvasInteractionOptions {
   onPreview(preview: CanvasInteractionPreview): void
   onCursorChange?(cursor: CanvasCursor): void
+  onVideoActivationChange?(fwId: string | null): void
 }
 
 export type CanvasCursor =
@@ -158,7 +160,14 @@ export function createCanvasInteraction(
   let ctx = initialContext
   let gesture: Gesture | null = null
   let hoveredFwId: string | null = null
+  let activeVideoFwId: string | null = null
   const previousCursor = container.style.cursor
+
+  const setActiveVideo = (fwId: string | null): void => {
+    if (fwId === activeVideoFwId) return
+    activeVideoFwId = fwId
+    options.onVideoActivationChange?.(fwId)
+  }
 
   const setCursor = (cursor: CanvasCursor): void => {
     if (options.onCursorChange !== undefined) {
@@ -178,6 +187,11 @@ export function createCanvasInteraction(
     corner === 'nw' || corner === 'se' ? 'nwse-resize' : 'nesw-resize'
 
   const updateHoverCursor = (target: EventTarget | null): void => {
+    if (shouldIgnore(target)) {
+      setHovered(null)
+      setCursor('default')
+      return
+    }
     const handle = closestResizeHandle(target)
     if (handle !== null) {
       setHovered(null)
@@ -350,6 +364,7 @@ export function createCanvasInteraction(
         const ids = collectNodesInRect(ctx.root, rectFromPoints(finished.startCanvas, endCanvas))
         ctx.callbacks.onSelectionRequest(ids, finished.shiftKey ? 'add' : 'replace')
       } else if (!finished.shiftKey) {
+        setActiveVideo(null)
         ctx.callbacks.onSelectionRequest([], 'replace')
       }
       resetPreview()
@@ -361,6 +376,10 @@ export function createCanvasInteraction(
       ctx.callbacks.onSelectionRequest([finished.fwId], 'toggle')
       updateHoverCursor(event.target)
       return
+    }
+    if (!finished.dragging && finished.wasSelected) {
+      const node = findNodeById(ctx.root, finished.fwId)
+      if (node !== null && isVideoNode(node)) setActiveVideo(node.fwId)
     }
     if (finished.dragging) {
       const endCanvas = screenToCanvas(ctx.viewport, localScreenPoint(container, event))
@@ -444,10 +463,16 @@ export function createCanvasInteraction(
   return {
     update(nextContext) {
       ctx = nextContext
+      const activeVideo =
+        activeVideoFwId === null ? null : findNodeById(ctx.root, activeVideoFwId)
+      if (activeVideoFwId !== null && (activeVideo === null || !isVideoNode(activeVideo))) {
+        setActiveVideo(null)
+      }
     },
 
     destroy() {
       cancelGesture()
+      setActiveVideo(null)
       container.removeEventListener('pointerdown', onPointerDown)
       window.removeEventListener('pointermove', onPointerMove)
       window.removeEventListener('pointerup', onPointerUp)

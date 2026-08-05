@@ -123,6 +123,51 @@ function makeVideoContext(): RenderContext {
   }
 }
 
+function makeInteractiveVideoContext(
+  selection: readonly string[] = [],
+  callbacks: RendererCallbacks = NOOP_RENDERER_CALLBACKS,
+): RenderContext {
+  return {
+    root: createFrameNode({
+      fwId: 'root',
+      width: 800,
+      height: 600,
+      children: [
+        createVideoNode({
+          fwId: 'video-1',
+          x: 12,
+          y: 34,
+          width: 320,
+          height: 180,
+          src: '/fixtures/preview.mp4',
+          fit: 'cover',
+        }),
+      ],
+    }),
+    selection,
+    viewport: DEFAULT_VIEWPORT,
+    callbacks,
+  }
+}
+
+function pointer(
+  target: EventTarget,
+  type: 'pointerdown' | 'pointermove' | 'pointerup',
+  x: number,
+  y: number,
+): void {
+  target.dispatchEvent(
+    new MouseEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      button: type === 'pointermove' ? -1 : 0,
+      buttons: type === 'pointerup' ? 0 : 1,
+      clientX: x,
+      clientY: y,
+    }),
+  )
+}
+
 let container: HTMLElement | null = null
 let hostRoot: Root | null = null
 
@@ -265,7 +310,8 @@ describe('createDomRenderer', () => {
     expect(video.controls).toBe(true)
     expect(video.playsInline).toBe(true)
     expect(video.preload).toBe('metadata')
-    expect(video.dataset.fwInteraction).toBe('ignore')
+    expect(video.dataset.fwInteraction).toBeUndefined()
+    expect(video.style.pointerEvents).toBe('none')
     expect(video.getAttribute('src')).toBe('/fixtures/preview.mp4')
     expect(video.getAttribute('poster')).toBe('/fixtures/poster.jpg')
     expect(video.style.objectFit).toBe('cover')
@@ -288,6 +334,60 @@ describe('createDomRenderer', () => {
     expect(video.getAttribute('locked')).toBeNull()
     expect(video.getAttribute('children')).toBeNull()
     expect(video.getAttribute('name')).toBeNull()
+    await act(async () => renderer.destroy())
+  })
+
+  it('video 默认归画布命中，激活后由原生控件接管，点空白退出激活', async () => {
+    const callbacks: RendererCallbacks = {
+      ...NOOP_RENDERER_CALLBACKS,
+      onSelectionRequest: vi.fn(),
+      onNodesMove: vi.fn(),
+    }
+    const renderer = await mountRenderer(makeInteractiveVideoContext([], callbacks))
+    let video = container!.querySelector('[data-fw-id="video-1"]') as HTMLVideoElement
+
+    expect(video.dataset.fwInteraction).toBeUndefined()
+    expect(video.style.pointerEvents).toBe('none')
+
+    await act(async () => {
+      pointer(video, 'pointerdown', 20, 40)
+      pointer(window, 'pointerup', 20, 40)
+    })
+    expect(callbacks.onSelectionRequest).toHaveBeenCalledWith(['video-1'], 'replace')
+
+    await act(async () => renderer.update(makeInteractiveVideoContext(['video-1'], callbacks)))
+    video = container!.querySelector('[data-fw-id="video-1"]') as HTMLVideoElement
+    await act(async () => {
+      pointer(video, 'pointerdown', 20, 40)
+      pointer(window, 'pointermove', 30, 50)
+      pointer(window, 'pointerup', 30, 50)
+    })
+    expect(callbacks.onNodesMove).toHaveBeenCalledOnce()
+
+    await act(async () => {
+      pointer(video, 'pointerdown', 20, 40)
+      pointer(window, 'pointerup', 20, 40)
+    })
+    video = container!.querySelector('[data-fw-id="video-1"]') as HTMLVideoElement
+    expect(video.dataset.fwInteraction).toBe('ignore')
+    expect(video.style.pointerEvents).toBe('auto')
+
+    await act(async () => {
+      pointer(video, 'pointerdown', 20, 40)
+      pointer(window, 'pointermove', 80, 40)
+      pointer(window, 'pointerup', 80, 40)
+    })
+    expect(callbacks.onNodesMove).toHaveBeenCalledOnce()
+
+    const rootNode = container!.querySelector('[data-fw-id="root"]') as HTMLElement
+    await act(async () => {
+      pointer(rootNode, 'pointerdown', 700, 500)
+      pointer(window, 'pointerup', 700, 500)
+    })
+    video = container!.querySelector('[data-fw-id="video-1"]') as HTMLVideoElement
+    expect(video.dataset.fwInteraction).toBeUndefined()
+    expect(video.style.pointerEvents).toBe('none')
+
     await act(async () => renderer.destroy())
   })
 

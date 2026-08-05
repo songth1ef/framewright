@@ -20,6 +20,7 @@ export interface ShapeProps {
   position: Point
   size?: { width: number; height: number }
   selected: boolean
+  active: boolean
   onNodeAction: RendererCallbacks['onNodeAction']
   children?: ReactNode
 }
