@@ -15,6 +15,8 @@ import {
   walkTree,
   type CanvasNode,
   type CanvasOp,
+  type AiImageNode,
+  type AiVideoNode,
   type FrameNode,
   type InboundRef,
   type NodeSlot,
@@ -27,6 +29,8 @@ import { createLeaferRenderer } from '@framewright/renderer-leafer'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DevPanelController, type DevPanelHandle } from './dev-panel'
 import { EmptyCanvasGuide, ShortcutHelpDialog } from './canvas-overlays'
+import { createGenerationController, type GenerationController, type GenerationNodePatch } from './generation-actions'
+import { createHttpGenerationBackend } from './generation-client'
 import { loadServerHistory } from './server-history'
 import type { ServerHistory } from './server-history'
 import {
@@ -127,7 +131,10 @@ export function RendererHost({
   const savedRootRef = useRef(root)
   const dirtyRef = useRef(false)
   const mountedRef = useRef(true)
+  const generationControllerRef = useRef<GenerationController | null>(null)
+  const documentIdRef = useRef(documentId)
   rootRef.current = root
+  documentIdRef.current = documentId
 
   // U2：给了 documentId 就把操作栈换成写后端的版本，刷新后仍能撤销；加载失败退回内存栈
   useEffect(() => {
@@ -217,6 +224,9 @@ export function RendererHost({
       mountedRef.current = false
       window.removeEventListener('pagehide', flushPendingSave)
       flushPendingSave()
+      // 文档切换 / 卸载时停掉所有在途轮询，避免补丁落到新文档的树上
+      generationControllerRef.current?.dispose()
+      generationControllerRef.current = null
     }
   }, [documentId, documentName])
 
@@ -228,6 +238,51 @@ export function RendererHost({
     if (DEV_PANEL_ENABLED) devPanelRef.current?.record(op)
     rootRef.current = next
     setRoot(next)
+  }
+
+  // 服务端驱动的状态同步（生成四态流转）不是用户的画布编辑，
+  // 应用但不进撤销历史；仍会触发自动保存
+  const applySyncedOps = (ops: readonly CanvasOp[]): void => {
+    const op = groupOps(ops)
+    if (op === null) return
+    const next = applyOp(rootRef.current, op)
+    rootRef.current = next
+    setRoot(next)
+  }
+
+  const applyGenerationPatch = (fwId: string, patch: GenerationNodePatch): void => {
+    const node = findNodeById(rootRef.current, fwId)
+    if (node === null || (!isAiImageNode(node) && !isAiVideoNode(node))) return
+    const before: Partial<AiImageNode | AiVideoNode> = {
+      status: node.status,
+      errorMessage: node.errorMessage,
+    }
+    const after: Partial<AiImageNode | AiVideoNode> = {
+      status: patch.status,
+      errorMessage: patch.errorMessage ?? null,
+    }
+    if (patch.src !== undefined) {
+      before.src = node.src
+      after.src = patch.src
+    }
+    applySyncedOps([{ kind: 'update-node', fwId, before, after }])
+  }
+
+  // 懒建：demo 模式（无 documentId）下 controller 也会建，提交时才报缺少 documentId
+  const getGenerationController = (): GenerationController => {
+    if (generationControllerRef.current === null) {
+      generationControllerRef.current = createGenerationController({
+        backend: createHttpGenerationBackend(),
+        getDocumentId: () => documentIdRef.current,
+        getNode: (fwId) => {
+          const node = findNodeById(rootRef.current, fwId)
+          return node !== null && (isAiImageNode(node) || isAiVideoNode(node)) ? node : null
+        },
+        onNodePatch: applyGenerationPatch,
+        onError: (fwId, error) => console.error(`[framewright] 生成请求失败（${fwId}）`, error),
+      })
+    }
+    return generationControllerRef.current
   }
 
   const callbacks = useMemo<RendererCallbacks>(
@@ -282,12 +337,18 @@ export function RendererHost({
           ops.push(op)
         }
         commitOps(ops)
+        for (const fwId of fwIds) generationControllerRef.current?.cancelNode(fwId)
         const remaining = new Set(collectNodeIds(rootRef.current))
         setSelection((current) => current.filter((fwId) => remaining.has(fwId)))
       },
       onViewportChange: setViewport,
       onNodeActivate: (fwId) => setLastAction(`${fwId}:activate`),
-      onNodeAction: (fwId: string, action: string) => setLastAction(`${fwId}:${action}`),
+      onNodeAction: (fwId: string, action: string) => {
+        setLastAction(`${fwId}:${action}`)
+        // 🔴 生成类动作（generate/retry/regenerate）在这里进入提交链路——
+        // 渲染器只在用户点卡片内主 CTA 或工具条「重新生成」时上报，没有自动触发路径
+        getGenerationController().handleAction(fwId, action)
+      },
     }),
     [],
   )
