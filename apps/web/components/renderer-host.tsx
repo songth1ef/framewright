@@ -29,6 +29,7 @@ import { createLeaferRenderer } from '@framewright/renderer-leafer'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DevPanelController, type DevPanelHandle } from './dev-panel'
 import { EmptyCanvasGuide, ShortcutHelpDialog } from './canvas-overlays'
+import { createDerivedGenerationSubmitter } from './derived-actions'
 import { createGenerationController, type GenerationController, type GenerationNodePatch } from './generation-actions'
 import { createHttpGenerationBackend } from './generation-client'
 import { loadServerHistory } from './server-history'
@@ -284,6 +285,27 @@ export function RendererHost({
     }
     return generationControllerRef.current
   }
+
+  // G2-5：派生生成接线。op 的构造（摆放 / sourceFwIds / 可撤销分组）全部
+  // 在 core 完成，这里只把 op 送进上面那条既有的 commitOps 通道——撤销、
+  // 操作日志持久化、开发面板记录因此自动生效，不存在第二条提交路径。
+  // commitOps 只依赖 ref 与 setRoot，首帧闭包即可长期使用。
+  // UI 入口下一波再接；当前经 window 桥暴露给联调与 e2e。
+  const [derivedSubmitter] = useState(() =>
+    createDerivedGenerationSubmitter({
+      getRoot: () => rootRef.current,
+      commitOps,
+      onError: (error) => console.error('[framewright] 派生生成提交失败', error),
+    }),
+  )
+
+  useEffect(() => {
+    const bridge = window as unknown as Record<string, unknown>
+    bridge['__fwDeriveFromNode'] = derivedSubmitter.submit
+    return () => {
+      delete bridge['__fwDeriveFromNode']
+    }
+  }, [derivedSubmitter])
 
   const callbacks = useMemo<RendererCallbacks>(
     () => ({
