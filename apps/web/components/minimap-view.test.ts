@@ -16,6 +16,14 @@ describe('minimap view 结构', () => {
     expect(source).toContain('projectViewportFrame(viewport, viewportSize, projection)')
   })
 
+  it('在同一个 canvas 内按类型填色并绘制矢量图标', () => {
+    expect(source).toContain('getMinimapVisual(item.fwType)')
+    expect(source).toContain('shouldDrawMinimapIcon(width, height)')
+    expect(source).toContain("visual.icon === 'image'")
+    expect(source).toContain("visual.icon === 'video'")
+    expect(source).toContain("visual.icon === 'audio'")
+  })
+
   it('定位在画布左下角且不是 fixed，不会覆盖画布上方工具栏', () => {
     expect(source).toMatch(/position: 'absolute', left: 12, bottom: 12/)
     expect(source).not.toContain("position: 'fixed'")

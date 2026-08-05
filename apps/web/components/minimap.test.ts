@@ -1,8 +1,18 @@
-import { createBoxNode, createFrameNode, getContentBounds } from '@framewright/core'
+import {
+  createAiImageNode,
+  createAudioNode,
+  createBoxNode,
+  createFrameNode,
+  createImgNode,
+  createVideoNode,
+  getContentBounds,
+} from '@framewright/core'
 import { describe, expect, it } from 'vitest'
 import {
   createMinimapDrawItems,
   createMinimapProjection,
+  getMinimapVisual,
+  shouldDrawMinimapIcon,
   mapMinimapPointToCanvas,
   projectViewportFrame,
   viewportCenteredAt,
@@ -102,5 +112,36 @@ describe('minimap draw items', () => {
       expect.objectContaining({ fwId: 'visible-frame', x: 30, y: 40, width: 50, height: 60 }),
       expect.objectContaining({ fwId: 'nested', x: 35, y: 46, width: 7, height: 8 }),
     ])
+  })
+})
+
+describe('minimap type visuals', () => {
+  it('图片、视频、音频使用不同颜色与矢量图标，ai-image 仍归图片类型', () => {
+    expect(getMinimapVisual('img')).toEqual({ color: '#2563eb', icon: 'image' })
+    expect(getMinimapVisual('ai-image')).toEqual({ color: '#0891b2', icon: 'image' })
+    expect(getMinimapVisual('video')).toEqual({ color: '#7c3aed', icon: 'video' })
+    expect(getMinimapVisual('audio')).toEqual({ color: '#db2777', icon: 'audio' })
+  })
+
+  it('绘制项保留全部节点类型供单 Canvas 分型绘制', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      children: [
+        createImgNode({ fwId: 'image' }),
+        createVideoNode({ fwId: 'video' }),
+        createAudioNode({ fwId: 'audio' }),
+        createAiImageNode({ fwId: 'ai-image' }),
+      ],
+    })
+
+    expect(createMinimapDrawItems(root).map((item) => item.fwType)).toEqual([
+      'img', 'video', 'audio', 'ai-image',
+    ])
+  })
+
+  it('投影尺寸任一边不足 12px 时只保留颜色，边界值允许图标', () => {
+    expect(shouldDrawMinimapIcon(12, 12)).toBe(true)
+    expect(shouldDrawMinimapIcon(11.99, 12)).toBe(false)
+    expect(shouldDrawMinimapIcon(12, 11.99)).toBe(false)
   })
 })

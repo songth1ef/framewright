@@ -16,12 +16,65 @@ import {
   MINIMAP_WIDTH,
   createMinimapDrawItems,
   createMinimapProjection,
+  getMinimapVisual,
   mapMinimapPointToCanvas,
   projectViewportFrame,
+  shouldDrawMinimapIcon,
   viewportCenteredAt,
   type MinimapDrawItem,
+  type MinimapIcon,
 } from './minimap'
 import type { ViewportSize } from './viewport-actions'
+
+function drawIcon(
+  context: CanvasRenderingContext2D,
+  icon: Exclude<MinimapIcon, null>,
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+): void {
+  const centerX = left + width / 2
+  const centerY = top + height / 2
+  const radius = Math.min(width, height) * 0.28
+  context.fillStyle = 'rgba(255, 255, 255, 0.92)'
+  context.strokeStyle = 'rgba(255, 255, 255, 0.92)'
+  context.lineWidth = Math.max(1, Math.min(width, height) * 0.08)
+  context.lineCap = 'round'
+  context.lineJoin = 'round'
+
+  if (icon === 'video') {
+    context.beginPath()
+    context.moveTo(centerX - radius * 0.65, centerY - radius)
+    context.lineTo(centerX + radius, centerY)
+    context.lineTo(centerX - radius * 0.65, centerY + radius)
+    context.closePath()
+    context.fill()
+    return
+  }
+  if (icon === 'audio') {
+    context.beginPath()
+    context.moveTo(centerX + radius * 0.55, centerY - radius)
+    context.lineTo(centerX + radius * 0.55, centerY + radius * 0.45)
+    context.lineTo(centerX - radius * 0.5, centerY + radius * 0.7)
+    context.stroke()
+    context.beginPath()
+    context.arc(centerX - radius * 0.72, centerY + radius * 0.72, radius * 0.35, 0, Math.PI * 2)
+    context.arc(centerX + radius * 0.32, centerY + radius * 0.45, radius * 0.35, 0, Math.PI * 2)
+    context.fill()
+    return
+  }
+
+  context.beginPath()
+  context.moveTo(centerX - radius, centerY + radius * 0.7)
+  context.lineTo(centerX - radius * 0.25, centerY - radius * 0.1)
+  context.lineTo(centerX + radius * 0.2, centerY + radius * 0.35)
+  context.lineTo(centerX + radius, centerY - radius * 0.5)
+  context.stroke()
+  context.beginPath()
+  context.arc(centerX - radius * 0.45, centerY - radius * 0.55, radius * 0.22, 0, Math.PI * 2)
+  context.fill()
+}
 
 function drawItems(
   canvas: HTMLCanvasElement,
@@ -33,15 +86,20 @@ function drawItems(
   const context = canvas.getContext('2d')
   if (context === null) return
   context.clearRect(0, 0, MINIMAP_WIDTH, MINIMAP_HEIGHT)
-  context.fillStyle = '#5b8def'
   for (const item of items) {
+    const visual = getMinimapVisual(item.fwType)
+    const left = item.x * projection.scale + projection.offsetX
+    const top = item.y * projection.scale + projection.offsetY
+    const width = item.width * projection.scale
+    const height = item.height * projection.scale
     context.globalAlpha = item.opacity
-    context.fillRect(
-      item.x * projection.scale + projection.offsetX,
-      item.y * projection.scale + projection.offsetY,
-      item.width * projection.scale,
-      item.height * projection.scale,
-    )
+    context.fillStyle = visual.color
+    context.fillRect(left, top, width, height)
+    if (visual.icon !== null && shouldDrawMinimapIcon(width, height)) {
+      if (visual.icon === 'image') drawIcon(context, 'image', left, top, width, height)
+      if (visual.icon === 'video') drawIcon(context, 'video', left, top, width, height)
+      if (visual.icon === 'audio') drawIcon(context, 'audio', left, top, width, height)
+    }
   }
   context.globalAlpha = 1
 }

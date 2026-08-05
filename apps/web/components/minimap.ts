@@ -21,6 +21,31 @@ export interface MinimapDrawItem {
   opacity: number
 }
 
+export type MinimapIcon = 'image' | 'video' | 'audio' | null
+
+export interface MinimapVisual {
+  color: string
+  icon: MinimapIcon
+}
+
+const MINIMAP_VISUALS: Record<CanvasNode['fwType'], MinimapVisual> = {
+  frame: { color: '#94a3b8', icon: null },
+  box: { color: '#64748b', icon: null },
+  img: { color: '#2563eb', icon: 'image' },
+  video: { color: '#7c3aed', icon: 'video' },
+  audio: { color: '#db2777', icon: 'audio' },
+  'ai-image': { color: '#0891b2', icon: 'image' },
+  'ai-video': { color: '#9333ea', icon: 'video' },
+}
+
+export function getMinimapVisual(type: CanvasNode['fwType']): MinimapVisual {
+  return MINIMAP_VISUALS[type]
+}
+
+export function shouldDrawMinimapIcon(width: number, height: number): boolean {
+  return width >= 12 && height >= 12
+}
+
 export interface MinimapViewportFrame {
   left: number
   top: number
