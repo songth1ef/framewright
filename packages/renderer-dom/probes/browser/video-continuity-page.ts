@@ -7,28 +7,25 @@ import {
 } from '@framewright/core'
 import { createLeaferRenderer } from '../../../renderer-leafer/src/index'
 import { createDomRenderer } from '../../src/index'
+import {
+  classifyVideoContinuity,
+  type PlaybackSnapshot,
+  type VideoContinuityClassification,
+} from './video-continuity-result'
 
 type RendererId = 'dom' | 'leafer'
 type Transition = 'culling' | 'simplified' | 'dot'
-
-interface PlaybackSnapshot {
-  elementId: number
-  currentTime: number
-  paused: boolean
-  ended: boolean
-  readyState: number
-  totalVideoFrames: number
-}
 
 export interface VideoContinuityResult {
   renderer: RendererId
   transition: Transition
   before: PlaybackSnapshot
   absentDuringTransition: boolean
-  after: PlaybackSnapshot
-  currentTimePreserved: boolean
-  playbackResumed: boolean
-  decodedFrameCounterPreserved: boolean
+  immediateAfterRemount: PlaybackSnapshot
+  playError: string | null
+  afterPlayReady: PlaybackSnapshot | null
+  afterPlaybackProgress: PlaybackSnapshot | null
+  classification: VideoContinuityClassification
 }
 
 interface VideoContinuityProbe {
@@ -62,7 +59,6 @@ Document.prototype.createElement = function createElement(
 }
 
 let renderer: RendererAdapter | null = null
-let activeRenderer: RendererId | null = null
 let viewport: Viewport = { scale: 1, offsetX: 0, offsetY: 0 }
 const root = createDemoDocument()
 
@@ -113,11 +109,28 @@ async function mount(id: RendererId): Promise<void> {
   renderer?.destroy()
   renderer = null
   view.replaceChildren()
-  activeRenderer = id
   viewport = { scale: 1, offsetX: 0, offsetY: 0 }
   renderer = id === 'dom' ? createDomRenderer() : createLeaferRenderer()
   renderer.mount(view, context())
   await waitUntil(() => snapshot(id), `${id} 首次视频挂载`)
+}
+
+async function observeUntil<T>(
+  read: () => T | null,
+  timeoutMs = 20_000,
+): Promise<T | null> {
+  const startedAt = performance.now()
+  return new Promise((resolve) => {
+    const tick = (): void => {
+      const value = read()
+      if (value !== null || performance.now() - startedAt >= timeoutMs) {
+        resolve(value)
+        return
+      }
+      requestAnimationFrame(tick)
+    }
+    tick()
+  })
 }
 
 async function beginPlayback(id: RendererId): Promise<PlaybackSnapshot> {
@@ -166,29 +179,68 @@ async function runScenario(
 
   viewport = { scale: 1, offsetX: 0, offsetY: 0 }
   renderer?.update(context())
-  const after = await waitUntil(() => {
-    const current = snapshot(id)
-    return current !== null && current.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
-      ? current
-      : null
-  }, `${id}/${transition} 重建视频`)
+  const immediateAfterRemount = await waitUntil(
+    () => snapshot(id),
+    `${id}/${transition} 重建视频元素`,
+  )
+
+  const remountedVideo = findVideo(id)
+  if (remountedVideo === null) throw new Error(`${id}/${transition} 重建后没有 video`)
+  remountedVideo.muted = true
+  remountedVideo.loop = true
+  remountedVideo.playbackRate = 0.1
+
+  let playError: string | null = null
+  try {
+    await remountedVideo.play()
+  } catch (error) {
+    playError = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
+  }
+
+  const afterPlayReady = playError === null
+    ? await observeUntil(() => {
+        const current = snapshot(id)
+        return current !== null && current.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+          ? current
+          : null
+      })
+    : null
+  const progressBaseline = afterPlayReady ?? immediateAfterRemount
+  const afterPlaybackProgress = afterPlayReady === null
+    ? null
+    : await observeUntil(() => {
+        const current = snapshot(id)
+        return current !== null &&
+          !current.paused &&
+          current.currentTime >= progressBaseline.currentTime + 0.02 &&
+          current.totalVideoFrames > progressBaseline.totalVideoFrames
+          ? current
+          : null
+      })
+  const observations = {
+    before,
+    immediateAfterRemount,
+    playError,
+    afterPlayReady,
+    afterPlaybackProgress,
+  }
 
   return {
     renderer: id,
     transition,
     before,
     absentDuringTransition,
-    after,
-    currentTimePreserved: after.currentTime >= before.currentTime - 0.05,
-    playbackResumed: !after.paused,
-    decodedFrameCounterPreserved: after.totalVideoFrames >= before.totalVideoFrames,
+    immediateAfterRemount,
+    playError,
+    afterPlayReady,
+    afterPlaybackProgress,
+    classification: classifyVideoContinuity(observations),
   }
 }
 
 function destroy(): void {
   renderer?.destroy()
   renderer = null
-  activeRenderer = null
   view.replaceChildren()
 }
 
