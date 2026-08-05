@@ -1,5 +1,5 @@
 import { createAiImageNode, createAiVideoNode, NODE_ACTIONS } from '@framewright/core'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createGenerationController,
   isGenerationAction,
@@ -47,6 +47,8 @@ interface Harness {
   nodes: Map<string, GenerationUnitNode>
 }
 
+const POLL_INTERVAL_MS = 10
+
 function makeHarness(options: {
   backend: ReturnType<typeof makeBackend>
   documentId?: string | undefined
@@ -57,7 +59,7 @@ function makeHarness(options: {
   const nodes = new Map((options.nodes ?? []).map((node) => [node.fwId, node]))
   const controller = createGenerationController({
     backend: options.backend,
-    pollIntervalMs: 0,
+    pollIntervalMs: POLL_INTERVAL_MS,
     getDocumentId: () => options.documentId,
     getNode: (fwId) => nodes.get(fwId) ?? null,
     onNodePatch: (fwId, patch) => patches.push({ fwId, patch }),
@@ -73,8 +75,8 @@ const imageNode = () =>
     params: { model: 'mock-standard', size: '1024x1024' },
   })
 
-/** 等异步轮询链跑完（pollIntervalMs=0 时仍需让出事件循环）。 */
-const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 20))
+/** 显式推进 submit 微任务与后续轮询，不依赖机器负载或真实时钟。 */
+const advancePolling = (): Promise<void> => vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 10)
 
 describe('isGenerationAction', () => {
   it('只认 generate / retry / regenerate，download 等不接管', () => {
@@ -124,6 +126,14 @@ describe('patchFromGeneration', () => {
 })
 
 describe('createGenerationController', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('点生成后状态按 pending → running → succeeded 依次落补丁，终态带素材地址', async () => {
     const backend = makeBackend({
       polls: [
@@ -134,7 +144,7 @@ describe('createGenerationController', () => {
     const { controller, patches } = makeHarness({ backend, documentId: 'doc-1', nodes: [imageNode()] })
 
     expect(controller.handleAction('a1', NODE_ACTIONS.generate)).toBe(true)
-    await flush()
+    await advancePolling()
 
     // 提交参数来自节点留存的 prompt / params
     expect(backend.submitCalls).toEqual([
@@ -165,7 +175,7 @@ describe('createGenerationController', () => {
     const { controller, patches } = makeHarness({ backend, documentId: 'doc-1', nodes: [imageNode()] })
 
     controller.handleAction('a1', NODE_ACTIONS.retry)
-    await flush()
+    await advancePolling()
 
     expect(patches.at(-1)?.patch).toEqual({ status: 'failed', errorMessage: '模拟失败' })
   })
@@ -181,7 +191,7 @@ describe('createGenerationController', () => {
 
     expect(controller.handleAction('a1', NODE_ACTIONS.generate)).toBe(true)
     expect(controller.handleAction('a1', NODE_ACTIONS.generate)).toBe(true)
-    await flush()
+    await advancePolling()
 
     expect(backend.submitCalls).toHaveLength(1)
     expect(patches.map((p) => p.patch.status)).toEqual([
@@ -204,7 +214,7 @@ describe('createGenerationController', () => {
 
     controller.handleAction('a1', NODE_ACTIONS.generate)
     controller.cancelNode('a1')
-    await flush()
+    await advancePolling()
 
     // 只有点击瞬间的乐观 pending；submit 快照及之后全部被丢弃
     expect(patches.map((p) => p.patch.status)).toEqual(['pending'])
@@ -220,7 +230,7 @@ describe('createGenerationController', () => {
     })
 
     controller.handleAction('a1', NODE_ACTIONS.generate)
-    await flush()
+    await advancePolling()
 
     expect(patches.at(-1)?.patch).toEqual({ status: 'failed', errorMessage: 'HTTP 404' })
     expect(errors).toHaveLength(1)
@@ -259,7 +269,7 @@ describe('createGenerationController', () => {
     const { controller } = makeHarness({ backend, documentId: 'doc-1', nodes: [videoNode] })
 
     controller.handleAction('v1', NODE_ACTIONS.generate)
-    await flush()
+    await advancePolling()
 
     expect(backend.submitCalls[0]).toEqual({
       documentId: 'doc-1',
@@ -278,7 +288,7 @@ describe('createGenerationController', () => {
     controller.handleAction('a1', NODE_ACTIONS.generate)
     controller.handleAction('a2', NODE_ACTIONS.generate)
     controller.dispose()
-    await flush()
+    await advancePolling()
 
     expect(backend.pollCalls).toHaveLength(0)
     expect(patches.filter((p) => p.patch.status === 'running')).toHaveLength(0)
