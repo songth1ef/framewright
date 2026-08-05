@@ -8,6 +8,7 @@ import {
   collectNodeIds,
   createDemoDocument,
   findNodeById,
+  getContentBounds,
   isAiImageNode,
   isAiVideoNode,
   isFrameNode,
@@ -27,6 +28,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { DevPanelController, type DevPanelHandle } from './dev-panel'
 import { loadServerHistory } from './server-history'
 import type { ServerHistory } from './server-history'
+import {
+  centerContentAtActualSize,
+  setActualSize,
+  zoomViewport,
+  type ViewportSize,
+} from './viewport-actions'
+import { ViewportToolbar } from './viewport-toolbar'
 
 type Factory = () => RendererAdapter
 
@@ -343,6 +351,10 @@ export function RendererHost({
     const node = findNodeById(root, fwId)
     return node === null ? [] : [node]
   })
+  const getViewportSize = (): ViewportSize => ({
+    width: containerRef.current?.clientWidth || 800,
+    height: containerRef.current?.clientHeight || 450,
+  })
 
   return (
     <main
@@ -350,20 +362,23 @@ export function RendererHost({
       data-history-ready={String(historyReady)}
       style={{ fontFamily: 'system-ui, sans-serif', padding: 16 }}
     >
-      <div
-        data-testid="toolbar"
-        style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}
-      >
-        <button
-          type="button"
-          data-testid="renderer-switch"
-          disabled={!historyReady}
-          onClick={() => setActiveIndex((i) => (i + 1) % RENDERERS.length)}
-          style={{ padding: '6px 14px', cursor: 'pointer' }}
-        >
-          切换渲染器
-        </button>
-        <span data-testid="active-renderer">{active?.label ?? ''}</span>
+      <ViewportToolbar
+        activeRendererId={active?.id ?? ''}
+        renderers={RENDERERS}
+        scale={viewport.scale}
+        disabled={!historyReady}
+        onRendererChange={(id) => {
+          const index = RENDERERS.findIndex((renderer) => renderer.id === id)
+          if (index >= 0) setActiveIndex(index)
+        }}
+        onZoomIn={() => setViewport((current) => zoomViewport(current, getViewportSize(), 1.1))}
+        onZoomOut={() => setViewport((current) => zoomViewport(current, getViewportSize(), 1 / 1.1))}
+        onFitCanvas={() =>
+          setViewport(centerContentAtActualSize(getContentBounds(rootRef.current), getViewportSize()))
+        }
+        onActualSize={() => setViewport((current) => setActualSize(current, getViewportSize()))}
+      />
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
         {!historyReady ? <span role="status">正在加载撤销历史…</span> : null}
         {documentId === undefined || saveStatus === 'idle' ? null : (
           <span
@@ -391,7 +406,6 @@ export function RendererHost({
         <span>
           已选 <span data-testid="selection-count">{selection.length}</span> 个
         </span>
-        <span data-testid="viewport-scale">{Math.round(viewport.scale * 100)}%</span>
         <span>
           最近操作：<span data-testid="last-node-action">{lastAction}</span>
         </span>
