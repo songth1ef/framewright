@@ -1,7 +1,7 @@
 import { createBoxNode, createFrameNode, getContentBounds } from '@framewright/core'
 import { describe, expect, it } from 'vitest'
 import {
-  createMinimapDensity,
+  createMinimapDrawItems,
   createMinimapProjection,
   mapMinimapPointToCanvas,
   projectViewportFrame,
@@ -47,8 +47,8 @@ describe('minimap geometry', () => {
   })
 })
 
-describe('minimap density aggregation', () => {
-  it('一万节点聚合进固定网格，不产生逐节点绘制模型', () => {
+describe('minimap draw items', () => {
+  it('一万节点生成绝对坐标矩形绘制项，不产生逐节点 UI', () => {
     const root = createFrameNode({
       fwId: 'root',
       width: 10_000,
@@ -64,15 +64,14 @@ describe('minimap density aggregation', () => {
       ),
     })
 
-    const density = createMinimapDensity(root, getContentBounds(root), 100, 75)
+    const items = createMinimapDrawItems(root)
 
-    expect(density.cells).toHaveLength(7_500)
-    expect(density.nodeCount).toBe(10_000)
-    expect(density.cells.reduce((sum, count) => sum + count, 0)).toBe(10_000)
-    expect(density.maxCount).toBeGreaterThan(0)
+    expect(items).toHaveLength(10_000)
+    expect(items[0]).toMatchObject({ x: 0, y: 0, width: 20, height: 20 })
+    expect(items[9_999]).toMatchObject({ x: 9_900, y: 9_900, width: 20, height: 20 })
   })
 
-  it('忽略 root、隐藏节点及隐藏 frame 的后代', () => {
+  it('累加嵌套 frame 坐标，并忽略 root、隐藏节点及隐藏 frame 的后代', () => {
     const root = createFrameNode({
       fwId: 'root',
       width: 100,
@@ -81,6 +80,14 @@ describe('minimap density aggregation', () => {
         createBoxNode({ fwId: 'visible', x: 10, y: 10 }),
         createBoxNode({ fwId: 'hidden', x: 20, y: 20, visible: false }),
         createFrameNode({
+          fwId: 'visible-frame',
+          x: 30,
+          y: 40,
+          width: 50,
+          height: 60,
+          children: [createBoxNode({ fwId: 'nested', x: 5, y: 6, width: 7, height: 8 })],
+        }),
+        createFrameNode({
           fwId: 'hidden-frame',
           visible: false,
           children: [createBoxNode({ fwId: 'hidden-child' })],
@@ -88,9 +95,12 @@ describe('minimap density aggregation', () => {
       ],
     })
 
-    const density = createMinimapDensity(root, getContentBounds(root), 10, 10)
+    const items = createMinimapDrawItems(root)
 
-    expect(density.nodeCount).toBe(1)
-    expect(density.cells.reduce((sum, count) => sum + count, 0)).toBe(1)
+    expect(items).toEqual([
+      expect.objectContaining({ fwId: 'visible', x: 10, y: 10 }),
+      expect.objectContaining({ fwId: 'visible-frame', x: 30, y: 40, width: 50, height: 60 }),
+      expect.objectContaining({ fwId: 'nested', x: 35, y: 46, width: 7, height: 8 }),
+    ])
   })
 })

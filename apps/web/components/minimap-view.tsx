@@ -11,37 +11,39 @@ import {
   type ReactElement,
 } from 'react'
 import {
-  MINIMAP_GRID_COLUMNS,
-  MINIMAP_GRID_ROWS,
   MINIMAP_HEIGHT,
   MINIMAP_PADDING,
   MINIMAP_WIDTH,
-  createMinimapDensity,
+  createMinimapDrawItems,
   createMinimapProjection,
   mapMinimapPointToCanvas,
   projectViewportFrame,
   viewportCenteredAt,
-  type MinimapDensity,
+  type MinimapDrawItem,
 } from './minimap'
 import type { ViewportSize } from './viewport-actions'
 
-function drawDensity(canvas: HTMLCanvasElement, density: MinimapDensity): void {
-  canvas.width = MINIMAP_GRID_COLUMNS
-  canvas.height = MINIMAP_GRID_ROWS
+function drawItems(
+  canvas: HTMLCanvasElement,
+  items: readonly MinimapDrawItem[],
+  projection: ReturnType<typeof createMinimapProjection>,
+): void {
+  canvas.width = MINIMAP_WIDTH
+  canvas.height = MINIMAP_HEIGHT
   const context = canvas.getContext('2d')
   if (context === null) return
-  const image = context.createImageData(MINIMAP_GRID_COLUMNS, MINIMAP_GRID_ROWS)
-  const denominator = Math.log2(density.maxCount + 1) || 1
-  density.cells.forEach((count, index) => {
-    if (count === 0) return
-    const intensity = Math.log2(count + 1) / denominator
-    const offset = index * 4
-    image.data[offset] = 80
-    image.data[offset + 1] = Math.round(125 + intensity * 65)
-    image.data[offset + 2] = 220
-    image.data[offset + 3] = Math.round(80 + intensity * 175)
-  })
-  context.putImageData(image, 0, 0)
+  context.clearRect(0, 0, MINIMAP_WIDTH, MINIMAP_HEIGHT)
+  context.fillStyle = '#5b8def'
+  for (const item of items) {
+    context.globalAlpha = item.opacity
+    context.fillRect(
+      item.x * projection.scale + projection.offsetX,
+      item.y * projection.scale + projection.offsetY,
+      item.width * projection.scale,
+      item.height * projection.scale,
+    )
+  }
+  context.globalAlpha = 1
 }
 
 const panelStyle: CSSProperties = {
@@ -89,16 +91,13 @@ export function Minimap({
     () => createMinimapProjection(bounds, { width: MINIMAP_WIDTH, height: MINIMAP_HEIGHT }, MINIMAP_PADDING),
     [bounds],
   )
-  const density = useMemo(
-    () => createMinimapDensity(root, bounds, MINIMAP_GRID_COLUMNS, MINIMAP_GRID_ROWS),
-    [root, bounds],
-  )
+  const items = useMemo(() => createMinimapDrawItems(root), [root])
   const frame = projectViewportFrame(viewport, viewportSize, projection)
 
   useEffect(() => {
     const canvas = canvasRef.current
-    if (canvas !== null) drawDensity(canvas, density)
-  }, [density])
+    if (canvas !== null) drawItems(canvas, items, projection)
+  }, [items, projection])
 
   useEffect(() => {
     const viewportElement = panelRef.current?.parentElement
@@ -148,8 +147,8 @@ export function Minimap({
       <canvas
         ref={canvasRef}
         aria-hidden="true"
-        data-testid="minimap-density-canvas"
-        style={{ width: '100%', height: '100%', imageRendering: 'pixelated' }}
+        data-testid="minimap-content-canvas"
+        style={{ width: '100%', height: '100%' }}
       />
       <div
         data-testid="minimap-viewport"

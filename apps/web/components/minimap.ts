@@ -1,10 +1,8 @@
-import { isFrameNode, type FrameNode, type Rect, type Viewport } from '@framewright/core'
+import { isFrameNode, type CanvasNode, type FrameNode, type Rect, type Viewport } from '@framewright/core'
 import type { ViewportSize } from './viewport-actions'
 
 export const MINIMAP_WIDTH = 200
 export const MINIMAP_HEIGHT = 150
-export const MINIMAP_GRID_COLUMNS = 100
-export const MINIMAP_GRID_ROWS = 75
 export const MINIMAP_PADDING = 8
 
 export interface MinimapProjection {
@@ -13,10 +11,14 @@ export interface MinimapProjection {
   offsetY: number
 }
 
-export interface MinimapDensity {
-  cells: Uint32Array
-  maxCount: number
-  nodeCount: number
+export interface MinimapDrawItem {
+  fwId: string
+  fwType: CanvasNode['fwType']
+  x: number
+  y: number
+  width: number
+  height: number
+  opacity: number
 }
 
 export interface MinimapViewportFrame {
@@ -86,37 +88,27 @@ export function projectViewportFrame(
   }
 }
 
-/** 节点树变化时才执行；万节点最终压进固定 100×75 网格，不产生逐节点 UI。 */
-export function createMinimapDensity(
-  root: FrameNode,
-  bounds: Rect,
-  columns: number,
-  rows: number,
-): MinimapDensity {
-  const cells = new Uint32Array(columns * rows)
-  let maxCount = 0
-  let nodeCount = 0
-  const width = Math.max(bounds.width, Number.EPSILON)
-  const height = Math.max(bounds.height, Number.EPSILON)
-
+/** 节点树变化时才执行；保留真实尺寸与 z 序，但不产生逐节点 UI。 */
+export function createMinimapDrawItems(root: FrameNode): MinimapDrawItem[] {
+  const items: MinimapDrawItem[] = []
   const visitChildren = (frame: FrameNode, parentX: number, parentY: number): void => {
     for (const node of frame.children) {
       if (!node.visible) continue
       const x = parentX + node.x
       const y = parentY + node.y
-      const centerX = x + node.width / 2
-      const centerY = y + node.height / 2
-      const column = Math.min(columns - 1, Math.max(0, Math.floor(((centerX - bounds.x) / width) * columns)))
-      const row = Math.min(rows - 1, Math.max(0, Math.floor(((centerY - bounds.y) / height) * rows)))
-      const index = row * columns + column
-      const count = (cells[index] ?? 0) + 1
-      cells[index] = count
-      maxCount = Math.max(maxCount, count)
-      nodeCount += 1
+      items.push({
+        fwId: node.fwId,
+        fwType: node.fwType,
+        x,
+        y,
+        width: node.width,
+        height: node.height,
+        opacity: node.opacity,
+      })
       if (isFrameNode(node)) visitChildren(node, x, y)
     }
   }
 
   visitChildren(root, root.x, root.y)
-  return { cells, maxCount, nodeCount }
+  return items
 }

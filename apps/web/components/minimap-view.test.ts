@@ -4,14 +4,15 @@ import { describe, expect, it } from 'vitest'
 describe('minimap view 结构', () => {
   const source = readFileSync(new URL('./minimap-view.tsx', import.meta.url), 'utf8')
 
-  it('固定为一个 canvas 密度层和一个独立视口框', () => {
+  it('固定为一个 canvas 形状层和一个独立视口框', () => {
     expect(source.match(/<canvas/g)).toHaveLength(1)
-    expect(source).toContain('data-testid="minimap-density-canvas"')
+    expect(source).toContain('data-testid="minimap-content-canvas"')
     expect(source).toContain('data-testid="minimap-viewport"')
   })
 
-  it('节点密度只依赖 root/bounds，viewport 变化不重算密度', () => {
-    expect(source).toMatch(/createMinimapDensity\([\s\S]*?\[root, bounds\]/)
+  it('矩形绘制项只依赖 root，viewport 变化不重算内容层', () => {
+    expect(source).toMatch(/createMinimapDrawItems\(root\)[\s\S]*?\[root\]/)
+    expect(source).toContain('context.fillRect(')
     expect(source).toContain('projectViewportFrame(viewport, viewportSize, projection)')
   })
 
