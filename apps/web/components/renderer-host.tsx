@@ -43,6 +43,11 @@ import { createDocumentAutosave, type DocumentAutosave } from './document-autosa
 import { createGenerationController, type GenerationController, type GenerationNodePatch } from './generation-actions'
 import { createHttpGenerationBackend } from './generation-client'
 import { FpsMonitor } from './fps-monitor-view'
+import { Minimap, MinimapToggle } from './minimap-view'
+import {
+  readStoredMinimapVisibility,
+  writeStoredMinimapVisibility,
+} from './minimap-storage'
 import {
   readStoredInteractionMode,
   writeStoredInteractionMode,
@@ -142,6 +147,7 @@ export function RendererHost({
   const devPanelRef = useRef<DevPanelHandle | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [minimapVisible, setMinimapVisible] = useState(() => readStoredMinimapVisibility())
   const getViewportSize = (): ViewportSize => ({
     width: containerRef.current?.clientWidth || 800,
     height: containerRef.current?.clientHeight || 450,
@@ -195,6 +201,11 @@ export function RendererHost({
   const commitConnectionVisibility = useCallback((next: ConnectionVisibility): void => {
     setConnectionVisibility(next)
     writeStoredConnectionVisibility(next)
+  }, [])
+
+  const commitMinimapVisibility = useCallback((next: boolean): void => {
+    setMinimapVisible(next)
+    writeStoredMinimapVisibility(next)
   }, [])
 
   useEffect(() => {
@@ -539,6 +550,7 @@ export function RendererHost({
   }, [ctx])
 
   const active = RENDERERS[activeIndex]
+  const contentBounds = useMemo(() => getContentBounds(root), [root])
   const selectedNodes = selection.flatMap((fwId) => {
     const node = findNodeById(root, fwId)
     return node === null ? [] : [node]
@@ -629,9 +641,20 @@ export function RendererHost({
             position: 'relative',
             boxSizing: 'border-box',
           }}
-        />
-        {historyReady && root.children.length === 0 ? <EmptyCanvasGuide /> : null}
-      </div>
+         />
+         {historyReady && root.children.length === 0 ? <EmptyCanvasGuide /> : null}
+         {minimapVisible ? (
+           <Minimap
+             root={root}
+             bounds={contentBounds}
+             viewport={viewport}
+             onViewportChange={commitViewport}
+             onClose={() => commitMinimapVisibility(false)}
+           />
+         ) : (
+           <MinimapToggle onOpen={() => commitMinimapVisibility(true)} />
+         )}
+       </div>
       {showShortcuts ? <ShortcutHelpDialog onClose={() => setShowShortcuts(false)} /> : null}
       <FpsMonitor totalNodeCount={collectNodeIds(root).length} />
       {DEV_PANEL_ENABLED ? (

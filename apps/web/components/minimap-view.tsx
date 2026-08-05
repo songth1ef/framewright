@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
   type ReactElement,
@@ -71,19 +72,19 @@ export function Minimap({
   root,
   bounds,
   viewport,
-  viewportSize,
   onViewportChange,
   onClose,
 }: {
   root: FrameNode
   bounds: Rect
   viewport: Viewport
-  viewportSize: ViewportSize
   onViewportChange(next: Viewport): void
   onClose(): void
 }): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
   const pointerIdRef = useRef<number | null>(null)
+  const [viewportSize, setViewportSize] = useState<ViewportSize>({ width: 800, height: 450 })
   const projection = useMemo(
     () => createMinimapProjection(bounds, { width: MINIMAP_WIDTH, height: MINIMAP_HEIGHT }, MINIMAP_PADDING),
     [bounds],
@@ -99,6 +100,18 @@ export function Minimap({
     if (canvas !== null) drawDensity(canvas, density)
   }, [density])
 
+  useEffect(() => {
+    const viewportElement = panelRef.current?.parentElement
+    if (viewportElement === null || viewportElement === undefined) return
+    const updateSize = (): void => {
+      setViewportSize({ width: viewportElement.clientWidth, height: viewportElement.clientHeight })
+    }
+    updateSize()
+    const observer = new ResizeObserver(updateSize)
+    observer.observe(viewportElement)
+    return () => observer.disconnect()
+  }, [])
+
   const jump = (event: ReactPointerEvent<HTMLElement>): void => {
     const rect = event.currentTarget.getBoundingClientRect()
     const point = {
@@ -110,6 +123,7 @@ export function Minimap({
 
   return (
     <section
+      ref={panelRef}
       aria-label="画布缩略图，点击或拖拽可跳转"
       data-testid="minimap"
       style={panelStyle}
