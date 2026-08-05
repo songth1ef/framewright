@@ -1,0 +1,190 @@
+/**
+ * Leafer S4 缩小档基准。父进程逐档隔离，单档超过 120 秒会记录 timeout 后继续。
+ * 不启动、不停止任何 dev server。
+ */
+
+import { chromium } from '@playwright/test'
+import { spawn } from 'node:child_process'
+import { readdirSync } from 'node:fs'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import path from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { LEAFER_ZOOM_OUT_PROBE_WORKLOAD } from './probe-config.mjs'
+import { buildDragEvidence, buildPanEvidence } from './browser/scale-sampling.mjs'
+
+const here = path.dirname(fileURLToPath(import.meta.url))
+const repoRoot = path.resolve(here, '../../..')
+const distDir = path.join(here, '.dist')
+const bundleFile = path.join(distDir, 'scale-probe.iife.js')
+const resultsDir = path.join(here, 'results')
+const host = 'http://scale-probe.local'
+const workload = LEAFER_ZOOM_OUT_PROBE_WORKLOAD
+const memoryReason =
+  'performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。'
+const caseId = process.argv.find((arg) => arg.startsWith('--case='))?.slice('--case='.length)
+
+async function buildBundle() {
+  const pnpmDir = path.join(repoRoot, 'node_modules/.pnpm')
+  const viteDirName = readdirSync(pnpmDir).find((dir) => dir.startsWith('vite@'))
+  if (viteDirName === undefined) throw new Error('node_modules/.pnpm 下找不到 vite')
+  const { build } = await import(
+    pathToFileURL(path.join(pnpmDir, viteDirName, 'node_modules/vite/dist/node/index.js')).href
+  )
+  await build({
+    root: path.join(here, 'browser'),
+    logLevel: 'silent',
+    build: {
+      outDir: distDir,
+      emptyOutDir: true,
+      lib: { entry: 'scale-page.ts', formats: ['iife'], name: 'FwLeaferScaleProbe', fileName: () => 'scale-probe.iife.js' },
+      minify: false,
+    },
+  })
+}
+
+async function runCase(id) {
+  const scenario = workload.scenarios.find((candidate) => candidate.id === id)
+  if (scenario === undefined) throw new Error(`未知 S4 档位：${id}`)
+  const bundle = await readFile(bundleFile, 'utf8')
+  const browser = await chromium.launch()
+  try {
+    const page = await browser.newPage({
+      viewport: { width: workload.viewport.width, height: workload.viewport.height },
+    })
+    page.on('pageerror', (error) => console.error('[pageerror]', error.message))
+    await page.route(`${host}/**`, (route) => {
+      const url = new URL(route.request().url())
+      if (url.pathname === '/') {
+        return route.fulfill({
+          contentType: 'text/html',
+          body: `<!doctype html><html><body style="margin:0"><div id="view" style="position:relative;width:${workload.viewport.viewWidth}px;height:${workload.viewport.viewHeight}px;overflow:hidden"></div><script src="/scale-probe.iife.js"></script></body></html>`,
+        })
+      }
+      if (url.pathname === '/scale-probe.iife.js') {
+        return route.fulfill({ contentType: 'text/javascript', body: bundle })
+      }
+      return route.abort()
+    })
+
+    console.log('S4_PHASE:load')
+    await page.goto(host)
+    await page.waitForFunction(() => window.__scaleProbe !== undefined)
+    const browserName = await page.evaluate(() => navigator.userAgent)
+
+    console.log('S4_PHASE:first-screen')
+    const firstScreen = await page.evaluate((value) => window.__scaleProbe.mountScenario(value), scenario)
+
+    console.log('S4_PHASE:drag')
+    await page.evaluate((value) => window.__scaleProbe.mountScenario(value), scenario)
+    const dragStart = await page.evaluate(() => window.__scaleProbe.dragSnapshot())
+    const dragSample = await page.evaluate(
+      ({ ms, threshold }) => window.__scaleProbe.sampleDrag(ms, threshold),
+      { ms: workload.sampleWindowMs, threshold: workload.longFrameThresholdMs },
+    )
+    const dragEnd = await page.evaluate(() => window.__scaleProbe.dragSnapshot())
+    const dragEvidence = buildDragEvidence(dragStart, dragEnd)
+
+    console.log('S4_PHASE:pan')
+    await page.evaluate((value) => window.__scaleProbe.mountScenario(value), scenario)
+    const panStart = await page.evaluate(() => window.__scaleProbe.panSnapshot())
+    const panSample = await page.evaluate(
+      ({ ms, threshold, panDelta }) => window.__scaleProbe.samplePan(ms, threshold, panDelta),
+      {
+        ms: workload.sampleWindowMs,
+        threshold: workload.longFrameThresholdMs,
+        panDelta: workload.panDelta,
+      },
+    )
+    const panEnd = await page.evaluate(() => window.__scaleProbe.panSnapshot())
+    const panEvidence = buildPanEvidence(panStart, panEnd)
+
+    const result = {
+      ...scenario,
+      status: 'completed',
+      browser: browserName,
+      firstScreen: { ...firstScreen, memory: null, memoryReason },
+      drag: { ...dragSample, avgFps: dragSample.fps, workEvidence: dragEvidence, memory: null, memoryReason },
+      pan: { ...panSample, avgFps: panSample.fps, workEvidence: panEvidence, memory: null, memoryReason },
+      memory: null,
+      memoryReason,
+    }
+    console.log(`S4_RESULT:${JSON.stringify(result)}`)
+  } finally {
+    await browser.close()
+  }
+}
+
+function runIsolatedCase(scenario) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [fileURLToPath(import.meta.url), `--case=${scenario.id}`], {
+      cwd: repoRoot,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    let stdout = ''
+    let stderr = ''
+    let lastPhase = 'spawn'
+    let settled = false
+    child.stdout.setEncoding('utf8')
+    child.stderr.setEncoding('utf8')
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk
+      for (const line of chunk.split(/\r?\n/u)) {
+        if (line.startsWith('S4_PHASE:')) lastPhase = line.slice('S4_PHASE:'.length)
+      }
+    })
+    child.stderr.on('data', (chunk) => { stderr += chunk })
+    const timer = setTimeout(() => {
+      settled = true
+      child.kill()
+      resolve({
+        ...scenario,
+        status: 'timeout',
+        timeoutMs: workload.caseTimeoutMs,
+        lastPhase,
+        reason: `${scenario.label} 单档超过 ${workload.caseTimeoutMs}ms，已终止该档并继续。`,
+        memory: null,
+        memoryReason,
+      })
+    }, workload.caseTimeoutMs)
+    child.on('error', (error) => {
+      clearTimeout(timer)
+      if (!settled) reject(error)
+    })
+    child.on('close', (code) => {
+      clearTimeout(timer)
+      if (settled) return
+      settled = true
+      const marker = stdout.split(/\r?\n/u).find((line) => line.startsWith('S4_RESULT:'))
+      if (code !== 0 || marker === undefined) {
+        reject(new Error(`${scenario.id} 子进程失败（exit=${code}）：${stderr || stdout}`))
+        return
+      }
+      resolve(JSON.parse(marker.slice('S4_RESULT:'.length)))
+    })
+  })
+}
+
+if (caseId !== undefined) {
+  await runCase(caseId)
+} else {
+  await buildBundle()
+  const results = {
+    probe: 'renderer-leafer-scale-s4-zoom-out',
+    startedAt: new Date().toISOString(),
+    workload,
+    memory: null,
+    memoryReason,
+    scenarios: [],
+  }
+  for (const scenario of workload.scenarios) {
+    const result = await runIsolatedCase(scenario)
+    results.scenarios.push(result)
+    console.log(`[${scenario.id}]`, JSON.stringify(result))
+  }
+  results.finishedAt = new Date().toISOString()
+  await mkdir(resultsDir, { recursive: true })
+  const outFile = path.join(resultsDir, `scale-s4-zoom-out-probe-${Date.now()}.json`)
+  await writeFile(outFile, JSON.stringify(results, null, 2))
+  console.log('结果已写入', outFile)
+}

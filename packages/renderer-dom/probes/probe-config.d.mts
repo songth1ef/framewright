@@ -23,6 +23,7 @@ export interface DomScaleProbeScenario {
   readonly label: string
   readonly nodeCount: number
   readonly connectionPattern: ScaleConnectionPattern
+  readonly initialScale?: number
 }
 
 export interface DomScaleProbeWorkload {
@@ -44,3 +45,18 @@ export interface DomScaleProbeWorkload {
 }
 
 export const DOM_SCALE_PROBE_WORKLOAD: DomScaleProbeWorkload
+
+export interface DomZoomOutProbeWorkload {
+  readonly renderer: string
+  readonly scenarios: readonly (DomScaleProbeScenario & { readonly initialScale: number })[]
+  readonly seed: 7
+  readonly sampleWindowMs: number
+  readonly caseTimeoutMs: number
+  readonly viewport: DomScaleProbeWorkload['viewport']
+  readonly viewportRole: string
+  readonly dragDelta: Readonly<{ x: number; y: number }>
+  readonly panDelta: Readonly<{ x: number; y: number }>
+  readonly longFrameThresholdMs: number
+}
+
+export const DOM_ZOOM_OUT_PROBE_WORKLOAD: DomZoomOutProbeWorkload

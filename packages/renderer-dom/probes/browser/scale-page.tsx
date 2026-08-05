@@ -30,7 +30,11 @@ interface DomScaleProbe {
   mountScenario(scenario: DomScaleProbeScenario): Promise<FirstScreenSample>
   sampleDrag(ms: number, longFrameThresholdMs: number): Promise<FrameStats>
   sampleZoom(ms: number, longFrameThresholdMs: number): Promise<FrameStats>
-  samplePan(ms: number, longFrameThresholdMs: number): Promise<FrameStats>
+  samplePan(
+    ms: number,
+    longFrameThresholdMs: number,
+    panDelta?: Readonly<{ x: number; y: number }>,
+  ): Promise<FrameStats>
   dragSnapshot(): DragSnapshot
   zoomSnapshot(): ZoomSnapshot
   panSnapshot(): PanSnapshot
@@ -48,6 +52,7 @@ if (view === null) throw new Error('缺少 #view')
 let renderer: RendererAdapter | null = null
 let root: FrameNode | null = null
 let viewport: Viewport = { scale: workload.zoom.startScale, offsetX: 0, offsetY: 0 }
+let initialScale = workload.zoom.startScale
 
 function context(): RenderContext {
   if (root === null) throw new Error('尚未挂载规模场景')
@@ -73,8 +78,9 @@ async function mountScenario(scenario: DomScaleProbeScenario): Promise<FirstScre
   const fixtureStart = performance.now()
   root = buildScaleFixture(scenario)
   const fixtureBuildMs = performance.now() - fixtureStart
+  initialScale = scenario.initialScale ?? workload.zoom.startScale
   viewport = {
-    scale: workload.zoom.startScale,
+    scale: initialScale,
     offsetX: 0,
     offsetY: 0,
   }
@@ -88,7 +94,7 @@ async function mountScenario(scenario: DomScaleProbeScenario): Promise<FirstScre
   const mountedNodes = view.querySelectorAll('[data-fw-id]:not([data-fw-type="frame"])').length
   const mountedConnections = view.querySelectorAll('[data-fw-connections] path').length
   if (mountedNodes === 0) throw new Error('裁剪后没有实际挂载素材节点')
-  if (mountedNodes >= scenario.nodeCount) {
+  if (scenario.initialScale === undefined && mountedNodes >= scenario.nodeCount) {
     throw new Error(`视口裁剪未生效：mounted=${mountedNodes}, total=${scenario.nodeCount}`)
   }
 
@@ -133,7 +139,7 @@ function sampleAnimation(
 
 async function sampleDrag(ms: number, threshold: number): Promise<FrameStats> {
   if (root === null) throw new Error('尚未挂载规模场景')
-  viewport = { scale: workload.zoom.startScale, offsetX: 0, offsetY: 0 }
+  viewport = { scale: initialScale, offsetX: 0, offsetY: 0 }
   const node = root.children[0]
   if (node === undefined) throw new Error('没有可拖拽节点')
   const origin = { x: node.x, y: node.y }
@@ -160,18 +166,22 @@ async function sampleZoom(ms: number, threshold: number): Promise<FrameStats> {
   })
 }
 
-async function samplePan(ms: number, threshold: number): Promise<FrameStats> {
+async function samplePan(
+  ms: number,
+  threshold: number,
+  panDelta: Readonly<{ x: number; y: number }> = workload.panDelta,
+): Promise<FrameStats> {
   viewport = {
-    scale: workload.zoom.startScale,
+    scale: initialScale,
     offsetX: 0,
     offsetY: 0,
   }
   renderer?.update(context())
   return sampleAnimation(ms, threshold, (progress) => {
     viewport = {
-      scale: workload.zoom.startScale,
-      offsetX: workload.panDelta.x * progress,
-      offsetY: workload.panDelta.y * progress,
+      scale: initialScale,
+      offsetX: panDelta.x * progress,
+      offsetY: panDelta.y * progress,
     }
   })
 }

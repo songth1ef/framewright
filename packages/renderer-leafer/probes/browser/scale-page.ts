@@ -31,7 +31,11 @@ interface LeaferScaleProbe {
   mountScenario(scenario: LeaferScaleProbeScenario): Promise<FirstScreenSample>
   sampleDrag(ms: number, threshold: number): Promise<FrameSample>
   sampleZoom(ms: number, threshold: number): Promise<FrameSample>
-  samplePan(ms: number, threshold: number): Promise<FrameSample>
+  samplePan(
+    ms: number,
+    threshold: number,
+    panDelta?: Readonly<{ x: number; y: number }>,
+  ): Promise<FrameSample>
   dragSnapshot(): DragSnapshot
   zoomSnapshot(): ZoomSnapshot
   panSnapshot(): PanSnapshot
@@ -54,6 +58,7 @@ const leafer = new Leafer({ view, ...screen })
 let scene = new LeaferViewportScene(leafer)
 let root: FrameNode | null = null
 let viewport: Viewport = { scale: 1, offsetX: 0, offsetY: 0 }
+let initialScale = workload.zoom.startScale
 
 function context(): RenderContext {
   if (root === null) throw new Error('规模场景尚未挂载')
@@ -67,11 +72,12 @@ function applyViewport(next: Viewport): void {
   leafer.y = next.offsetY
 }
 
-function resetScene(nextRoot: FrameNode): void {
+function resetScene(nextRoot: FrameNode, nextInitialScale: number): void {
   scene.destroy()
   scene = new LeaferViewportScene(leafer)
   root = nextRoot
-  applyViewport({ scale: workload.zoom.startScale, offsetX: 0, offsetY: 0 })
+  initialScale = nextInitialScale
+  applyViewport({ scale: initialScale, offsetX: 0, offsetY: 0 })
 }
 
 function nextFrame(): Promise<number> {
@@ -115,7 +121,7 @@ async function mountScenario(value: LeaferScaleProbeScenario): Promise<FirstScre
   const fixtureStart = performance.now()
   const nextRoot = buildScaleFixture(value)
   const fixtureBuildMs = performance.now() - fixtureStart
-  resetScene(nextRoot)
+  resetScene(nextRoot, value.initialScale ?? workload.zoom.startScale)
 
   const renderStart = performance.now()
   scene.reconcile(context(), screen)
@@ -132,7 +138,10 @@ async function mountScenario(value: LeaferScaleProbeScenario): Promise<FirstScre
   const mountedIds = scene.getMountedNodeIds()
   const mountedLogicalNodeCount = mountedIds.filter((fwId) => fwId !== nextRoot.fwId).length
   const totalConnectionCount = countFixtureConnections(nextRoot)
-  if (mountedLogicalNodeCount <= 0 || mountedLogicalNodeCount >= value.nodeCount) {
+  if (
+    mountedLogicalNodeCount <= 0 ||
+    (value.initialScale === undefined && mountedLogicalNodeCount >= value.nodeCount)
+  ) {
     throw new Error(
       `${value.id} 裁剪挂载证据无效：mounted=${mountedLogicalNodeCount}, total=${value.nodeCount}`,
     )
@@ -202,18 +211,22 @@ async function sampleZoom(ms: number, threshold: number): Promise<FrameSample> {
   })
 }
 
-async function samplePan(ms: number, threshold: number): Promise<FrameSample> {
-  const start = {
-    offsetX: workload.pan.startOffsetX,
-    offsetY: workload.pan.startOffsetY,
-  }
-  applyViewport({ scale: workload.zoom.startScale, ...start })
+async function samplePan(
+  ms: number,
+  threshold: number,
+  panDelta?: Readonly<{ x: number; y: number }>,
+): Promise<FrameSample> {
+  const start = { offsetX: workload.pan.startOffsetX, offsetY: workload.pan.startOffsetY }
+  const end = panDelta === undefined
+    ? { offsetX: workload.pan.endOffsetX, offsetY: workload.pan.endOffsetY }
+    : { offsetX: start.offsetX + panDelta.x, offsetY: start.offsetY + panDelta.y }
+  applyViewport({ scale: initialScale, ...start })
   scene.reconcile(context(), screen)
   return sampleAnimation(ms, threshold, (progress) => {
     applyViewport({
-      scale: workload.zoom.startScale,
-      offsetX: start.offsetX + (workload.pan.endOffsetX - start.offsetX) * progress,
-      offsetY: start.offsetY + (workload.pan.endOffsetY - start.offsetY) * progress,
+      scale: initialScale,
+      offsetX: start.offsetX + (end.offsetX - start.offsetX) * progress,
+      offsetY: start.offsetY + (end.offsetY - start.offsetY) * progress,
     })
     scene.reconcile(context(), screen)
   })

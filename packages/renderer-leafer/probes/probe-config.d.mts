@@ -5,6 +5,7 @@ export interface LeaferScaleProbeScenario {
   readonly label: string
   readonly nodeCount: number
   readonly connectionPattern: ScaleConnectionPattern
+  readonly initialScale?: number
 }
 
 export interface LeaferScaleProbeWorkload {
@@ -31,3 +32,18 @@ export interface LeaferScaleProbeWorkload {
 }
 
 export const LEAFER_SCALE_PROBE_WORKLOAD: LeaferScaleProbeWorkload
+
+export interface LeaferZoomOutProbeWorkload {
+  readonly renderer: string
+  readonly seed: 7
+  readonly scenarios: readonly (LeaferScaleProbeScenario & { readonly initialScale: number })[]
+  readonly sampleWindowMs: number
+  readonly caseTimeoutMs: number
+  readonly viewport: LeaferScaleProbeWorkload['viewport']
+  readonly viewportRole: string
+  readonly dragDelta: Readonly<{ x: number; y: number }>
+  readonly panDelta: Readonly<{ x: number; y: number }>
+  readonly longFrameThresholdMs: number
+}
+
+export const LEAFER_ZOOM_OUT_PROBE_WORKLOAD: LeaferZoomOutProbeWorkload

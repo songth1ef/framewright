@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { DOM_SCALE_PROBE_WORKLOAD } from '../probe-config.mjs'
+import {
+  DOM_SCALE_PROBE_WORKLOAD,
+  DOM_ZOOM_OUT_PROBE_WORKLOAD,
+} from '../probe-config.mjs'
 import {
   buildDragEvidence,
   buildFrameStats,
@@ -21,6 +24,24 @@ describe('DOM 规模 probe', () => {
         { id: 'none-10000', nodeCount: 10000, connectionPattern: 'none' },
       ],
     })
+  })
+
+  it('S4 四档只改变初始缩放，全部使用 10000 节点 many-to-many', () => {
+    expect(DOM_ZOOM_OUT_PROBE_WORKLOAD).toMatchObject({
+      seed: 7,
+      sampleWindowMs: 3000,
+      caseTimeoutMs: 120000,
+      longFrameThresholdMs: 50,
+      viewport: { width: 1024, height: 1400, viewWidth: 960, viewHeight: 1300 },
+      dragDelta: { x: 240, y: 120 },
+      panDelta: { x: -1200, y: -800 },
+    })
+    expect(DOM_ZOOM_OUT_PROBE_WORKLOAD.scenarios).toEqual([
+      { id: 'zoom-100', label: '100%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 1 },
+      { id: 'zoom-50', label: '50%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 0.5 },
+      { id: 'zoom-25', label: '25%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 0.25 },
+      { id: 'zoom-10', label: '10%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 0.1 },
+    ])
   })
 
   it('平移证据记录 offset 起止值并拒绝空转', () => {

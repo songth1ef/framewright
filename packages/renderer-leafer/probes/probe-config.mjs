@@ -31,3 +31,21 @@ export const LEAFER_SCALE_PROBE_WORKLOAD = Object.freeze({
   pan: Object.freeze({ startOffsetX: 0, startOffsetY: 0, endOffsetX: -480, endOffsetY: -650 }),
   longFrameThresholdMs: 50,
 })
+
+export const LEAFER_ZOOM_OUT_PROBE_WORKLOAD = Object.freeze({
+  renderer: LEAFER_SCALE_PROBE_WORKLOAD.renderer,
+  scenarios: Object.freeze([
+    Object.freeze({ id: 'zoom-100', label: '100%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 1 }),
+    Object.freeze({ id: 'zoom-50', label: '50%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 0.5 }),
+    Object.freeze({ id: 'zoom-25', label: '25%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 0.25 }),
+    Object.freeze({ id: 'zoom-10', label: '10%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 0.1 }),
+  ]),
+  seed: 7,
+  sampleWindowMs: 3000,
+  caseTimeoutMs: 120000,
+  viewport: LEAFER_SCALE_PROBE_WORKLOAD.viewport,
+  viewportRole: LEAFER_SCALE_PROBE_WORKLOAD.viewportRole,
+  dragDelta: LEAFER_SCALE_PROBE_WORKLOAD.dragDelta,
+  panDelta: Object.freeze({ x: -1200, y: -800 }),
+  longFrameThresholdMs: 50,
+})

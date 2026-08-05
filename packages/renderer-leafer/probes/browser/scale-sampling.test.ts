@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { LEAFER_SCALE_PROBE_WORKLOAD } from '../probe-config.mjs'
+import {
+  LEAFER_SCALE_PROBE_WORKLOAD,
+  LEAFER_ZOOM_OUT_PROBE_WORKLOAD,
+} from '../probe-config.mjs'
 import {
   buildDragEvidence,
   buildPanEvidence,
@@ -22,6 +25,24 @@ describe('Leafer S3 规模 probe', () => {
       ],
     })
     expect(LEAFER_SCALE_PROBE_WORKLOAD.viewportRole).toContain('与 DOM 侧严格同口径')
+  })
+
+  it('S4 四档只改变初始缩放，全部使用 10000 节点 many-to-many', () => {
+    expect(LEAFER_ZOOM_OUT_PROBE_WORKLOAD).toMatchObject({
+      seed: 7,
+      sampleWindowMs: 3000,
+      caseTimeoutMs: 120000,
+      longFrameThresholdMs: 50,
+      viewport: { width: 1024, height: 1400, viewWidth: 960, viewHeight: 1300 },
+      dragDelta: { x: 240, y: 120 },
+      panDelta: { x: -1200, y: -800 },
+    })
+    expect(LEAFER_ZOOM_OUT_PROBE_WORKLOAD.scenarios).toEqual([
+      { id: 'zoom-100', label: '100%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 1 },
+      { id: 'zoom-50', label: '50%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 0.5 },
+      { id: 'zoom-25', label: '25%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 0.25 },
+      { id: 'zoom-10', label: '10%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 0.1 },
+    ])
   })
 
   it('报告平均 fps、中位数、p95、最大值与长帧数', () => {
