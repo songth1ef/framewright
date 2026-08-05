@@ -163,6 +163,44 @@ describe('getNodesInViewport', () => {
     ]).toEqual(['root', 'vertical-center'])
   })
 
+  it('半退化视口（一维为 0）退回各向同性，不产生极端拉伸的保留区', () => {
+    // 0×800 这类形态出现在容器某一维被布局压塌时。
+    // 若两维各自独立兜底成 1，会得到 halfW=1、halfH=400 —— 400 倍各向异性，
+    // 保留区退化成一条竖条，几乎只按 x 排序。那比退回圆形还糟：
+    // 圆形至少是各向同性的中性行为。这里断言横纵被一视同仁。
+    const root = createFrameNode({
+      fwId: 'root',
+      width: 800,
+      height: 800,
+      children: [
+        // 两个节点都必须横跨 x=0：零宽视口下候选过滤本身就是零宽的
+        // （overscan 是比例，0 乘任何比例仍是 0），不跨过去就根本进不了候选。
+        // 中心 (6, 400)：横向差 6px、纵向差 0 —— 真实距离上明显更近
+        createBoxNode({ fwId: 'near-in-x', x: -2, y: 399, width: 16, height: 2 }),
+        // 中心 (0, 301)：纵向差 99px
+        createBoxNode({ fwId: 'far-in-y', x: -2, y: 300, width: 4, height: 2 }),
+      ],
+    })
+
+    const kept = [
+      ...getNodesInViewport(root, viewport, {
+        width: 0,
+        height: 800,
+        overscan: 0,
+        maxNodes: 2,
+      }),
+    ]
+
+    // 视口中心 (0, 400)。各向同性兜底（两维都取 400）下：
+    //   near-in-x = max(6/400, 0/400)  = 0.015
+    //   far-in-y  = max(0/400, 99/400) = 0.2475   → near-in-x 更近 ✓
+    // 而旧的「各兜各的」（halfW=1、halfH=400）下：
+    //   near-in-x = max(6/1, 0/400)  = 6
+    //   far-in-y  = max(0/1, 99/400) = 0.2475     → 结论反过来 ✗
+    // 横向权重被放大 400 倍，一个 6px 的横向偏移被判得比 99px 的纵向偏移还远。
+    expect(kept).toEqual(['root', 'near-in-x'])
+  })
+
   it('最近节点位于嵌套 frame 时，祖先链计入上限并一并保留', () => {
     const root = createFrameNode({
       fwId: 'root',

@@ -182,9 +182,19 @@ export function getViewportCullingResult(
     y: currentBounds.y + currentBounds.height / 2,
   }
   // 按真实视口的半宽/半高归一化，使等值面与视口同宽高比。
-  // 零尺寸发生在 host 尚未完成测量时；用 1 作中性分母，避免 NaN/Infinity。
-  const viewportHalfWidth = currentBounds.width > 0 ? currentBounds.width / 2 : 1
-  const viewportHalfHeight = currentBounds.height > 0 ? currentBounds.height / 2 : 1
+  //
+  // 🔴 两个维度必须一起兜底，不能各兜各的。
+  // 非正尺寸发生在 host 尚未完成测量、或容器某一维被布局压塌时。
+  // 若各自独立兜成 1，遇到 0×800 这类**半退化**视口就会得到 halfW=1、halfH=400 ——
+  // 400 倍的各向异性，等值面退化成一条竖条，几乎只按 x 排序。
+  // 那比退回圆形还糟：圆形至少是各向同性的中性行为。
+  // 所以任一维不可用时，两维取同一个值，退化为中性的正方形保留区。
+  const halfWidth = currentBounds.width / 2
+  const halfHeight = currentBounds.height / 2
+  const bothUsable = halfWidth > 0 && halfHeight > 0
+  const neutralHalfExtent = Math.max(halfWidth, halfHeight, 1)
+  const viewportHalfWidth = bothUsable ? halfWidth : neutralHalfExtent
+  const viewportHalfHeight = bothUsable ? halfHeight : neutralHalfExtent
   const maxNodes = getLimit(options.maxNodes, DEFAULT_MAX_NODES, 'maxNodes', false)
   const connectionsVisible = resolveConnectionVisibility(options.connectionVisibility) === 'visible'
   const maxConnections = connectionsVisible
