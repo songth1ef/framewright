@@ -9,6 +9,7 @@ import {
   createAiVideoNode,
   createDemoDocument,
   createFrameNode,
+  createVideoNode,
   type RenderContext,
   type RendererCallbacks,
 } from '@framewright/core'
@@ -90,6 +91,35 @@ function makeGenerationContext(
     selection: [],
     viewport: DEFAULT_VIEWPORT,
     callbacks,
+  }
+}
+
+function makeVideoContext(): RenderContext {
+  return {
+    root: createFrameNode({
+      fwId: 'root',
+      width: 800,
+      height: 600,
+      children: [
+        createVideoNode({
+          fwId: 'video-1',
+          name: '预览视频',
+          x: 12,
+          y: 34,
+          width: 320,
+          height: 180,
+          rotation: 5,
+          opacity: 0.75,
+          locked: true,
+          src: '/fixtures/preview.mp4',
+          poster: '/fixtures/poster.jpg',
+          fit: 'cover',
+        }),
+      ],
+    }),
+    selection: [],
+    viewport: DEFAULT_VIEWPORT,
+    callbacks: NOOP_RENDERER_CALLBACKS,
   }
 }
 
@@ -224,6 +254,39 @@ describe('createDomRenderer', () => {
     expect(button.textContent).toBe('重试')
     expect(button.dataset.fwInteraction).toBe('ignore')
     expect(node.querySelector('[data-fw-generation-footer]')).toBeNull()
+    await act(async () => renderer.destroy())
+  })
+
+  it('video 使用原生控件并逐字段映射媒体与几何属性', async () => {
+    const renderer = await mountRenderer(makeVideoContext())
+    const video = container!.querySelector('[data-fw-id="video-1"]') as HTMLVideoElement
+
+    expect(video).toBeInstanceOf(HTMLVideoElement)
+    expect(video.controls).toBe(true)
+    expect(video.playsInline).toBe(true)
+    expect(video.preload).toBe('metadata')
+    expect(video.getAttribute('src')).toBe('/fixtures/preview.mp4')
+    expect(video.getAttribute('poster')).toBe('/fixtures/poster.jpg')
+    expect(video.style.objectFit).toBe('cover')
+    expect(video.style.left).toBe('12px')
+    expect(video.style.top).toBe('34px')
+    expect(video.style.width).toBe('320px')
+    expect(video.style.height).toBe('180px')
+    expect(video.style.opacity).toBe('0.75')
+    expect(video.style.transform).toBe('rotate(5deg)')
+    expect(video.dataset.fwUnsupported).toBeUndefined()
+    await act(async () => renderer.destroy())
+  })
+
+  it('video 映射不向原生元素泄漏 node 业务字段', async () => {
+    const renderer = await mountRenderer(makeVideoContext())
+    const video = container!.querySelector('[data-fw-id="video-1"]') as HTMLVideoElement
+
+    expect(video.getAttribute('fwId')).toBeNull()
+    expect(video.getAttribute('fwType')).toBeNull()
+    expect(video.getAttribute('locked')).toBeNull()
+    expect(video.getAttribute('children')).toBeNull()
+    expect(video.getAttribute('name')).toBeNull()
     await act(async () => renderer.destroy())
   })
 

@@ -13,6 +13,7 @@ import {
 import type { CSSProperties, ReactNode } from 'react'
 import { toNodeStyle } from '../node-style'
 import { GenerationUnit } from './generation-unit'
+import { VideoShape } from './video'
 
 export interface ShapeProps {
   node: CanvasNode
@@ -89,7 +90,7 @@ export const DOM_SHAPES: Record<ShapeType, ShapeComponent> = {
   frame: FrameShape,
   box: BoxShape,
   img: makeUnsupportedShape('img'),
-  video: makeUnsupportedShape('video'),
+  video: VideoShape,
   'ai-image': GenerationUnitShape,
   'ai-video': GenerationUnitShape,
 }
