@@ -21,6 +21,7 @@ export interface GenerationUnitProps {
   active: boolean
   viewportScale: number
   cumulativeRotation: number
+  mountVideo?: boolean
   onNodeAction(fwId: string, action: string): void
   onNodesDelete(fwIds: readonly string[]): void
 }
@@ -213,7 +214,13 @@ function GeneratingContent(): ReactNode {
   )
 }
 
-function SucceededContent({ node }: { node: GenerationNode }): ReactNode {
+function SucceededContent({
+  node,
+  mountVideo = true,
+}: {
+  node: GenerationNode
+  mountVideo: boolean
+}): ReactNode {
   const mediaStyle: CSSProperties = {
     display: 'block',
     width: '100%',
@@ -222,13 +229,15 @@ function SucceededContent({ node }: { node: GenerationNode }): ReactNode {
   }
   const media = isAiImageNode(node) ? (
     <img alt="" draggable={false} src={node.src ?? undefined} style={mediaStyle} />
-  ) : (
+  ) : mountVideo ? (
     <video
       poster={isAiVideoNode(node) ? node.poster ?? undefined : undefined}
       preload="none"
       src={node.src ?? undefined}
       style={mediaStyle}
     />
+  ) : (
+    <div data-fw-video-deferred="true" style={{ ...mediaStyle, background: '#000000' }} />
   )
 
   return (
@@ -308,6 +317,7 @@ function FailedContent({ node, onAction }: { node: GenerationNode; onAction(): v
 function renderContent(
   node: GenerationNode,
   onNodeAction: GenerationUnitProps['onNodeAction'],
+  mountVideo: boolean,
 ): ReactNode {
   switch (node.status) {
     case 'empty':
@@ -316,7 +326,7 @@ function renderContent(
     case 'running':
       return <GeneratingContent />
     case 'succeeded':
-      return <SucceededContent node={node} />
+      return <SucceededContent node={node} mountVideo={mountVideo} />
     case 'failed':
       return <FailedContent node={node} onAction={() => onNodeAction(node.fwId, NODE_ACTIONS.retry)} />
   }
@@ -327,6 +337,7 @@ export function GenerationUnit({
   position,
   size,
   onNodeAction,
+  mountVideo = true,
 }: GenerationUnitProps): ReactNode {
   const isEmpty = node.status === 'empty'
   const isFailed = node.status === 'failed'
@@ -356,7 +367,7 @@ export function GenerationUnit({
           borderRadius: 'inherit',
         }}
       >
-        {renderContent(node, onNodeAction)}
+        {renderContent(node, onNodeAction, mountVideo)}
       </div>
     </div>
   )

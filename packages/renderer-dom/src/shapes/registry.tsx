@@ -24,6 +24,7 @@ export interface ShapeProps {
   active: boolean
   viewportScale: number
   cumulativeRotation: number
+  videoVisible: boolean
   onNodeAction: RendererCallbacks['onNodeAction']
   onNodesDelete: RendererCallbacks['onNodesDelete']
   children?: ReactNode
@@ -63,6 +64,7 @@ function GenerationUnitShape({
   active,
   viewportScale,
   cumulativeRotation,
+  videoVisible,
   onNodeAction,
   onNodesDelete,
 }: ShapeProps): ReactNode {
@@ -76,6 +78,7 @@ function GenerationUnitShape({
       active={active}
       viewportScale={viewportScale}
       cumulativeRotation={cumulativeRotation}
+      mountVideo={videoVisible}
       onNodeAction={onNodeAction}
       onNodesDelete={onNodesDelete}
     />

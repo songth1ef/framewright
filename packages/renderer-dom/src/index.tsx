@@ -1,5 +1,7 @@
 import {
   findNodeById,
+  getConnectionsInViewport,
+  getNodesInViewport,
   isAiImageNode,
   isAiVideoNode,
   isFrameNode,
@@ -12,7 +14,7 @@ import {
 } from '@framewright/core'
 import type { ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { collectConnectionItems, ConnectionLayer } from './connections'
+import { ConnectionLayer } from './connections'
 import {
   createCanvasInteraction,
   EMPTY_INTERACTION_PREVIEW,
@@ -34,8 +36,8 @@ function renderNode(
   selection: readonly string[],
   previewMoves: ReadonlyMap<string, { x: number; y: number }>,
   previewResizes: ReadonlyMap<string, NodeResize>,
-  bounds: Map<string, Rect>,
-  visibleNodeIds: string[],
+  mountedNodeIds: ReadonlySet<string>,
+  videoVisibleNodeIds: ReadonlySet<string>,
   onNodeAction: RenderContext['callbacks']['onNodeAction'],
   onNodesDelete: RenderContext['callbacks']['onNodesDelete'],
   activeVideoFwId: string | null,
@@ -43,6 +45,8 @@ function renderNode(
   parentRotation: number,
   connectionLayer?: ReactNode,
 ): ReactNode {
+  if (!mountedNodeIds.has(node.fwId)) return null
+
   const previewResize = previewResizes.get(node.fwId)
   const previewPosition = previewMoves.get(node.fwId)
   const position: Point = previewResize ?? previewPosition ?? { x: node.x, y: node.y }
@@ -50,14 +54,6 @@ function renderNode(
   const absolute: Point = { x: parentAbsolute.x + position.x, y: parentAbsolute.y + position.y }
   const cumulativeRotation = parentRotation + node.rotation
   const visible = parentVisible && node.visible
-  bounds.set(node.fwId, {
-    x: absolute.x,
-    y: absolute.y,
-    width: size.width,
-    height: size.height,
-  })
-  if (visible) visibleNodeIds.push(node.fwId)
-
   const Shape = DOM_SHAPES[node.fwType]
   const children = isFrameNode(node)
     ? (
@@ -71,8 +67,8 @@ function renderNode(
               selection,
               previewMoves,
               previewResizes,
-              bounds,
-              visibleNodeIds,
+              mountedNodeIds,
+              videoVisibleNodeIds,
               onNodeAction,
               onNodesDelete,
               activeVideoFwId,
@@ -94,12 +90,45 @@ function renderNode(
       active={node.fwId === activeVideoFwId}
       viewportScale={viewportScale}
       cumulativeRotation={cumulativeRotation}
+      videoVisible={videoVisibleNodeIds.has(node.fwId)}
       onNodeAction={onNodeAction}
       onNodesDelete={onNodesDelete}
     >
       {children}
     </Shape>
   )
+}
+
+function collectRenderMetrics(
+  node: CanvasNode,
+  parentAbsolute: Point,
+  parentVisible: boolean,
+  previewMoves: ReadonlyMap<string, Point>,
+  previewResizes: ReadonlyMap<string, NodeResize>,
+  bounds: Map<string, Rect>,
+  visibleNodeIds: string[],
+): void {
+  const previewResize = previewResizes.get(node.fwId)
+  const position = previewResize ?? previewMoves.get(node.fwId) ?? { x: node.x, y: node.y }
+  const size = previewResize ?? { width: node.width, height: node.height }
+  const absolute = { x: parentAbsolute.x + position.x, y: parentAbsolute.y + position.y }
+  const visible = parentVisible && node.visible
+
+  bounds.set(node.fwId, { x: absolute.x, y: absolute.y, width: size.width, height: size.height })
+  if (visible) visibleNodeIds.push(node.fwId)
+  if (isFrameNode(node)) {
+    for (const child of node.children) {
+      collectRenderMetrics(
+        child,
+        absolute,
+        visible,
+        previewMoves,
+        previewResizes,
+        bounds,
+        visibleNodeIds,
+      )
+    }
+  }
 }
 
 export function createDomRenderer(): RendererAdapter {
@@ -132,6 +161,24 @@ export function createDomRenderer(): RendererAdapter {
     const previewResizes = new Map(
       (interactionPreview.resizes ?? []).map((resize) => [resize.fwId, resize]),
     )
+    collectRenderMetrics(
+      ctx.root,
+      { x: 0, y: 0 },
+      true,
+      previewMoves,
+      previewResizes,
+      bounds,
+      visibleNodeIds,
+    )
+    const viewportSize = {
+      width: cursorContainer?.clientWidth || ctx.root.width * scale,
+      height: cursorContainer?.clientHeight || ctx.root.height * scale,
+    }
+    const mountedNodeIds = getNodesInViewport(ctx.root, ctx.viewport, viewportSize)
+    const videoVisibleNodeIds = getNodesInViewport(ctx.root, ctx.viewport, {
+      ...viewportSize,
+      overscan: 0,
+    })
     const rootBounds: Rect = {
       x: ctx.root.x,
       y: ctx.root.y,
@@ -140,7 +187,7 @@ export function createDomRenderer(): RendererAdapter {
     }
     const connectionLayer = (
       <ConnectionLayer
-        items={collectConnectionItems(ctx.root)}
+        items={getConnectionsInViewport(ctx.root, ctx.viewport, viewportSize)}
         selection={ctx.selection}
         scale={scale}
         rootBounds={rootBounds}
@@ -153,8 +200,8 @@ export function createDomRenderer(): RendererAdapter {
       ctx.selection,
       previewMoves,
       previewResizes,
-      bounds,
-      visibleNodeIds,
+      mountedNodeIds,
+      videoVisibleNodeIds,
       ctx.callbacks.onNodeAction,
       ctx.callbacks.onNodesDelete,
       activeVideoFwId,
@@ -168,6 +215,8 @@ export function createDomRenderer(): RendererAdapter {
     const generationToolbar =
       hoveredNode !== null &&
       hoveredRect !== undefined &&
+      hoveredFwId !== null &&
+      mountedNodeIds.has(hoveredFwId) &&
       (isAiImageNode(hoveredNode) || isAiVideoNode(hoveredNode))
         ? (
             <div
@@ -209,12 +258,14 @@ export function createDomRenderer(): RendererAdapter {
           preview={interactionPreview}
           viewport={ctx.viewport}
           selectionBounds={ctx.selection.flatMap((fwId) => {
+            if (!mountedNodeIds.has(fwId)) return []
             const rect = bounds.get(fwId)
               return rect === undefined ? [] : [{ fwId, rect }]
           })}
           hoverBounds={(() => {
             const fwId = interactionPreview.hoveredFwId
             if (fwId === undefined || fwId === null) return null
+            if (!mountedNodeIds.has(fwId)) return null
             const rect = bounds.get(fwId)
             return rect === undefined ? null : { fwId, rect }
           })()}

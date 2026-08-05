@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { toNodeStyle } from '../node-style'
 import type { ShapeProps } from './registry'
 
-export function VideoShape({ node, position, size, active }: ShapeProps): ReactNode {
+export function VideoShape({ node, position, size, active, videoVisible }: ShapeProps): ReactNode {
   if (!isVideoNode(node)) return null
 
   const base = toNodeStyle(node, position, size)
@@ -37,6 +37,17 @@ export function VideoShape({ node, position, size, active }: ShapeProps): ReactN
     objectFit: node.fit,
     background: '#000000',
     pointerEvents: active ? 'auto' : 'none',
+  }
+
+  if (!videoVisible) {
+    return (
+      <div
+        data-fw-id={node.fwId}
+        data-fw-type="video"
+        data-fw-video-deferred="true"
+        style={style}
+      />
+    )
   }
 
   return (

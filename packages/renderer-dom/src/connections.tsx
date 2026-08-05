@@ -75,6 +75,13 @@ export function ConnectionLayer({
 }: ConnectionLayerProps): ReactNode {
   const safeScale = scale > 0 ? scale : 1
   const radius = CONNECTION_STYLE.endpointRadius / safeScale
+  const occurrences = new Map<string, number>()
+  const keyedItems = items.map((item) => {
+    const pair = `${item.fromFwId}:${item.toFwId}`
+    const occurrence = occurrences.get(pair) ?? 0
+    occurrences.set(pair, occurrence + 1)
+    return { item, key: `${pair}:${occurrence}` }
+  })
 
   return (
     <svg
@@ -91,7 +98,7 @@ export function ConnectionLayer({
         pointerEvents: 'none',
       }}
     >
-      {items.map((item, index) => {
+      {keyedItems.map(({ item, key }) => {
         const highlighted =
           selection.includes(item.fromFwId) || selection.includes(item.toFwId)
         const color = highlighted
@@ -101,7 +108,7 @@ export function ConnectionLayer({
           (highlighted ? CONNECTION_STYLE.highlightWidth : CONNECTION_STYLE.strokeWidth) /
           safeScale
         return (
-          <g key={`${item.fromFwId}:${item.toFwId}:${index}`}>
+          <g key={key}>
             <path
               data-fw-connection-from={item.fromFwId}
               data-fw-connection-to={item.toFwId}
