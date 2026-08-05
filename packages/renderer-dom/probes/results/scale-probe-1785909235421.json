@@ -1,0 +1,273 @@
+{
+  "probe": "renderer-dom-scale",
+  "startedAt": "2026-08-05T05:53:30.949Z",
+  "workload": {
+    "renderer": "DOM（React 节点层 + SVG 连线层）",
+    "scenarios": [
+      {
+        "id": "nodes-100",
+        "label": "100 节点、无连线",
+        "nodeCount": 100,
+        "connectionCount": 0,
+        "connectionPattern": "none"
+      },
+      {
+        "id": "nodes-1000",
+        "label": "1000 节点、无连线",
+        "nodeCount": 1000,
+        "connectionCount": 0,
+        "connectionPattern": "none"
+      },
+      {
+        "id": "fanin-100",
+        "label": "1000 节点、单节点扇入 100 条连线",
+        "nodeCount": 1000,
+        "connectionCount": 100,
+        "connectionPattern": "fanin"
+      },
+      {
+        "id": "distributed-1000",
+        "label": "1000 节点、分散 1000 条连线",
+        "nodeCount": 1000,
+        "connectionCount": 1000,
+        "connectionPattern": "distributed"
+      }
+    ],
+    "sampleWindowMs": 3000,
+    "nodeSize": {
+      "width": 120,
+      "height": 80
+    },
+    "viewport": {
+      "width": 1024,
+      "height": 1400,
+      "viewWidth": 960,
+      "viewHeight": 1300
+    },
+    "viewportRole": "browser viewport 为 1024×1400；其中 #view 是 960×1300 的可见画布裁剪区。所有节点均挂载，仅裁剪区内节点可见；两侧必须使用同一口径。",
+    "layout": {
+      "columns": 25,
+      "originX": 20,
+      "originY": 20,
+      "gapX": 24,
+      "gapY": 24
+    },
+    "dragDelta": {
+      "x": 240,
+      "y": 120
+    },
+    "zoom": {
+      "startScale": 1,
+      "endScale": 1.25
+    },
+    "longFrameThresholdMs": 50
+  },
+  "memory": {
+    "value": null,
+    "reason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+  },
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+  "scenarios": [
+    {
+      "id": "nodes-100",
+      "label": "100 节点、无连线",
+      "nodeCount": 100,
+      "connectionCount": 0,
+      "connectionPattern": "none",
+      "firstScreen": {
+        "elapsedMs": 9.400000005960464,
+        "mountedNodeCount": 100,
+        "mountedConnectionCount": 0,
+        "visibleNodeCount": 28,
+        "memory": null
+      },
+      "drag": {
+        "frames": 181,
+        "elapsedMs": 3009.9000000059605,
+        "fps": 60.13488820214677,
+        "longFrames": 0,
+        "workEvidence": {
+          "fwId": "box-0",
+          "start": {
+            "x": 20,
+            "y": 20
+          },
+          "end": {
+            "x": 260,
+            "y": 140
+          },
+          "delta": {
+            "x": 240,
+            "y": 120
+          },
+          "positionChanged": true
+        },
+        "memory": null
+      },
+      "zoom": {
+        "frames": 181,
+        "elapsedMs": 3010.4000000119213,
+        "fps": 60.12490034523094,
+        "longFrames": 0,
+        "workEvidence": {
+          "scaleStart": 1,
+          "scaleEnd": 1.25,
+          "scaleDelta": 0.25,
+          "scaleChanged": true
+        },
+        "memory": null
+      }
+    },
+    {
+      "id": "nodes-1000",
+      "label": "1000 节点、无连线",
+      "nodeCount": 1000,
+      "connectionCount": 0,
+      "connectionPattern": "none",
+      "firstScreen": {
+        "elapsedMs": 18,
+        "mountedNodeCount": 1000,
+        "mountedConnectionCount": 0,
+        "visibleNodeCount": 91,
+        "memory": null
+      },
+      "drag": {
+        "frames": 181,
+        "elapsedMs": 3004.30000000596,
+        "fps": 60.24697932950801,
+        "longFrames": 0,
+        "workEvidence": {
+          "fwId": "box-0",
+          "start": {
+            "x": 20,
+            "y": 20
+          },
+          "end": {
+            "x": 260,
+            "y": 140
+          },
+          "delta": {
+            "x": 240,
+            "y": 120
+          },
+          "positionChanged": true
+        },
+        "memory": null
+      },
+      "zoom": {
+        "frames": 181,
+        "elapsedMs": 3008.2999999999993,
+        "fps": 60.166871655087604,
+        "longFrames": 0,
+        "workEvidence": {
+          "scaleStart": 1,
+          "scaleEnd": 1.25,
+          "scaleDelta": 0.25,
+          "scaleChanged": true
+        },
+        "memory": null
+      }
+    },
+    {
+      "id": "fanin-100",
+      "label": "1000 节点、单节点扇入 100 条连线",
+      "nodeCount": 1000,
+      "connectionCount": 100,
+      "connectionPattern": "fanin",
+      "firstScreen": {
+        "elapsedMs": 16,
+        "mountedNodeCount": 1000,
+        "mountedConnectionCount": 100,
+        "visibleNodeCount": 91,
+        "memory": null
+      },
+      "drag": {
+        "frames": 181,
+        "elapsedMs": 3006.3000000178818,
+        "fps": 60.20689884539913,
+        "longFrames": 0,
+        "workEvidence": {
+          "fwId": "box-0",
+          "start": {
+            "x": 20,
+            "y": 20
+          },
+          "end": {
+            "x": 260,
+            "y": 140
+          },
+          "delta": {
+            "x": 240,
+            "y": 120
+          },
+          "positionChanged": true
+        },
+        "memory": null
+      },
+      "zoom": {
+        "frames": 180,
+        "elapsedMs": 3005.100000005961,
+        "fps": 59.89817310560146,
+        "longFrames": 0,
+        "workEvidence": {
+          "scaleStart": 1,
+          "scaleEnd": 1.25,
+          "scaleDelta": 0.25,
+          "scaleChanged": true
+        },
+        "memory": null
+      }
+    },
+    {
+      "id": "distributed-1000",
+      "label": "1000 节点、分散 1000 条连线",
+      "nodeCount": 1000,
+      "connectionCount": 1000,
+      "connectionPattern": "distributed",
+      "firstScreen": {
+        "elapsedMs": 19.5,
+        "mountedNodeCount": 1000,
+        "mountedConnectionCount": 1000,
+        "visibleNodeCount": 91,
+        "memory": null
+      },
+      "drag": {
+        "frames": 178,
+        "elapsedMs": 3004.600000017883,
+        "fps": 59.24249484089083,
+        "longFrames": 1,
+        "workEvidence": {
+          "fwId": "box-0",
+          "start": {
+            "x": 20,
+            "y": 20
+          },
+          "end": {
+            "x": 260,
+            "y": 140
+          },
+          "delta": {
+            "x": 240,
+            "y": 120
+          },
+          "positionChanged": true
+        },
+        "memory": null
+      },
+      "zoom": {
+        "frames": 181,
+        "elapsedMs": 3006.999999994041,
+        "fps": 60.19288327248377,
+        "longFrames": 0,
+        "workEvidence": {
+          "scaleStart": 1,
+          "scaleEnd": 1.25,
+          "scaleDelta": 0.25,
+          "scaleChanged": true
+        },
+        "memory": null
+      }
+    }
+  ],
+  "finishedAt": "2026-08-05T05:53:55.420Z"
+}
