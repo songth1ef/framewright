@@ -1,6 +1,6 @@
 /** schema 单一真相源。任何 node 字段的增删改只在本文件发生。 */
 
-export const SHAPE_TYPES = ['frame', 'box', 'img', 'video', 'ai-image', 'ai-video'] as const
+export const SHAPE_TYPES = ['frame', 'box', 'img', 'video', 'audio', 'ai-image', 'ai-video'] as const
 export type ShapeType = (typeof SHAPE_TYPES)[number]
 
 export type ObjectFit = 'contain' | 'cover' | 'fill'
@@ -53,6 +53,11 @@ export interface VideoNode extends BaseNode {
   fit: ObjectFit
 }
 
+export interface AudioNode extends BaseNode {
+  fwType: 'audio'
+  src: string
+}
+
 /**
  * 生成单元（一等公民，docs/domain.md §3.2.1）。复合业务组件：
  * 一个 node 渲染成一整套视觉，但整体只是一个 node。
@@ -86,7 +91,14 @@ export interface AiVideoNode extends BaseNode {
   sourceFwIds: string[]
 }
 
-export type CanvasNode = FrameNode | BoxNode | ImgNode | VideoNode | AiImageNode | AiVideoNode
+export type CanvasNode =
+  | FrameNode
+  | BoxNode
+  | ImgNode
+  | VideoNode
+  | AudioNode
+  | AiImageNode
+  | AiVideoNode
 
 export function isFrameNode(node: CanvasNode): node is FrameNode {
   return node.fwType === 'frame'
@@ -99,6 +111,9 @@ export function isImgNode(node: CanvasNode): node is ImgNode {
 }
 export function isVideoNode(node: CanvasNode): node is VideoNode {
   return node.fwType === 'video'
+}
+export function isAudioNode(node: CanvasNode): node is AudioNode {
+  return node.fwType === 'audio'
 }
 export function isAiImageNode(node: CanvasNode): node is AiImageNode {
   return node.fwType === 'ai-image'
@@ -163,6 +178,15 @@ export function createVideoNode(init: Init<VideoNode>): VideoNode {
     src: '',
     poster: null,
     fit: 'contain',
+    ...init,
+  }
+}
+
+export function createAudioNode(init: Init<AudioNode>): AudioNode {
+  return {
+    ...baseDefaults(init.fwId, 'audio'),
+    fwType: 'audio',
+    src: '',
     ...init,
   }
 }

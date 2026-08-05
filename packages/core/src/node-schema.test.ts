@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   SHAPE_TYPES,
+  createAudioNode,
   createAiImageNode,
   createAiVideoNode,
   createBoxNode,
@@ -9,6 +10,7 @@ import {
   createVideoNode,
   isAiImageNode,
   isAiVideoNode,
+  isAudioNode,
   isBoxNode,
   isFrameNode,
   isImgNode,
@@ -16,8 +18,8 @@ import {
 } from './node-schema'
 
 describe('SHAPE_TYPES', () => {
-  it('是 frame/box/img/video/ai-image/ai-video 六个，且顺序固定', () => {
-    expect(SHAPE_TYPES).toEqual(['frame', 'box', 'img', 'video', 'ai-image', 'ai-video'])
+  it('覆盖全部七种 shape，且顺序固定', () => {
+    expect(SHAPE_TYPES).toEqual(['frame', 'box', 'img', 'video', 'audio', 'ai-image', 'ai-video'])
   })
 })
 
@@ -65,12 +67,25 @@ describe('createVideoNode', () => {
   })
 })
 
+describe('createAudioNode', () => {
+  it('补齐默认值', () => {
+    const audio = createAudioNode({ fwId: 'a1' })
+    expect(audio).toMatchObject({ fwType: 'audio', src: '' })
+  })
+
+  it('显式传入的字段覆盖默认值', () => {
+    const audio = createAudioNode({ fwId: 'a1', src: 'https://example.com/audio.mp3' })
+    expect(audio.src).toBe('https://example.com/audio.mp3')
+  })
+})
+
 describe('类型守卫', () => {
   it('按 fwType 判别', () => {
     const frame = createFrameNode({ fwId: 'f1' })
     const box = createBoxNode({ fwId: 'b1' })
     const image = createImgNode({ fwId: 'i1' })
     const video = createVideoNode({ fwId: 'v1' })
+    const audio = createAudioNode({ fwId: 'a1' })
     expect(isFrameNode(frame)).toBe(true)
     expect(isFrameNode(box)).toBe(false)
     expect(isBoxNode(box)).toBe(true)
@@ -79,9 +94,11 @@ describe('类型守卫', () => {
     expect(isImgNode(video)).toBe(false)
     expect(isVideoNode(video)).toBe(true)
     expect(isVideoNode(image)).toBe(false)
+    expect(isAudioNode(audio)).toBe(true)
+    expect(isAudioNode(video)).toBe(false)
   })
 
-  it('六个 fwType 的守卫互斥', () => {
+  it('七个 fwType 的守卫互斥', () => {
     const aiImage = createAiImageNode({ fwId: 'ai1' })
     const aiVideo = createAiVideoNode({ fwId: 'av1' })
     expect(isAiImageNode(aiImage)).toBe(true)
@@ -90,6 +107,7 @@ describe('类型守卫', () => {
     expect(isAiVideoNode(aiImage)).toBe(false)
     expect(isImgNode(aiImage)).toBe(false)
     expect(isVideoNode(aiVideo)).toBe(false)
+    expect(isAudioNode(aiVideo)).toBe(false)
     expect(isBoxNode(aiImage)).toBe(false)
     expect(isFrameNode(aiVideo)).toBe(false)
   })
