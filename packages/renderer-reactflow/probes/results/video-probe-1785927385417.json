@@ -1,0 +1,189 @@
+{
+  "probe": "renderer-reactflow-video",
+  "startedAt": "2026-08-05T10:56:14.805Z",
+  "workload": {
+    "renderer": "React Flow 自定义节点内原生 <video>",
+    "concurrency": [
+      1,
+      4,
+      8
+    ],
+    "sampleWindowMs": 3000,
+    "longFrameThresholdMs": 50,
+    "nodeSize": {
+      "width": 460,
+      "height": 260
+    },
+    "viewport": {
+      "width": 1024,
+      "height": 1400,
+      "viewWidth": 960,
+      "viewHeight": 1300
+    }
+  },
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+  "scenarios": [
+    {
+      "concurrency": 1,
+      "firstScreen": {
+        "renderMs": 33.79999998211861,
+        "mountedVideos": 1,
+        "mountedDomElements": 16
+      },
+      "fps": {
+        "frames": 181,
+        "elapsedMs": 3016.5,
+        "fps": 60.00331510028178,
+        "frameTimeMs": {
+          "median": 16.699999999999818,
+          "p95": 16.799999999999727,
+          "max": 16.800000000000182
+        },
+        "longFrames": 0
+      },
+      "workEvidence": [
+        {
+          "fwId": "video-0",
+          "progressDeltaSeconds": 3.0319260000000003,
+          "decodedFramesDelta": 76,
+          "droppedFramesDelta": 0
+        }
+      ]
+    },
+    {
+      "concurrency": 4,
+      "firstScreen": {
+        "renderMs": 10.5,
+        "mountedVideos": 4,
+        "mountedDomElements": 31
+      },
+      "fps": {
+        "frames": 92,
+        "elapsedMs": 3016.6,
+        "fps": 30.497911556056486,
+        "frameTimeMs": {
+          "median": 33.30000000000018,
+          "p95": 33.400000000000546,
+          "max": 50
+        },
+        "longFrames": 0
+      },
+      "workEvidence": [
+        {
+          "fwId": "video-0",
+          "progressDeltaSeconds": 3.031015,
+          "decodedFramesDelta": 76,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "video-1",
+          "progressDeltaSeconds": 3.03102,
+          "decodedFramesDelta": 76,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "video-2",
+          "progressDeltaSeconds": 3.0310230000000002,
+          "decodedFramesDelta": 76,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "video-3",
+          "progressDeltaSeconds": 3.031025,
+          "decodedFramesDelta": 76,
+          "droppedFramesDelta": 0
+        }
+      ]
+    },
+    {
+      "concurrency": 8,
+      "firstScreen": {
+        "renderMs": 26.80000001192093,
+        "mountedVideos": 8,
+        "mountedDomElements": 51
+      },
+      "fps": {
+        "frames": 91,
+        "elapsedMs": 3033.2000000000007,
+        "fps": 30.001318739285235,
+        "frameTimeMs": {
+          "median": 33.30000000000109,
+          "p95": 33.399999999999636,
+          "max": 33.5
+        },
+        "longFrames": 0
+      },
+      "workEvidence": [
+        {
+          "fwId": "video-0",
+          "progressDeltaSeconds": 3.047743,
+          "decodedFramesDelta": 76,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "video-1",
+          "progressDeltaSeconds": 3.047743,
+          "decodedFramesDelta": 77,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "video-2",
+          "progressDeltaSeconds": 3.047743,
+          "decodedFramesDelta": 77,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "video-3",
+          "progressDeltaSeconds": 3.047743,
+          "decodedFramesDelta": 77,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "video-4",
+          "progressDeltaSeconds": 3.047742,
+          "decodedFramesDelta": 77,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "video-5",
+          "progressDeltaSeconds": 3.0477399999999997,
+          "decodedFramesDelta": 77,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "video-6",
+          "progressDeltaSeconds": 3.047735,
+          "decodedFramesDelta": 77,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "video-7",
+          "progressDeltaSeconds": 3.047736,
+          "decodedFramesDelta": 77,
+          "droppedFramesDelta": 0
+        }
+      ]
+    }
+  ],
+  "cullingReset": {
+    "before": {
+      "fwId": "video-0",
+      "paused": false,
+      "currentTime": 0.070057,
+      "totalVideoFrames": 6,
+      "droppedVideoFrames": 0
+    },
+    "after": {
+      "fwId": "video-0",
+      "paused": true,
+      "currentTime": 0,
+      "totalVideoFrames": 0,
+      "droppedVideoFrames": 0
+    },
+    "unmountedOffscreen": true,
+    "playbackPositionReset": true
+  },
+  "memory": null,
+  "memoryReason": "页面 API 无法覆盖视频解码缓冲与 GPU 显存，performance.memory 仅为部分 JS heap，故不采集。",
+  "finishedAt": "2026-08-05T10:56:25.417Z"
+}

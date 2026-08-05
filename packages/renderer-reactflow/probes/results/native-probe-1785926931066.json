@@ -1,0 +1,106 @@
+{
+  "probe": "renderer-reactflow-native-interaction",
+  "startedAt": "2026-08-05T10:48:27.359Z",
+  "workload": {
+    "renderer": "React Flow 12.11.2（onlyRenderVisibleElements=true）",
+    "seed": 7,
+    "nodeCount": 10000,
+    "connectionPattern": "many-to-many",
+    "scales": [
+      1,
+      0.5,
+      0.25,
+      0.1
+    ],
+    "miniMapScales": [
+      1,
+      0.1
+    ],
+    "sampleWindowMs": 3000,
+    "dragDelta": {
+      "x": 240,
+      "y": 120
+    },
+    "panDelta": {
+      "x": -1200,
+      "y": -800
+    },
+    "longFrameThresholdMs": 50,
+    "viewport": {
+      "width": 1024,
+      "height": 1400,
+      "viewWidth": 960,
+      "viewHeight": 1300
+    }
+  },
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+  "scenarios": [
+    {
+      "scale": 0.1,
+      "miniMap": true,
+      "firstScreen": {
+        "scale": 0.1,
+        "miniMap": true,
+        "fixtureBuildMs": 19.400000005960464,
+        "renderMs": 5179.0999999940395,
+        "mountedLogicalNodeCount": 3888,
+        "mountedEdgeCount": 7425,
+        "miniMapNodeCount": 10000,
+        "mountedDomElementCount": 59155,
+        "totalNodeCount": 10000,
+        "mountedToTotalRatio": 0.3888
+      },
+      "drag": {
+        "frames": 62,
+        "elapsedMs": 4273.699999988079,
+        "fps": 14.507335564071633,
+        "frameTimeMs": {
+          "median": 16.700000000000728,
+          "p95": 349.89999999999964,
+          "max": 1266.6999999999998
+        },
+        "longFrames": 7,
+        "evidence": {
+          "before": {
+            "fwId": "scale-node-0",
+            "transform": "matrix(1, 0, 0, 1, 40, 40)",
+            "x": 4,
+            "y": 4
+          },
+          "after": {
+            "fwId": "scale-node-0",
+            "transform": "matrix(1, 0, 0, 1, 640, 340)",
+            "x": 74.5,
+            "y": 45.625
+          },
+          "changed": true
+        }
+      },
+      "pan": {
+        "frames": 14,
+        "elapsedMs": 4093.899999994039,
+        "fps": 3.419722025457482,
+        "frameTimeMs": {
+          "median": 38.71399999701953,
+          "p95": 3283.2000000000007,
+          "max": 3283.2000000000007
+        },
+        "longFrames": 6,
+        "evidence": {
+          "before": {
+            "scale": 0.1,
+            "offsetX": 10.5,
+            "offsetY": 11.625
+          },
+          "after": {
+            "scale": 0.1,
+            "offsetX": 210.5,
+            "offsetY": 111.625
+          },
+          "changed": true
+        }
+      }
+    }
+  ],
+  "finishedAt": "2026-08-05T10:48:51.066Z"
+}
