@@ -132,9 +132,12 @@ test('撤销后再操作会丢弃重做栈', async ({ page }) => {
 })
 
 test('工具栏显示最近一次业务节点动作', async ({ page }) => {
-  // 卡片内主操作按钮（失败态的「重试」），不是 hover 业务工具条里的按钮。
-  // 工具条按钮一律带 data-fw-interaction="ignore"，用它把两者区分开 ——
-  // 否则 `[data-fw-id=...] button` 会同时命中两处，strict mode 直接报错。
-  await page.locator('[data-fw-id="ai-video-2"] button:not([data-fw-interaction])').click()
+  // 卡片内主操作按钮（失败态的「重试」），不是 hover 业务工具条里的那个。
+  // 两处按钮都带 data-fw-interaction="ignore"，区分不了；工具条自己的容器
+  // 才是唯一标识，所以用 `:not([data-fw-node-toolbar] button)` 把它排除掉 ——
+  // 否则 `[data-fw-id=...] button` 一下命中 4 个，strict mode 直接报错。
+  await page
+    .locator('[data-fw-id="ai-video-2"] button:not([data-fw-node-toolbar] button)')
+    .click()
   await expect(page.getByTestId('last-node-action')).toHaveText('ai-video-2:retry')
 })
