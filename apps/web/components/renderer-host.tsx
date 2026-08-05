@@ -48,10 +48,21 @@ import { getViewportShortcut, isEditableTarget } from './viewport-shortcuts'
 
 type Factory = () => RendererAdapter
 
-/** 注册在这里的每一项都必须实现同一个 RendererAdapter，上层不做品牌分支判断。 */
+/**
+ * 注册在这里的每一项都必须实现同一个 RendererAdapter，上层不做品牌分支判断。
+ *
+ * 🔴 **列表第一项是默认渲染器。** 2026-08-05 起默认改为 LeaferJS。
+ *
+ * 起因：DOM 侧打开 10000 节点画布会卡死、内存到 2.4GB —— 13.5 万个 DOM 元素常驻
+ * （见 `architecture.md` §8.4 S3）。Canvas 没有「元素常驻」这个成本。
+ *
+ * ⚠️ 但换默认不等于问题解决：Leafer 在无裁剪时每帧要画一万个节点，同样撑不住，
+ * 只是失败形态从「内存爆掉」变成「帧率掉光」。**视口虚拟化两侧都得做**，
+ * 裁剪判定放在 `core` 里共用。
+ */
 const RENDERERS: ReadonlyArray<{ id: string; label: string; create: Factory }> = [
-  { id: 'dom', label: 'HTML / DOM', create: createDomRenderer },
   { id: 'leafer', label: 'LeaferJS', create: createLeaferRenderer },
+  { id: 'dom', label: 'HTML / DOM', create: createDomRenderer },
 ]
 
 const DEV_PANEL_ENABLED = process.env.NODE_ENV !== 'production'
