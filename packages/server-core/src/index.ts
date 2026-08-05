@@ -1,3 +1,5 @@
 export * from './document-store'
 export * from './history-store'
+export * from './project-store'
+export * from './session-store'
 export { createPrismaClient, prisma } from './prisma'
