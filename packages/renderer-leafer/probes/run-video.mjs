@@ -14,6 +14,7 @@ import { readFile } from 'node:fs/promises'
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { assertPlaybackStarted, buildWorkEvidence } from './browser/sampling.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(here, '../../..')
@@ -32,7 +33,25 @@ const videoFile = path.join(repoRoot, 'demo-video', 'framewright-mvp-20260804.we
 
 const HOST = 'http://probe.local'
 
-const results = { steps: [], startedAt: new Date().toISOString() }
+const results = {
+  probe: 'renderer-leafer-video',
+  startedAt: new Date().toISOString(),
+  workload: {
+    renderer: 'Leafer Canvas video fill + 自绘 controls',
+    concurrency: [1, 4, 8],
+    sampleWindowMs: 3000,
+    nodeSize: { width: 460, height: 260 },
+    viewport: { width: 1024, height: 1400, viewWidth: 960, viewHeight: 1300 },
+    audio: '全部 muted；避免多路音频混流混入视频渲染对比',
+    longFrameThresholdMs: 50,
+  },
+  memory: {
+    value: null,
+    reason: 'Chromium 页面 API 无法覆盖视频解码缓冲与 GPU 显存；performance.memory 仅是 JS heap，故不采集。',
+  },
+  browser: null,
+  steps: [],
+}
 function record(step, data) {
   results.steps.push({ step, ...data })
   console.log(`[${step}]`, JSON.stringify(data))
@@ -99,12 +118,13 @@ await page.route(`${HOST}/**`, (route) => {
 
 await page.goto(HOST)
 await page.waitForFunction(() => window.__probe !== undefined)
+results.browser = await page.evaluate(() => navigator.userAgent)
 
 const evaluate = (fn, arg) => page.evaluate(fn, arg)
 
 // --- 3. 单路播放全链路 ---
 const url1 = `${HOST}/video.webm?i=1`
-const id1 = await evaluate((url) => window.__probe.createNode(url, 20, 20, 480, 270), url1)
+const id1 = await evaluate((url) => window.__probe.createNode(url, 20, 20, 460, 260), url1)
 await page.waitForFunction((url) => window.__probe.sourceState(url).state === 'ready', url1, { timeout: 15000 })
 const ready1 = await evaluate((url) => window.__probe.sourceState(url), url1)
 record('单路-加载', { duration: ready1.duration, naturalSize: ready1.naturalSize })
@@ -192,15 +212,31 @@ await page.waitForTimeout(200)
 const volumed = await evaluate((url) => window.__probe.sourceState(url), url1)
 record('单路-点按音量25%', { 实际音量: volumed.volume })
 
-// --- 4. 多路并发：1 / 4 / 8 路同时播放，各采 3s FPS + 内存 ---
-// 恢复播放（静音其余：音量不影响解码负载，但避免浏览器把多路音频混流成本算进来——如实记录这一点）
+// --- 4. 多路并发：1 / 4 / 8 路同时播放，各采 3s FPS + 播放工作证据 ---
+// 恢复播放；全部视频静音，避免多路音频混流混入视频渲染对比。
 async function playAll(count) {
+  const urls = Array.from({ length: count }, (_, i) => `${HOST}/video.webm?i=${i + 1}`)
+  const beforePlay = await evaluate((list) => window.__probe.snapshot(list), urls)
   for (let i = 0; i < count; i++) {
-    const id = `probe-video-${i}`
-    const point = await evaluate((id) => window.__probe.controlPoint(id, 'play'), id)
-    await page.mouse.click(point.x, point.y)
+    if (beforePlay[i].paused) {
+      const id = `probe-video-${i}`
+      const point = await evaluate((id) => window.__probe.controlPoint(id, 'play'), id)
+      await page.mouse.click(point.x, point.y)
+    }
   }
-  await page.waitForTimeout(500)
+  await page.waitForFunction(
+    ({ list, baseline }) => {
+      const current = window.__probe.snapshot(list)
+      return current.every((item, index) => {
+        const start = baseline[index]
+        return start !== undefined && !item.paused && item.currentTime > start.currentTime && item.totalVideoFrames > start.totalVideoFrames
+      })
+    },
+    { list: urls, baseline: beforePlay },
+    { timeout: 20_000 },
+  )
+  const afterPlay = await evaluate((list) => window.__probe.snapshot(list), urls)
+  assertPlaybackStarted(beforePlay, afterPlay)
 }
 
 async function pauseAll(count) {
@@ -215,31 +251,31 @@ async function pauseAll(count) {
   await page.waitForTimeout(300)
 }
 
-/** 证据采集：FPS + 内存 + 解码帧总数 + 区间内合成调用数（空转 rAF 不算数） */
+/** 证据采集：FPS + 每路进度/解码帧增量 + 区间内合成调用数（空转 rAF 不算数） */
 async function sampleWithEvidence(count) {
   const urls = Array.from({ length: count }, (_, i) => `${HOST}/video.webm?i=${i + 1}`)
-  const q0 = await evaluate((list) => list.map((u) => window.__probe.videoQuality(u)?.totalVideoFrames ?? null), urls)
+  // 🔴 playAll 的 barrier 确认全部路已播放后，才在这里打开 3 秒采样窗口。
+  const sampleStart = await evaluate((list) => window.__probe.snapshot(list), urls)
   await evaluate(() => window.__probe.renderStats(true))
   const fps = await evaluate(() => window.__probe.sampleFps(3000))
-  const q1 = await evaluate((list) => list.map((u) => window.__probe.videoQuality(u)?.totalVideoFrames ?? null), urls)
+  const sampleEnd = await evaluate((list) => window.__probe.snapshot(list), urls)
   const stats = await evaluate(() => window.__probe.renderStats(false))
-  const decoded = q1.reduce((sum, v, i) => sum + (v != null && q0[i] != null ? v - q0[i] : 0), 0)
+  const workEvidence = buildWorkEvidence(sampleStart, sampleEnd)
   return {
     ...fps,
-    内存MB: await evaluate(() => window.__probe.memoryMB()),
-    解码帧数_采样区间: decoded,
+    workEvidence,
+    allProgressNonZero: workEvidence.every((item) => item.progressNonZero),
+    allDecodedFramesIncreased: workEvidence.every((item) => item.decodedFramesIncreased),
+    memory: null,
+    解码帧数_采样区间: workEvidence.reduce((sum, item) => sum + item.decodedFramesDelta, 0),
     视频帧合成调用_采样区间: stats.drawImageVideoCalls,
     合成调用总数_采样区间: stats.drawImageCalls,
   }
 }
 
-// 1 路采样前恢复播放——首轮 probe 的「1 路 60fps」采样时视频其实是暂停态（真·空转 rAF）
-const stateBefore1 = await evaluate((u) => window.__probe.sourceState(u), url1)
-if (!stateBefore1.playing) {
-  const point = await evaluate((id) => window.__probe.controlPoint(id, 'play'), id1)
-  await page.mouse.click(point.x, point.y)
-  await page.waitForFunction((u) => window.__probe.sourceState(u).playing === true, url1, { timeout: 5000 })
-}
+// 单路交互已 seek 到 90%；并发口径从 0 开始，确保完整覆盖 3 秒采样窗口。
+await evaluate((u) => window.__probe.resetPlayback(u), url1)
+await playAll(1)
 const fps1 = await sampleWithEvidence(1)
 record('并发-1路播放-FPS', fps1)
 await pauseAll(1)
@@ -275,6 +311,7 @@ record('并发-8路-各路进度', { progresses })
 
 await browser.close()
 
+results.finishedAt = new Date().toISOString()
 await mkdir(resultsDir, { recursive: true })
 const outFile = path.join(resultsDir, `video-probe-${Date.now()}.json`)
 await writeFile(outFile, JSON.stringify(results, null, 2))

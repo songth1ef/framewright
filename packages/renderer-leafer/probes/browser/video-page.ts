@@ -3,6 +3,7 @@ import { createVideoNode } from '@framewright/core'
 import { layoutVideoControls, hitTestVideoControls } from '../../src/video/player-controls'
 import { getOrCreateVideoSource, setVideoElementFactoryForTest } from '../../src/video/video-paint'
 import { createVideoShape } from '../../src/video/video-node'
+import type { PlaybackSnapshot } from './sampling.mjs'
 
 /**
  * 真实浏览器视频 probe 页面（C3-leafer 实测）。
@@ -38,6 +39,7 @@ setVideoElementFactoryForTest((url) => {
   const el = document.createElement('video')
   el.preload = 'auto'
   el.playsInline = true
+  el.muted = true
   el.src = url
   elementSeq += 1
   elementIds.set(el, elementSeq)
@@ -109,6 +111,29 @@ function sourceState(url: string) {
     playing: source.playing,
     naturalSize: source.naturalSize,
   }
+}
+
+function resetPlayback(url: string): void {
+  const element = getOrCreateVideoSource(url).element
+  if (element === null) throw new Error(`视频源尚未就绪：${url}`)
+  element.pause()
+  element.currentTime = 0
+}
+
+function snapshot(urls: string[]): PlaybackSnapshot[] {
+  return urls.map((url, index) => {
+    const source = getOrCreateVideoSource(url)
+    const element = source.element
+    const quality = element?.getVideoPlaybackQuality()
+    return {
+      fwId: nodes[index]?.fwId ?? `probe-video-${index}`,
+      currentTime: source.currentTime,
+      totalVideoFrames: quality?.totalVideoFrames ?? 0,
+      droppedVideoFrames: quality?.droppedVideoFrames ?? 0,
+      readyState: element?.readyState ?? 0,
+      paused: element?.paused ?? true,
+    }
+  })
 }
 
 /** 控件在页面坐标系中的位置（真实点击 = 真实命中路径，不是直接调函数） */
@@ -214,11 +239,6 @@ function diagnoseTap(fwId: string, pageX: number, pageY: number) {
 
 /** 控件在页面坐标系中的位置（真实点击 = 真实命中路径，不是直接调函数） */
 
-function memoryMB(): number | null {
-  const memory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
-  return memory ? Math.round((memory.usedJSHeapSize / 1024 / 1024) * 10) / 10 : null
-}
-
 /** 诊断：paint 管线内部状态——fill 有没有算出 leafPaint、image 是否 ready、data/pattern 是否存在 */
 function paintState(fwId: string) {
   const node = nodes.find((item) => item.fwId === fwId)
@@ -274,10 +294,11 @@ function renderStats(reset = false) {
 window.__probe = {
   createNode,
   sourceState,
+  resetPlayback,
+  snapshot,
   controlPoint,
   sampleFps,
   frameFingerprint,
-  memoryMB,
   diagnoseTap,
   paintState,
   videoQuality,

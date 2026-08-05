@@ -1,0 +1,577 @@
+{
+  "probe": "renderer-leafer-video",
+  "startedAt": "2026-08-05T04:32:59.544Z",
+  "workload": {
+    "renderer": "Leafer Canvas video fill + 自绘 controls",
+    "concurrency": [
+      1,
+      4,
+      8
+    ],
+    "sampleWindowMs": 3000,
+    "nodeSize": {
+      "width": 460,
+      "height": 260
+    },
+    "viewport": {
+      "width": 1024,
+      "height": 1400,
+      "viewWidth": 960,
+      "viewHeight": 1300
+    },
+    "audio": "全部 muted；避免多路音频混流混入视频渲染对比",
+    "longFrameThresholdMs": 50
+  },
+  "memory": {
+    "value": null,
+    "reason": "Chromium 页面 API 无法覆盖视频解码缓冲与 GPU 显存；performance.memory 仅是 JS heap，故不采集。"
+  },
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+  "steps": [
+    {
+      "step": "单路-加载",
+      "duration": 23.32,
+      "naturalSize": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "step": "诊断-加载后paint状态",
+      "inputFill": {
+        "type": "video",
+        "url": "http://probe.local/video.webm?i=1",
+        "mode": "fit",
+        "changeful": true
+      },
+      "leafPaints": [
+        {
+          "type": "video",
+          "imageReady": true,
+          "imageUrl": "http://probe.local/video.webm?i=1",
+          "imageSize": [
+            1440,
+            900
+          ],
+          "imageViewTag": "HTMLVideoElement",
+          "imageError": null,
+          "hasData": true,
+          "patternId": null
+        }
+      ],
+      "rendererIgnore": false
+    },
+    {
+      "step": "单路-播放1.2s",
+      "currentTime": 1.227023,
+      "playing": true,
+      "画面指纹变化": true,
+      "指纹": [
+        [
+          [
+            -1919205229,
+            -1153551553,
+            -138244650,
+            -1919205229,
+            -1534182188,
+            -138244650,
+            -1919205229,
+            -1153551553,
+            -138244650,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553
+          ]
+        ],
+        [
+          [
+            191230293,
+            -1153551553,
+            2143509784,
+            1275805812,
+            -658550410,
+            2143509784,
+            191230293,
+            -1153551553,
+            2143509784,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553
+          ]
+        ]
+      ],
+      "解码帧数": [
+        4,
+        34
+      ],
+      "解码帧数上升": true,
+      "合成调用": {
+        "drawImageCalls": 73,
+        "drawImageVideoCalls": 73
+      },
+      "paint状态": {
+        "inputFill": {
+          "type": "video",
+          "url": "http://probe.local/video.webm?i=1",
+          "mode": "fit",
+          "changeful": true
+        },
+        "leafPaints": [
+          {
+            "type": "video",
+            "imageReady": true,
+            "imageUrl": "http://probe.local/video.webm?i=1",
+            "imageSize": [
+              1440,
+              900
+            ],
+            "imageViewTag": "HTMLVideoElement",
+            "imageError": null,
+            "hasData": true,
+            "patternId": null
+          }
+        ],
+        "rendererIgnore": false
+      }
+    },
+    {
+      "step": "单路-暂停",
+      "暂停时进度": 1.235502,
+      "400ms后进度": 1.235502,
+      "进度停住": true
+    },
+    {
+      "step": "单路-点按seek到50%",
+      "期望": 11.66,
+      "实际": 11.66,
+      "瞬态序列": [
+        11.66,
+        11.66,
+        11.66
+      ],
+      "偏差秒": 0,
+      "指纹": [
+        [
+          [
+            -1919205229,
+            -1153551553,
+            -138244650,
+            -1919205229,
+            -1534182188,
+            -138244650,
+            -1919205229,
+            -1153551553,
+            -138244650,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553
+          ]
+        ],
+        [
+          [
+            191230293,
+            -1153551553,
+            2143509784,
+            1275805812,
+            -658550410,
+            2143509784,
+            191230293,
+            -1153551553,
+            2143509784,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553
+          ]
+        ],
+        [
+          [
+            191230293,
+            -1153551553,
+            2143509784,
+            1275805812,
+            -658550410,
+            2143509784,
+            191230293,
+            -1153551553,
+            2143509784,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553,
+            -1153551553
+          ]
+        ]
+      ],
+      "指纹在seek后变化": false
+    },
+    {
+      "step": "诊断-进度点击",
+      "layoutBar": {
+        "x": 0,
+        "y": 224,
+        "width": 460,
+        "height": 36
+      },
+      "layoutProgress": {
+        "x": 40,
+        "y": 240,
+        "width": 262,
+        "height": 4
+      },
+      "hitByContainerLocal": {
+        "type": "seek",
+        "fraction": 0.5
+      },
+      "elementId": 1,
+      "source": {
+        "state": "ready",
+        "currentTime": 11.66,
+        "duration": 23.32,
+        "rawDuration": 23.32,
+        "playing": false
+      }
+    },
+    {
+      "0": {
+        "fwId": "probe-video-0",
+        "eventXY": [
+          40,
+          262
+        ],
+        "innerToContainer": {
+          "x": 20,
+          "y": 242
+        },
+        "target": "Rect"
+      },
+      "1": {
+        "fwId": "probe-video-0",
+        "eventXY": [
+          40,
+          262
+        ],
+        "innerToContainer": {
+          "x": 20,
+          "y": 242
+        },
+        "target": "Rect"
+      },
+      "2": {
+        "fwId": "probe-video-0",
+        "eventXY": [
+          191,
+          262
+        ],
+        "innerToContainer": {
+          "x": 171,
+          "y": 242
+        },
+        "target": "Rect"
+      },
+      "step": "诊断-TAP事件坐标"
+    },
+    {
+      "0": {
+        "kind": "create",
+        "seq": 1,
+        "url": "http://probe.local/video.webm?i=1"
+      },
+      "1": {
+        "kind": "loadeddata",
+        "seq": 1,
+        "currentTime": 0,
+        "src": "p://probe.local/video.webm?i=1"
+      },
+      "2": {
+        "kind": "play",
+        "seq": 1,
+        "currentTime": 0.001684,
+        "src": "p://probe.local/video.webm?i=1"
+      },
+      "3": {
+        "kind": "pause",
+        "seq": 1,
+        "currentTime": 1.235502,
+        "src": "p://probe.local/video.webm?i=1"
+      },
+      "4": {
+        "kind": "seeking",
+        "seq": 1,
+        "currentTime": 11.66,
+        "src": "p://probe.local/video.webm?i=1"
+      },
+      "5": {
+        "kind": "seeked",
+        "seq": 1,
+        "currentTime": 11.66,
+        "src": "p://probe.local/video.webm?i=1"
+      },
+      "step": "诊断-视频元素事件日志"
+    },
+    {
+      "step": "单路-点按seek到90%",
+      "期望": 20.988,
+      "实际": 21.005801,
+      "偏差秒": 0.017801000000002176,
+      "指纹在seek90后变化": true
+    },
+    {
+      "step": "单路-点按音量25%",
+      "实际音量": 0.25
+    },
+    {
+      "step": "并发-1路播放-FPS",
+      "frames": 181,
+      "elapsedMs": 3007.7999999940394,
+      "fps": 60.17687346245053,
+      "longFrames": 0,
+      "workEvidence": [
+        {
+          "fwId": "probe-video-0",
+          "progressStartSeconds": 0.023266,
+          "progressEndSeconds": 3.068291,
+          "progressDeltaSeconds": 3.045025,
+          "progressNonZero": true,
+          "decodedFramesStart": 95,
+          "decodedFramesEnd": 170,
+          "decodedFramesDelta": 75,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        }
+      ],
+      "allProgressNonZero": true,
+      "allDecodedFramesIncreased": true,
+      "memory": null,
+      "解码帧数_采样区间": 75,
+      "视频帧合成调用_采样区间": 182,
+      "合成调用总数_采样区间": 182
+    },
+    {
+      "step": "并发-4路播放-FPS",
+      "frames": 157,
+      "elapsedMs": 3005.3999999999996,
+      "fps": 52.23930258867373,
+      "longFrames": 0,
+      "workEvidence": [
+        {
+          "fwId": "probe-video-0",
+          "progressStartSeconds": 3.126892,
+          "progressEndSeconds": 6.166272,
+          "progressDeltaSeconds": 3.0393800000000004,
+          "progressNonZero": true,
+          "decodedFramesStart": 172,
+          "decodedFramesEnd": 248,
+          "decodedFramesDelta": 76,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-1",
+          "progressStartSeconds": 0.044687,
+          "progressEndSeconds": 3.084067,
+          "progressDeltaSeconds": 3.03938,
+          "progressNonZero": true,
+          "decodedFramesStart": 5,
+          "decodedFramesEnd": 81,
+          "decodedFramesDelta": 76,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-2",
+          "progressStartSeconds": 0.041396,
+          "progressEndSeconds": 3.080776,
+          "progressDeltaSeconds": 3.03938,
+          "progressNonZero": true,
+          "decodedFramesStart": 5,
+          "decodedFramesEnd": 81,
+          "decodedFramesDelta": 76,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-3",
+          "progressStartSeconds": 0.038193,
+          "progressEndSeconds": 3.077573,
+          "progressDeltaSeconds": 3.03938,
+          "progressNonZero": true,
+          "decodedFramesStart": 5,
+          "decodedFramesEnd": 81,
+          "decodedFramesDelta": 76,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        }
+      ],
+      "allProgressNonZero": true,
+      "allDecodedFramesIncreased": true,
+      "memory": null,
+      "解码帧数_采样区间": 304,
+      "视频帧合成调用_采样区间": 600,
+      "合成调用总数_采样区间": 600
+    },
+    {
+      "step": "并发-8路播放-FPS",
+      "frames": 55,
+      "elapsedMs": 3054.6999999821182,
+      "fps": 18.005041411700645,
+      "longFrames": 29,
+      "workEvidence": [
+        {
+          "fwId": "probe-video-0",
+          "progressStartSeconds": 6.43335,
+          "progressEndSeconds": 9.733762,
+          "progressDeltaSeconds": 3.3004120000000006,
+          "progressNonZero": true,
+          "decodedFramesStart": 254,
+          "decodedFramesEnd": 337,
+          "decodedFramesDelta": 83,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-1",
+          "progressStartSeconds": 3.352097,
+          "progressEndSeconds": 6.65251,
+          "progressDeltaSeconds": 3.3004130000000003,
+          "progressNonZero": true,
+          "decodedFramesStart": 87,
+          "decodedFramesEnd": 170,
+          "decodedFramesDelta": 83,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-2",
+          "progressStartSeconds": 3.348484,
+          "progressEndSeconds": 6.648897,
+          "progressDeltaSeconds": 3.300413,
+          "progressNonZero": true,
+          "decodedFramesStart": 88,
+          "decodedFramesEnd": 170,
+          "decodedFramesDelta": 82,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-3",
+          "progressStartSeconds": 3.344449,
+          "progressEndSeconds": 6.644863,
+          "progressDeltaSeconds": 3.300414,
+          "progressNonZero": true,
+          "decodedFramesStart": 88,
+          "decodedFramesEnd": 170,
+          "decodedFramesDelta": 82,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-4",
+          "progressStartSeconds": 0.227535,
+          "progressEndSeconds": 3.527948,
+          "progressDeltaSeconds": 3.300413,
+          "progressNonZero": true,
+          "decodedFramesStart": 10,
+          "decodedFramesEnd": 93,
+          "decodedFramesDelta": 83,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-5",
+          "progressStartSeconds": 0.22458,
+          "progressEndSeconds": 3.524994,
+          "progressDeltaSeconds": 3.300414,
+          "progressNonZero": true,
+          "decodedFramesStart": 10,
+          "decodedFramesEnd": 93,
+          "decodedFramesDelta": 83,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-6",
+          "progressStartSeconds": 0.221989,
+          "progressEndSeconds": 3.522402,
+          "progressDeltaSeconds": 3.300413,
+          "progressNonZero": true,
+          "decodedFramesStart": 11,
+          "decodedFramesEnd": 93,
+          "decodedFramesDelta": 82,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-7",
+          "progressStartSeconds": 0.209689,
+          "progressEndSeconds": 3.510103,
+          "progressDeltaSeconds": 3.300414,
+          "progressNonZero": true,
+          "decodedFramesStart": 10,
+          "decodedFramesEnd": 92,
+          "decodedFramesDelta": 82,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        }
+      ],
+      "allProgressNonZero": true,
+      "allDecodedFramesIncreased": true,
+      "memory": null,
+      "解码帧数_采样区间": 660,
+      "视频帧合成调用_采样区间": 464,
+      "合成调用总数_采样区间": 464
+    },
+    {
+      "step": "并发-8路-各路进度",
+      "progresses": [
+        9.854127,
+        6.772874,
+        6.769261,
+        6.765227,
+        3.648312,
+        3.645357,
+        3.642765,
+        3.630465
+      ]
+    }
+  ],
+  "finishedAt": "2026-08-05T04:33:14.387Z"
+}
