@@ -108,6 +108,46 @@ describe('LeaferViewportScene', () => {
     leafer.destroy()
   })
 
+  it('同一叶子节点位置变化时保持 Leafer 实例对象身份', () => {
+    const leafer = new Leafer()
+    const scene = new LeaferViewportScene(leafer)
+    const root = makeRoot()
+    scene.reconcile(context(root), screen)
+    const leftUi = scene.getMountedUi('left')
+    const keeperUi = scene.getMountedUi('keeper')
+    if (leftUi === undefined || keeperUi === undefined) {
+      throw new Error('测试前置条件失败：叶子节点未挂载')
+    }
+
+    const movedRoot = createFrameNode({
+      fwId: 'root',
+      width: 2_000,
+      height: 500,
+      children: [
+        createBoxNode({
+          fwId: 'left',
+          x: 35,
+          y: 45,
+          width: 40,
+          height: 40,
+          fill: '#123456',
+        }),
+        createBoxNode({ fwId: 'keeper', x: 350, y: 20, width: 40, height: 40 }),
+        createBoxNode({ fwId: 'right', x: 550, y: 20, width: 40, height: 40 }),
+        createBoxNode({ fwId: 'far', x: 1_200, y: 20, width: 40, height: 40 }),
+      ],
+    })
+    scene.reconcile(context(movedRoot), screen)
+
+    expect(scene.getMountedUi('left')).toBe(leftUi)
+    expect(scene.getMountedUi('keeper')).toBe(keeperUi)
+    expect(leftUi.x).toBe(35)
+    expect(leftUi.y).toBe(45)
+    expect(leftUi.fill).toBe('#123456')
+    scene.destroy()
+    leafer.destroy()
+  })
+
   it('连线层使用 getConnectionsInViewport 的曲线裁剪结果', () => {
     const root = createFrameNode({
       fwId: 'root',
@@ -146,6 +186,37 @@ describe('LeaferViewportScene', () => {
     )
     expect(expected).toHaveLength(1)
     expect(paths).toHaveLength(expected.length)
+    scene.destroy()
+    leafer.destroy()
+  })
+
+  it('连续 reconcile 时保持同一个连线层实例', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      width: 2_000,
+      height: 500,
+      children: [
+        createAiImageNode({ fwId: 'source', x: 20, y: 50, width: 40, height: 40 }),
+        createAiImageNode({
+          fwId: 'target',
+          x: 120,
+          y: 50,
+          width: 40,
+          height: 40,
+          sourceFwIds: ['source'],
+        }),
+      ],
+    })
+    const leafer = new Leafer()
+    const scene = new LeaferViewportScene(leafer)
+    scene.reconcile(context(root), screen)
+    const connectionLayer = scene.getConnectionLayer()
+
+    scene.reconcile(context(root), screen)
+
+    expect(connectionLayer).not.toBeNull()
+    expect(scene.getConnectionLayer()).toBe(connectionLayer)
+    expect(scene.getMountedUi('root')?.children?.[0]).toBe(connectionLayer)
     scene.destroy()
     leafer.destroy()
   })

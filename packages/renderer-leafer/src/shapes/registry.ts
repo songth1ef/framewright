@@ -1,7 +1,12 @@
 import {
+  GEN_UNIT_STYLE,
   assertShapeCoverage,
+  isAiImageNode,
+  isAiVideoNode,
   isBoxNode,
   isFrameNode,
+  isImgNode,
+  isVideoNode,
   type CanvasNode,
   type Point,
   type ShapeType,
@@ -50,6 +55,108 @@ export const LEAFER_SHAPES: Record<ShapeType, ShapeFactory> = {
   video: createVideoShape(),
   'ai-image': createGenerationUnitShape(),
   'ai-video': createGenerationUnitShape(),
+}
+
+function replaceChildren(target: IUI, replacement: IUI): void {
+  for (const child of [...(target.children ?? [])]) {
+    child.remove()
+    child.destroy()
+  }
+  for (const child of [...(replacement.children ?? [])]) {
+    child.remove()
+    target.add(child)
+  }
+  replacement.destroy()
+}
+
+function generationContentChanged(previous: CanvasNode, next: CanvasNode): boolean {
+  if (
+    (!isAiImageNode(previous) && !isAiVideoNode(previous)) ||
+    (!isAiImageNode(next) && !isAiVideoNode(next))
+  ) {
+    return true
+  }
+  const previousUrl = isAiImageNode(previous) ? previous.src : previous.poster
+  const nextUrl = isAiImageNode(next) ? next.src : next.poster
+  return (
+    previous.status !== next.status ||
+    previous.prompt !== next.prompt ||
+    previous.errorMessage !== next.errorMessage ||
+    previous.fit !== next.fit ||
+    previousUrl !== nextUrl
+  )
+}
+
+/** 保留已挂载的外层 Leafer 实例，显式更新几何与节点内容。 */
+export function updateLeaferShape(
+  ui: IUI,
+  previousNode: CanvasNode,
+  ctx: ShapeContext,
+): void {
+  const { node, position, size } = ctx
+  const geometry = toLeaferProps(node, position, size)
+  switch (node.fwType) {
+    case 'frame':
+      ui.set({
+        ...geometry,
+        fill: isFrameNode(node) ? node.background ?? undefined : undefined,
+        overflow: isFrameNode(node) && node.clip ? 'hide' : 'show',
+      })
+      break
+    case 'box':
+      ui.set({
+        ...geometry,
+        fill: isBoxNode(node) ? node.fill : undefined,
+        cornerRadius: isBoxNode(node) ? node.cornerRadius : 0,
+      })
+      break
+    case 'img': {
+      const empty = !isImgNode(node) || node.src === ''
+      const mode = isImgNode(node)
+        ? node.fit === 'cover' ? 'cover' : node.fit === 'fill' ? 'stretch' : 'fit'
+        : 'fit'
+      ui.set({
+        ...geometry,
+        fill: empty ? '#DDDDDD' : { type: 'image', url: node.src, mode },
+        stroke: empty ? '#999999' : undefined,
+        strokeWidth: empty ? 1 : 0,
+        dashPattern: empty ? [4, 4] : undefined,
+      })
+      break
+    }
+    case 'ai-image':
+    case 'ai-video': {
+      const layoutChanged =
+        previousNode.width !== (size?.width ?? node.width) ||
+        previousNode.height !== (size?.height ?? node.height)
+      ui.set({
+        ...geometry,
+        cornerRadius: GEN_UNIT_STYLE.cornerRadius,
+        overflow: 'hide',
+        stroke: node.status === 'failed'
+          ? GEN_UNIT_STYLE.failedBorderColor
+          : GEN_UNIT_STYLE.borderColor,
+        strokeWidth: GEN_UNIT_STYLE.borderWidth,
+        dashPattern: node.status === 'empty' ? [4, 4] : undefined,
+      })
+      if (layoutChanged || generationContentChanged(previousNode, node)) {
+        replaceChildren(ui, LEAFER_SHAPES[node.fwType](ctx))
+      }
+      break
+    }
+    case 'video': {
+      ui.set({ ...geometry, fill: '#000000', overflow: 'hide' })
+      const contentChanged =
+        !isVideoNode(previousNode) ||
+        !isVideoNode(node) ||
+        previousNode.src !== node.src ||
+        previousNode.fit !== node.fit ||
+        previousNode.width !== (size?.width ?? node.width) ||
+        previousNode.height !== (size?.height ?? node.height)
+      if (contentChanged) replaceChildren(ui, LEAFER_SHAPES.video(ctx))
+      break
+    }
+  }
 }
 
 assertShapeCoverage('leafer', LEAFER_SHAPES)
