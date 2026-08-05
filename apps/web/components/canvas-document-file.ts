@@ -1,6 +1,7 @@
 import {
   isAiImageNode,
   isAiVideoNode,
+  isAudioNode,
   isBoxNode,
   isFrameNode,
   isImgNode,
@@ -106,6 +107,10 @@ export function isCanvasNode(value: unknown): value is CanvasNode {
       ) {
         return false
       }
+      continue
+    }
+    if (isAudioNode(node)) {
+      if (typeof current['src'] !== 'string') return false
       continue
     }
     if (isAiImageNode(node)) {
