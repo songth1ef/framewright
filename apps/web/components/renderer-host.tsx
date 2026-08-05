@@ -34,6 +34,7 @@ import { CanvasDocumentStatus } from './canvas-document-status'
 import { createDerivedGenerationSubmitter } from './derived-actions'
 import { createGenerationController, type GenerationController, type GenerationNodePatch } from './generation-actions'
 import { createHttpGenerationBackend } from './generation-client'
+import { FpsMonitor } from './fps-monitor-view'
 import { loadServerHistory } from './server-history'
 import type { ServerHistory } from './server-history'
 import {
@@ -549,6 +550,7 @@ export function RendererHost({
         {historyReady && root.children.length === 0 ? <EmptyCanvasGuide /> : null}
       </div>
       {showShortcuts ? <ShortcutHelpDialog onClose={() => setShowShortcuts(false)} /> : null}
+      <FpsMonitor totalNodeCount={collectNodeIds(root).length} />
       {DEV_PANEL_ENABLED ? (
         <DevPanelController ref={devPanelRef} selectedNodes={selectedNodes} />
       ) : null}
