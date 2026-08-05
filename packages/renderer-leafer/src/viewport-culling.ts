@@ -2,6 +2,7 @@ import {
   canReuseViewportCulling,
   ConnectionBoundsCache,
   getConnectionsInViewport,
+  getViewportLod,
   getViewportCullingResult,
   isFrameNode,
   type CanvasNode,
@@ -11,6 +12,7 @@ import {
   type RenderContext,
   type ViewportCullingOptions,
   type ViewportCullingResult,
+  type ViewportDetailLevel,
 } from '@framewright/core'
 import { Leafer, type IUI } from 'leafer-ui'
 import type { CanvasInteractionPreview, NodeResize } from './canvas-interaction'
@@ -31,6 +33,7 @@ interface SceneDescriptor {
 interface MountedNode {
   descriptor: SceneDescriptor
   ui: IUI
+  detail: ViewportDetailLevel
 }
 
 export interface LeaferSceneSnapshot {
@@ -101,6 +104,7 @@ export class LeaferViewportScene {
     root: RenderContext['root']
     result: ViewportCullingResult
     connections: ConnectionItem[]
+    connectionDetail: ReturnType<typeof getViewportLod>['connections']
   } | null = null
 
   constructor(private readonly leafer: Leafer) {}
@@ -111,21 +115,26 @@ export class LeaferViewportScene {
     preview: CanvasInteractionPreview = {},
   ): LeaferSceneSnapshot {
     const { descriptors, snapshot } = collectDescriptors(ctx, preview)
+    const lod = getViewportLod(ctx.viewport.scale)
     const descriptorById = new Map(descriptors.map((descriptor) => [descriptor.node.fwId, descriptor]))
     const canReuse =
       this.cullingCache !== null &&
       this.cullingCache.root === ctx.root &&
+      this.cullingCache.connectionDetail === lod.connections &&
       canReuseViewportCulling(this.cullingCache.result, ctx.viewport, cullingOptions)
     if (!canReuse) {
       this.cullingCache = {
         root: ctx.root,
         result: getViewportCullingResult(ctx.root, ctx.viewport, cullingOptions),
-        connections: getConnectionsInViewport(
-          ctx.root,
-          ctx.viewport,
-          cullingOptions,
-          this.connectionBoundsCache,
-        ),
+        connections: lod.connections === 'hidden'
+          ? []
+          : getConnectionsInViewport(
+            ctx.root,
+            ctx.viewport,
+            cullingOptions,
+            this.connectionBoundsCache,
+          ),
+        connectionDetail: lod.connections,
       }
     }
     const cullingCache = this.cullingCache
@@ -142,7 +151,7 @@ export class LeaferViewportScene {
       if (!desiredIds.has(fwId)) continue
       const previous = this.mounted.get(fwId)
       if (previous === undefined) {
-        this.createMountedNode(descriptor)
+        this.createMountedNode(descriptor, lod.detail)
         continue
       }
 
@@ -154,16 +163,18 @@ export class LeaferViewportScene {
         } else {
           this.destroyMountedNode(fwId)
         }
-        this.createMountedNode(descriptor)
+        this.createMountedNode(descriptor, lod.detail)
       } else {
         const previousNode = previous.descriptor.node
         previous.descriptor = descriptor
-        updateLeaferShape(previous.ui, previousNode, {
+        updateLeaferShape(previous.ui, previousNode, previous.detail, {
           node: descriptor.node,
           position: descriptor.position,
           size: descriptor.size,
           selected: descriptor.selected,
+          detail: lod.detail,
         })
+        previous.detail = lod.detail
         previous.ui.data = {
           ...(previous.ui.data as Record<string, unknown> | undefined),
           fwId,
@@ -181,6 +192,7 @@ export class LeaferViewportScene {
         cullingCache.connections,
         ctx.selection,
         ctx.viewport.scale,
+        lod.connections,
       )
     }
     this.syncChildOrder(descriptors, desiredIds, ctx.root.fwId)
@@ -212,7 +224,7 @@ export class LeaferViewportScene {
     this.cullingCache = null
   }
 
-  private createMountedNode(descriptor: SceneDescriptor): void {
+  private createMountedNode(descriptor: SceneDescriptor, detail: ViewportDetailLevel): void {
     const parent =
       descriptor.parentFwId === null
         ? this.leafer
@@ -223,10 +235,11 @@ export class LeaferViewportScene {
       position: descriptor.position,
       size: descriptor.size,
       selected: descriptor.selected,
+      detail,
     })
     ui.data = { ...(ui.data as Record<string, unknown> | undefined), fwId: descriptor.node.fwId }
     parent.add(ui)
-    this.mounted.set(descriptor.node.fwId, { descriptor, ui })
+    this.mounted.set(descriptor.node.fwId, { descriptor, ui, detail })
   }
 
   private destroyMountedNode(fwId: string): void {

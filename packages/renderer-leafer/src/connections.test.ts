@@ -3,7 +3,7 @@ import './leafer-test-stub'
 import { describe, expect, it } from 'vitest'
 import { CONNECTION_STYLE, collectConnectionItems, createDemoDocument } from '@framewright/core'
 import { Ellipse, Path } from 'leafer-ui'
-import { buildConnectionLayer } from './connections'
+import { buildConnectionLayer, LeaferConnectionLayer } from './connections'
 
 // collectConnectionItems 的锚点/悬空跳过测试在 packages/core/src/connections.test.ts（C2-core 收编后两侧共用）。
 
@@ -60,5 +60,29 @@ describe('C2-leafer buildConnectionLayer', () => {
     const layer = buildConnectionLayer(items, ['ai-image-1'], 4)
     const path = (layer.children ?? []).find((c) => (c as Path).tag === 'Path') as unknown as Path
     expect(path.strokeWidth).toBe(CONNECTION_STYLE.highlightWidth / 4)
+  })
+
+  it('simplified 用 p0 到 p3 的直线，并复用已有 Path 实例', () => {
+    const layer = new LeaferConnectionLayer()
+    layer.reconcile(items, [], 1, 'curve')
+    const path = (layer.ui.children ?? []).find((child) => child instanceof Path) as Path
+
+    layer.reconcile(items, [], 0.25, 'line')
+
+    const nextPath = (layer.ui.children ?? []).find((child) => child instanceof Path) as Path
+    expect(nextPath).toBe(path)
+    expect(nextPath.path).toBe('M 600 350 L 620 350')
+    layer.destroy()
+  })
+
+  it('dot 档隐藏整层连线', () => {
+    const layer = new LeaferConnectionLayer()
+    layer.reconcile(items, [], 1, 'curve')
+    expect(layer.ui.children?.length).toBeGreaterThan(0)
+
+    layer.reconcile(items, [], 0.1, 'hidden')
+
+    expect(layer.ui.children ?? []).toHaveLength(0)
+    layer.destroy()
   })
 })

@@ -1,6 +1,7 @@
 import {
   CONNECTION_STYLE,
   type ConnectionItem,
+  type ConnectionDetailLevel,
 } from '@framewright/core'
 import { Ellipse, Group, Path, type IUI } from 'leafer-ui'
 
@@ -42,6 +43,14 @@ function curvePath(item: ConnectionItem): string {
   return `M ${p0.x} ${p0.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p3.x} ${p3.y}`
 }
 
+function connectionPath(item: ConnectionItem, detail: ConnectionDetailLevel): string {
+  if (detail === 'line') {
+    const { p0, p3 } = item.curve
+    return `M ${p0.x} ${p0.y} L ${p3.x} ${p3.y}`
+  }
+  return curvePath(item)
+}
+
 /** 长期存活的连线层：按端点 key 增删，已有连线只原地更新。 */
 export class LeaferConnectionLayer {
   readonly ui = new Group({ hittable: false })
@@ -51,8 +60,9 @@ export class LeaferConnectionLayer {
     items: readonly ConnectionItem[],
     selection: readonly string[],
     viewportScale: number,
+    detail: ConnectionDetailLevel = 'curve',
   ): void {
-    const keyedItems = keyedConnectionItems(items)
+    const keyedItems = detail === 'hidden' ? [] : keyedConnectionItems(items)
     const desiredKeys = new Set(keyedItems.map(([key]) => key))
     for (const [key, mounted] of this.mounted) {
       if (desiredKeys.has(key)) continue
@@ -68,10 +78,10 @@ export class LeaferConnectionLayer {
     keyedItems.forEach(([key, item], index) => {
       let mounted = this.mounted.get(key)
       if (mounted === undefined) {
-        mounted = this.create(item, selection, viewportScale)
+        mounted = this.create(item, selection, viewportScale, detail)
         this.mounted.set(key, mounted)
       } else {
-        this.update(mounted, item, selection, viewportScale)
+        this.update(mounted, item, selection, viewportScale, detail)
       }
       const childIndex = index * (CONNECTION_STYLE.endpointRadius > 0 ? 3 : 1)
       this.ui.add(mounted.path, childIndex)
@@ -91,8 +101,12 @@ export class LeaferConnectionLayer {
     item: ConnectionItem,
     selection: readonly string[],
     viewportScale: number,
+    detail: ConnectionDetailLevel,
   ): MountedConnection {
-    const path = new Path({ path: curvePath(item), ...connectionStyle(item, selection, viewportScale) })
+    const path = new Path({
+      path: connectionPath(item, detail),
+      ...connectionStyle(item, selection, viewportScale),
+    })
     let endpoints: MountedConnection['endpoints'] = null
     if (CONNECTION_STYLE.endpointRadius > 0) {
       const diameter = CONNECTION_STYLE.endpointRadius * 2
@@ -122,9 +136,10 @@ export class LeaferConnectionLayer {
     item: ConnectionItem,
     selection: readonly string[],
     viewportScale: number,
+    detail: ConnectionDetailLevel,
   ): void {
     mounted.path.set({
-      path: curvePath(item),
+      path: connectionPath(item, detail),
       ...connectionStyle(item, selection, viewportScale),
     })
     if (mounted.endpoints !== null) {
@@ -155,8 +170,9 @@ export function buildConnectionLayer(
   items: readonly ConnectionItem[],
   selection: readonly string[],
   viewportScale: number,
+  detail: ConnectionDetailLevel = 'curve',
 ): IUI {
   const layer = new LeaferConnectionLayer()
-  layer.reconcile(items, selection, viewportScale)
+  layer.reconcile(items, selection, viewportScale, detail)
   return layer.ui
 }

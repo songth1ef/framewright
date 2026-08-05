@@ -3,8 +3,11 @@ import './leafer-test-stub'
 import { describe, expect, it, vi } from 'vitest'
 import {
   createAiImageNode,
+  createAudioNode,
   createBoxNode,
   createFrameNode,
+  createImgNode,
+  createVideoNode,
   getConnectionsInViewport,
   type RenderContext,
 } from '@framewright/core'
@@ -14,11 +17,12 @@ import { createLeaferRenderer } from './index'
 
 const screen = { width: 200, height: 200 }
 
-function context(root: RenderContext['root'], offsetX = 0): RenderContext {
+function context(root: RenderContext['root'], offsetX = 0, scale = 1): RenderContext {
   return {
     root,
     selection: [],
-    viewport: { scale: 1, offsetX, offsetY: 0 },
+    interactionMode: 'unified',
+    viewport: { scale, offsetX, offsetY: 0 },
     callbacks: {
       onSelectionRequest: () => undefined,
       onNodesMove: () => undefined,
@@ -160,6 +164,151 @@ describe('LeaferViewportScene', () => {
     expect(leftUi.x).toBe(35)
     expect(leftUi.y).toBe(45)
     expect(leftUi.fill).toBe('#123456')
+    scene.destroy()
+    leafer.destroy()
+  })
+
+  it('full / simplified / dot 三档分别保留完整内容、轮廓色块与纯色块', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      width: 2_000,
+      height: 500,
+      children: [
+        createAiImageNode({
+          fwId: 'generated',
+          x: 20,
+          y: 20,
+          width: 120,
+          height: 80,
+          status: 'running',
+        }),
+      ],
+    })
+    const leafer = new Leafer()
+    const scene = new LeaferViewportScene(leafer)
+
+    scene.reconcile(context(root, 0, 1), screen)
+    const generated = scene.getMountedUi('generated')
+    if (generated === undefined) throw new Error('测试前置条件失败：generated 未挂载')
+    expect(generated.children?.length).toBeGreaterThan(0)
+
+    scene.reconcile(context(root, 0, 0.25), screen)
+    expect(scene.getMountedUi('generated')).toBe(generated)
+    expect(generated.children ?? []).toHaveLength(0)
+    expect(generated.fill).toBeTruthy()
+    expect(generated.strokeWidth).toBeGreaterThan(0)
+
+    scene.reconcile(context(root, 0, 0.1), screen)
+    expect(scene.getMountedUi('generated')).toBe(generated)
+    expect(generated.children ?? []).toHaveLength(0)
+    expect(generated.fill).toBeTruthy()
+    expect(generated.strokeWidth ?? 0).toBe(0)
+    expect(generated.dashPattern).toBeUndefined()
+    scene.destroy()
+    leafer.destroy()
+  })
+
+  it('simplified 不创建图片素材、视频/音频控件或生成单元内部内容', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      width: 2_000,
+      height: 500,
+      children: [
+        createImgNode({ fwId: 'image', x: 20, y: 20, src: 'https://example.com/image.png' }),
+        createVideoNode({ fwId: 'video', x: 180, y: 20, src: 'https://example.com/video.mp4' }),
+        createAudioNode({ fwId: 'audio', x: 340, y: 20, src: 'https://example.com/audio.mp3' }),
+        createAiImageNode({
+          fwId: 'generated',
+          x: 500,
+          y: 20,
+          status: 'succeeded',
+          src: 'https://example.com/result.png',
+          prompt: 'neutral prompt',
+        }),
+      ],
+    })
+    const leafer = new Leafer()
+    const scene = new LeaferViewportScene(leafer)
+
+    scene.reconcile(context(root, 0, 0.25), screen)
+
+    for (const fwId of ['image', 'video', 'audio', 'generated']) {
+      const ui = scene.getMountedUi(fwId)
+      expect(ui, `${fwId} 应挂载`).toBeDefined()
+      expect(ui?.children ?? [], `${fwId} 不应创建内部细节`).toHaveLength(0)
+      expect(typeof ui?.fill, `${fwId} 应只画主色块`).toBe('string')
+    }
+    scene.destroy()
+    leafer.destroy()
+  })
+
+  it('跨 LOD 切换复用外层实例，回到 full 时只恢复内部细节', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      width: 2_000,
+      height: 500,
+      children: [
+        createAiImageNode({
+          fwId: 'generated',
+          x: 20,
+          y: 20,
+          width: 120,
+          height: 80,
+          status: 'succeeded',
+          src: 'https://example.com/result.png',
+          prompt: 'neutral prompt',
+        }),
+      ],
+    })
+    const leafer = new Leafer()
+    const scene = new LeaferViewportScene(leafer)
+
+    scene.reconcile(context(root, 0, 1), screen)
+    const generated = scene.getMountedUi('generated')
+    if (generated === undefined) throw new Error('测试前置条件失败：generated 未挂载')
+    const destroy = vi.spyOn(generated, 'destroy')
+
+    scene.reconcile(context(root, 0, 0.25), screen)
+    scene.reconcile(context(root, 0, 0.1), screen)
+    scene.reconcile(context(root, 0, 1), screen)
+
+    expect(scene.getMountedUi('generated')).toBe(generated)
+    expect(destroy).not.toHaveBeenCalled()
+    expect(generated.children?.length).toBeGreaterThan(0)
+    scene.destroy()
+    leafer.destroy()
+  })
+
+  it('LOD 不改变节点命中标记与完整 bounds / visible 契约', () => {
+    const root = makeRoot()
+    const renderer = createLeaferRenderer()
+    const container = document.createElement('div')
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      right: screen.width,
+      bottom: screen.height,
+      ...screen,
+      toJSON: () => ({}),
+    })
+
+    renderer.mount(container, context(root, 0, 0.1))
+
+    expect(renderer.getRenderedBounds().get('far')).toEqual({
+      x: 1_200,
+      y: 20,
+      width: 40,
+      height: 40,
+    })
+    expect(renderer.getVisibleNodeIds()).toContain('far')
+    renderer.destroy()
+
+    const leafer = new Leafer()
+    const scene = new LeaferViewportScene(leafer)
+    scene.reconcile(context(root, 0, 0.1), screen)
+    expect(scene.getMountedUi('left')?.data).toMatchObject({ fwId: 'left' })
     scene.destroy()
     leafer.destroy()
   })

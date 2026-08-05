@@ -198,6 +198,7 @@ describe('D1-leafer 挂载接线', () => {
     const ctx = {
       root: createDemoDocument(),
       selection: [],
+      interactionMode: 'unified' as const,
       viewport: DEFAULT_VIEWPORT,
       callbacks: { ...NOOP_RENDERER_CALLBACKS, onViewportChange },
     }

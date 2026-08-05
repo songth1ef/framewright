@@ -108,6 +108,7 @@ function makeContext(
   return {
     root,
     selection,
+    interactionMode: 'unified',
     viewport: { scale: 1, offsetX: 0, offsetY: 0 },
     callbacks,
   }

@@ -110,7 +110,7 @@ describe('createAudioShape', () => {
     const identity = ui
     const next = fixture({ name: '环境音', x: 30, src: 'http://probe.local/ambient.mp3' })
 
-    updateLeaferShape(ui, previous, {
+    updateLeaferShape(ui, previous, 'full', {
       node: next,
       position: { x: 30, y: 20 },
       selected: false,
