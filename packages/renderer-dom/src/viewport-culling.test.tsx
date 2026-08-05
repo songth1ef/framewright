@@ -9,6 +9,7 @@ import {
   createVideoNode,
   type RenderContext,
   type Viewport,
+  type ViewportCullingLimits,
   type ViewportSize,
 } from '@framewright/core'
 import { createDomRenderer } from './index'
@@ -27,12 +28,14 @@ function makeContext(
   children: Parameters<typeof createFrameNode>[0]['children'],
   viewport: Viewport = { scale: 1, offsetX: 0, offsetY: 0 },
   viewportSize?: ViewportSize,
+  cullingLimits?: ViewportCullingLimits,
 ): RenderContext {
   return {
     root: createFrameNode({ fwId: 'root', width: 1_000, height: 1_000, children }),
     selection: [],
     viewport,
     viewportSize,
+    cullingLimits,
     interactionMode: 'unified',
     callbacks: NOOP_RENDERER_CALLBACKS,
   }
@@ -51,6 +54,28 @@ async function mount(ctx: RenderContext) {
 }
 
 describe('DOM 视口裁剪', () => {
+  it('从 ctx 读取节点预算并覆盖 core 默认值', async () => {
+    const renderer = await mount(
+      makeContext(
+        [
+          createBoxNode({ fwId: 'nearest', x: 45, y: 45, width: 10, height: 10 }),
+          createBoxNode({ fwId: 'farther', x: 80, y: 45, width: 10, height: 10 }),
+        ],
+        undefined,
+        undefined,
+        { maxNodes: 2, maxConnections: 1_000 },
+      ),
+    )
+
+    expect(
+      [...container!.querySelectorAll<HTMLElement>('[data-fw-id]')].map(
+        (element) => element.dataset.fwId,
+      ),
+    ).toEqual(['root', 'nearest'])
+
+    await act(async () => renderer.destroy())
+  })
+
   it('以 ctx.viewportSize 为裁剪口径，不受容器回退尺寸影响', async () => {
     const ctx = makeContext(
       [

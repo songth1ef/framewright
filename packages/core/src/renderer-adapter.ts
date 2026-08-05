@@ -1,5 +1,6 @@
 import { SHAPE_TYPES, type FrameNode } from './node-schema'
 import type { SelectionMode } from './selection'
+import type { ViewportCullingLimits } from './viewport-culling'
 
 export type RendererId = 'dom' | 'leafer'
 export type InteractionMode = 'unified' | 'native'
@@ -100,6 +101,8 @@ export interface RenderContext {
    * 未提供时按 DEFAULT_CONNECTION_VISIBILITY 处理，兼容既有调用方并默认显示连线。
    */
   connectionVisibility?: ConnectionVisibility
+  /** 用户本机的裁剪预算；未提供时由 resolveViewportCullingLimits 解析契约默认值。 */
+  cullingLimits?: ViewportCullingLimits
   callbacks: RendererCallbacks
 }
 

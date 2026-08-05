@@ -141,6 +141,28 @@ describe('getNodesInViewport', () => {
     ]).toEqual(['root', 'center', 'wide-left', 'wide-right'])
   })
 
+  it('视口宽度为 0 时使用有限分母，仍按可用的纵向距离排序', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      x: -1,
+      width: 2,
+      height: 100,
+      children: [
+        createBoxNode({ fwId: 'first-but-far', x: 0, y: 0, width: 2, height: 2 }),
+        createBoxNode({ fwId: 'vertical-center', x: 0, y: 49, width: 2, height: 2 }),
+      ],
+    })
+
+    expect([
+      ...getNodesInViewport(root, viewport, {
+        width: 0,
+        height: 100,
+        overscan: 0,
+        maxNodes: 2,
+      }),
+    ]).toEqual(['root', 'vertical-center'])
+  })
+
   it('最近节点位于嵌套 frame 时，祖先链计入上限并一并保留', () => {
     const root = createFrameNode({
       fwId: 'root',
@@ -258,6 +280,33 @@ describe('getNodesInViewport', () => {
 
     expect(previous.nodeIds.has('left')).toBe(true)
     expect(canReuseViewportCulling(previous, { ...viewport, offsetX: -100 }, options)).toBe(false)
+  })
+
+  it('预算变化时不复用旧裁剪派生结果', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      children: [createBoxNode({ fwId: 'child' })],
+    })
+    const previous = getViewportCullingResult(root, viewport, {
+      ...screen,
+      maxNodes: 2,
+      maxConnections: 1,
+    })
+
+    expect(
+      canReuseViewportCulling(previous, viewport, {
+        ...screen,
+        maxNodes: 1,
+        maxConnections: 1,
+      }),
+    ).toBe(false)
+    expect(
+      canReuseViewportCulling(previous, viewport, {
+        ...screen,
+        maxNodes: 2,
+        maxConnections: 0,
+      }),
+    ).toBe(false)
   })
 
   it('节点未触顶但连线可能触顶时，平移同样不能复用旧中心集合', () => {

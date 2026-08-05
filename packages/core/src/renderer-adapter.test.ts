@@ -11,6 +11,10 @@ import {
   resolveViewportSize,
   type RendererCallbacks,
 } from './renderer-adapter'
+import {
+  DEFAULT_VIEWPORT_CULLING_LIMITS,
+  resolveViewportCullingLimits,
+} from './viewport-culling'
 import { createDemoDocument } from './demo-document'
 import { collectNodeIds, findNodeById } from './node-tree'
 
@@ -43,6 +47,19 @@ describe('DEFAULT_VIEWPORT_SIZE', () => {
     expect(DEFAULT_VIEWPORT_SIZE).toEqual({ width: 0, height: 0 })
     expect(resolveViewportSize(undefined)).toEqual({ width: 0, height: 0 })
     expect(resolveViewportSize(measured)).toBe(measured)
+  })
+})
+
+describe('DEFAULT_VIEWPORT_CULLING_LIMITS', () => {
+  it('未传裁剪预算时显式回退为 1500 个节点与 1000 条连线', () => {
+    expect(DEFAULT_VIEWPORT_CULLING_LIMITS).toEqual({
+      maxNodes: 1_500,
+      maxConnections: 1_000,
+    })
+    expect(resolveViewportCullingLimits(undefined)).toEqual({
+      maxNodes: 1_500,
+      maxConnections: 1_000,
+    })
   })
 })
 

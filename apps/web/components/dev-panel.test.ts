@@ -4,6 +4,11 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { DevPanel } from './dev-panel'
 
+const cullingProps = {
+  cullingLimits: { maxNodes: 1_500, maxConnections: 1_000 },
+  onCullingLimitsChange: () => undefined,
+}
+
 describe('DevPanel', () => {
   it('🔴 默认收起，只渲染一个小按钮 —— 展开态会盖住画布工具栏', () => {
     // 回归守卫：面板原先默认展开且钉在右上角，把渲染器切换按钮整个盖住，
@@ -12,6 +17,7 @@ describe('DevPanel', () => {
     const html = renderToStaticMarkup(createElement(DevPanel, {
       selectedNodes: [createBoxNode({ fwId: 'box-1', name: '完整节点' })],
       entries: [],
+      ...cullingProps,
       onClear: () => undefined,
     }))
 
@@ -25,6 +31,7 @@ describe('DevPanel', () => {
     const html = renderToStaticMarkup(createElement(DevPanel, {
       defaultExpanded: true,
       selectedNodes: [node],
+      ...cullingProps,
       entries: [{
         id: 'entry-1',
         timestamp: '2026-08-04T12:34:56.000Z',
@@ -41,6 +48,12 @@ describe('DevPanel', () => {
     expect(html).toContain('data-testid="copy-node-json-box-1"')
     expect(html).toContain('data-testid="dev-log-filter"')
     expect(html).toContain('data-testid="clear-dev-log"')
+    expect(html).toContain('data-testid="max-nodes-input"')
+    expect(html).toContain('aria-label="节点上限"')
+    expect(html).toContain('value="1500"')
+    expect(html).toContain('data-testid="max-connections-input"')
+    expect(html).toContain('aria-label="连线上限"')
+    expect(html).toContain('value="1000"')
     expect(html).toContain('box-1 · x : 0 → 20')
   })
 })

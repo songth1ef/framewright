@@ -37,10 +37,27 @@ export interface ViewportCullingOptions {
   connectionVisibility?: ConnectionVisibility
 }
 
+export interface ViewportCullingLimits {
+  maxNodes: number
+  maxConnections: number
+}
+
 /** 2535 个节点时 DOM 已降至 24fps；1500 为该实测拐点留出约 40% 余量。 */
 export const DEFAULT_MAX_NODES = 1_500
 /** 100% 缩放实测 367 条连线可流畅运行；1000 保留约 2.7 倍余量并阻断万级爆炸。 */
 export const DEFAULT_MAX_CONNECTIONS = 1_000
+
+export const DEFAULT_VIEWPORT_CULLING_LIMITS: ViewportCullingLimits = {
+  maxNodes: DEFAULT_MAX_NODES,
+  maxConnections: DEFAULT_MAX_CONNECTIONS,
+}
+
+/** 未提供用户预算时，显式落到经过性能实测确定的契约默认值。 */
+export function resolveViewportCullingLimits(
+  limits: ViewportCullingLimits | undefined,
+): ViewportCullingLimits {
+  return limits ?? DEFAULT_VIEWPORT_CULLING_LIMITS
+}
 
 function getViewportBounds(
   viewport: Viewport,
@@ -113,6 +130,8 @@ export interface ViewportCullingResult {
   nodeIds: ReadonlySet<string>
   /** 只要当前真实视口仍完整落在这里，上述集合就不会漏掉当前应显示的节点。 */
   validViewportBounds: Rect
+  /** 生成这份派生结果时使用的预算，仅用于判断缓存是否仍有效。 */
+  cullingLimits: ViewportCullingLimits
 }
 
 interface NodeCandidate {
@@ -199,6 +218,7 @@ export function getViewportCullingResult(
     return {
       nodeIds: new Set(candidates.map(({ fwId }) => fwId)),
       validViewportBounds: connectionsMayBeLimited ? currentBounds : bounds,
+      cullingLimits: { maxNodes, maxConnections },
     }
   }
 
@@ -230,6 +250,7 @@ export function getViewportCullingResult(
     nodeIds: selected,
     // 排名依赖真实视口中心；截断后只允许相同视口复用，平移必须重新排名。
     validViewportBounds: currentBounds,
+    cullingLimits: { maxNodes, maxConnections },
   }
 }
 
@@ -242,6 +263,17 @@ export function canReuseViewportCulling(
   viewport: Viewport,
   options: ViewportCullingOptions,
 ): boolean {
+  const maxNodes = getLimit(options.maxNodes, DEFAULT_MAX_NODES, 'maxNodes', false)
+  const maxConnections =
+    resolveConnectionVisibility(options.connectionVisibility) === 'visible'
+      ? getLimit(options.maxConnections, DEFAULT_MAX_CONNECTIONS, 'maxConnections', true)
+      : 0
+  if (
+    previous.cullingLimits.maxNodes !== maxNodes ||
+    previous.cullingLimits.maxConnections !== maxConnections
+  ) {
+    return false
+  }
   const current = getViewportBounds(viewport, options, 0)
   const valid = previous.validViewportBounds
   return (

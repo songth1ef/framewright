@@ -10,6 +10,14 @@ import {
   type ReactElement,
 } from 'react'
 import { canvasOpToDevLogEntries, type DevLogEntry } from './dev-panel-log'
+import {
+  MAX_CONFIGURABLE_CONNECTIONS,
+  MAX_CONFIGURABLE_NODES,
+  MIN_CONFIGURABLE_CONNECTIONS,
+  MIN_CONFIGURABLE_NODES,
+  isViewportCullingLimits,
+  type ViewportCullingLimits,
+} from './viewport-culling-storage'
 
 export interface DevPanelHandle {
   record(op: CanvasOp): void
@@ -18,6 +26,8 @@ export interface DevPanelHandle {
 interface DevPanelProps {
   selectedNodes: readonly CanvasNode[]
   entries: readonly DevLogEntry[]
+  cullingLimits: ViewportCullingLimits
+  onCullingLimitsChange(limits: ViewportCullingLimits): void
   onClear(): void
   /** 初始是否展开。默认 `false` —— 展开态会盖住画布，不能是默认状态。 */
   defaultExpanded?: boolean
@@ -81,6 +91,8 @@ const collapsedToggleStyle: CSSProperties = {
 export function DevPanel({
   selectedNodes,
   entries,
+  cullingLimits,
+  onCullingLimitsChange,
   onClear,
   defaultExpanded = false,
 }: DevPanelProps): ReactElement {
@@ -165,6 +177,50 @@ export function DevPanel({
       }, '收起'),
     ),
     createElement('section', null,
+      createElement('h3', { style: { margin: '8px 0', font: '600 12px system-ui' } }, '视口裁剪预算'),
+      createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 } },
+        createElement('label', null,
+          '节点上限',
+          createElement('input', {
+            type: 'number',
+            'data-testid': 'max-nodes-input',
+            'aria-label': '节点上限',
+            min: MIN_CONFIGURABLE_NODES,
+            max: MAX_CONFIGURABLE_NODES,
+            step: 1,
+            value: cullingLimits.maxNodes,
+            onChange: (event: { currentTarget: { valueAsNumber: number } }) => {
+              const next = { ...cullingLimits, maxNodes: event.currentTarget.valueAsNumber }
+              if (isViewportCullingLimits(next)) onCullingLimitsChange(next)
+            },
+            style: { width: '100%', boxSizing: 'border-box', marginTop: 3 },
+          }),
+        ),
+        createElement('label', null,
+          '连线上限',
+          createElement('input', {
+            type: 'number',
+            'data-testid': 'max-connections-input',
+            'aria-label': '连线上限',
+            min: MIN_CONFIGURABLE_CONNECTIONS,
+            max: MAX_CONFIGURABLE_CONNECTIONS,
+            step: 1,
+            value: cullingLimits.maxConnections,
+            onChange: (event: { currentTarget: { valueAsNumber: number } }) => {
+              const next = {
+                ...cullingLimits,
+                maxConnections: event.currentTarget.valueAsNumber,
+              }
+              if (isViewportCullingLimits(next)) onCullingLimitsChange(next)
+            },
+            style: { width: '100%', boxSizing: 'border-box', marginTop: 3 },
+          }),
+        ),
+      ),
+      createElement('p', { style: { margin: '6px 0 0', color: '#98a2b3' } },
+        '调高可显示更多内容，也会增加本机渲染压力。'),
+    ),
+    createElement('section', null,
       createElement('h3', { style: { margin: '8px 0', font: '600 12px system-ui' } }, '选中节点 JSON'),
       nodeSections,
     ),
@@ -191,8 +247,18 @@ export function DevPanel({
   )
 }
 
-export const DevPanelController = forwardRef<DevPanelHandle, { selectedNodes: readonly CanvasNode[] }>(
-  function DevPanelController({ selectedNodes }, ref) {
+export const DevPanelController = forwardRef<
+  DevPanelHandle,
+  {
+    selectedNodes: readonly CanvasNode[]
+    cullingLimits: ViewportCullingLimits
+    onCullingLimitsChange(limits: ViewportCullingLimits): void
+  }
+>(
+  function DevPanelController(
+    { selectedNodes, cullingLimits, onCullingLimitsChange },
+    ref,
+  ) {
     const [entries, setEntries] = useState<readonly DevLogEntry[]>([])
     useImperativeHandle(ref, () => ({
       record(op) {
@@ -203,6 +269,8 @@ export const DevPanelController = forwardRef<DevPanelHandle, { selectedNodes: re
     return createElement(DevPanel, {
       selectedNodes,
       entries,
+      cullingLimits,
+      onCullingLimitsChange,
       onClear: () => setEntries([]),
     })
   },

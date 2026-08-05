@@ -6,6 +6,7 @@ import {
   isAiImageNode,
   isAiVideoNode,
   isFrameNode,
+  resolveViewportCullingLimits,
   resolveViewportSize,
   assertShapeCoverage,
   type CanvasNode,
@@ -191,11 +192,15 @@ export function createDomRenderer(): RendererAdapter {
             height: cursorContainer?.clientHeight || ctx.root.height * scale,
           }
         : resolvedViewportSize
-    const mountedNodeIds = getNodesInViewport(ctx.root, ctx.viewport, viewportSize)
+    const cullingOptions = {
+      ...viewportSize,
+      ...resolveViewportCullingLimits(ctx.cullingLimits),
+    }
+    const mountedNodeIds = getNodesInViewport(ctx.root, ctx.viewport, cullingOptions)
     const videoVisibleNodeIds =
       lod.detail === 'full'
         ? getNodesInViewport(ctx.root, ctx.viewport, {
-            ...viewportSize,
+            ...cullingOptions,
             overscan: 0,
           })
         : new Set<string>()
@@ -208,7 +213,7 @@ export function createDomRenderer(): RendererAdapter {
     const connectionLayer =
       lod.connections === 'hidden' ? undefined : (
         <ConnectionLayer
-          items={getConnectionsInViewport(ctx.root, ctx.viewport, viewportSize)}
+          items={getConnectionsInViewport(ctx.root, ctx.viewport, cullingOptions)}
           selection={ctx.selection}
           scale={scale}
           rootBounds={rootBounds}

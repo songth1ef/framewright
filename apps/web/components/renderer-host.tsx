@@ -71,6 +71,11 @@ import {
   type ViewportStorageWriter,
 } from './viewport-storage'
 import { createVideoPlaybackSessionStore } from './video-playback-session-store'
+import {
+  readStoredViewportCullingLimits,
+  writeStoredViewportCullingLimits,
+  type ViewportCullingLimits,
+} from './viewport-culling-storage'
 
 type Factory = () => RendererAdapter
 
@@ -151,6 +156,9 @@ export function RendererHost({
   const [activeIndex, setActiveIndex] = useState(0)
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [minimapVisible, setMinimapVisible] = useState(() => readStoredMinimapVisibility())
+  const [viewportCullingLimits, setViewportCullingLimits] = useState(
+    () => readStoredViewportCullingLimits(),
+  )
   const [viewportSize, setViewportSize] = useState<ViewportSize | null>(null)
   const getViewportSize = (): ViewportSize => ({
     width: containerRef.current?.clientWidth || 800,
@@ -217,6 +225,11 @@ export function RendererHost({
   const commitMinimapVisibility = useCallback((next: boolean): void => {
     setMinimapVisible(next)
     writeStoredMinimapVisibility(next)
+  }, [])
+
+  const commitViewportCullingLimits = useCallback((next: ViewportCullingLimits): void => {
+    setViewportCullingLimits(next)
+    writeStoredViewportCullingLimits(next)
   }, [])
 
   useEffect(() => {
@@ -528,6 +541,7 @@ export function RendererHost({
     viewportSize: viewportSize ?? DEFAULT_VIEWPORT_SIZE,
     interactionMode,
     connectionVisibility,
+    cullingLimits: viewportCullingLimits,
     callbacks,
   }
   const ctxRef = useRef(ctx)
@@ -562,7 +576,7 @@ export function RendererHost({
       delete (window as unknown as Record<string, unknown>)['__fwGetBounds']
       delete (window as unknown as Record<string, unknown>)['__fwGetVisible']
     }
-  }, [activeIndex, historyReady, viewportSizeReady])
+  }, [activeIndex, historyReady, viewportSizeReady, viewportCullingLimits])
 
   useEffect(() => {
     queueMicrotask(() => adapterRef.current?.update(ctx))
@@ -677,7 +691,12 @@ export function RendererHost({
       {showShortcuts ? <ShortcutHelpDialog onClose={() => setShowShortcuts(false)} /> : null}
       <FpsMonitor totalNodeCount={collectNodeIds(root).length} />
       {DEV_PANEL_ENABLED ? (
-        <DevPanelController ref={devPanelRef} selectedNodes={selectedNodes} />
+        <DevPanelController
+          ref={devPanelRef}
+          selectedNodes={selectedNodes}
+          cullingLimits={viewportCullingLimits}
+          onCullingLimitsChange={commitViewportCullingLimits}
+        />
       ) : null}
     </main>
   )

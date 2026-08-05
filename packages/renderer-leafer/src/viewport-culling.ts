@@ -5,6 +5,7 @@ import {
   getViewportLod,
   getViewportCullingResult,
   isFrameNode,
+  resolveViewportCullingLimits,
   resolveViewportSize,
   type CanvasNode,
   type ConnectionItem,
@@ -116,10 +117,11 @@ export class LeaferViewportScene {
     preview: CanvasInteractionPreview = {},
   ): LeaferSceneSnapshot {
     const resolvedViewportSize = resolveViewportSize(ctx.viewportSize)
+    const resolvedCullingLimits = resolveViewportCullingLimits(ctx.cullingLimits)
     const resolvedCullingOptions =
       ctx.viewportSize === undefined
-        ? cullingOptions
-        : { ...cullingOptions, ...resolvedViewportSize }
+        ? { ...cullingOptions, ...resolvedCullingLimits }
+        : { ...cullingOptions, ...resolvedViewportSize, ...resolvedCullingLimits }
     const { descriptors, snapshot } = collectDescriptors(ctx, preview)
     const lod = getViewportLod(ctx.viewport.scale)
     const descriptorById = new Map(descriptors.map((descriptor) => [descriptor.node.fwId, descriptor]))

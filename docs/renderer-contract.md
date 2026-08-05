@@ -338,6 +338,19 @@ host 从容器测量并在 resize 时触发 update。两侧渲染器一律用它
 
 ---
 
+## 附录 · 裁剪预算归属（2026-08-05 裁定）
+
+`maxNodes` / `maxConnections` 是用户按本机性能选择的观看配置，与 `viewportSize`、
+`interactionMode`、`connectionVisibility` 同属 host 状态。`RenderContext` 增加可选的
+`cullingLimits: { maxNodes: number; maxConnections: number }`，由 host 持久化并单向传给两侧渲染器；
+渲染器只读取它来调用 core 裁剪函数，不改写、不把它作为独立真相源。
+
+缺省必须显式走 `resolveViewportCullingLimits`，得到经过性能实测确定的
+`{ maxNodes: 1500, maxConnections: 1000 }`。不能依赖 host 当前总会传值：调用方省略字段时，
+契约默认行为本身也必须正确。
+
+---
+
 ## 附录 · 交互模式可切换（2026-08-05 裁定）
 
 ### 起因
