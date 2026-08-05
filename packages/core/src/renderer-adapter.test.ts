@@ -4,9 +4,11 @@ import {
   DEFAULT_CONNECTION_VISIBILITY,
   DEFAULT_INTERACTION_MODE,
   DEFAULT_VIEWPORT,
+  DEFAULT_VIEWPORT_SIZE,
   assertShapeCoverage,
   resolveConnectionVisibility,
   resolveInteractionMode,
+  resolveViewportSize,
   type RendererCallbacks,
 } from './renderer-adapter'
 import { createDemoDocument } from './demo-document'
@@ -31,6 +33,16 @@ describe('DEFAULT_CONNECTION_VISIBILITY', () => {
 describe('DEFAULT_VIEWPORT', () => {
   it('缩放 1、无偏移', () => {
     expect(DEFAULT_VIEWPORT).toEqual({ scale: 1, offsetX: 0, offsetY: 0 })
+  })
+})
+
+describe('DEFAULT_VIEWPORT_SIZE', () => {
+  it('未测量时回退为零尺寸，已提供时保持 host 的测量值', () => {
+    const measured = { width: 1280, height: 720 }
+
+    expect(DEFAULT_VIEWPORT_SIZE).toEqual({ width: 0, height: 0 })
+    expect(resolveViewportSize(undefined)).toEqual({ width: 0, height: 0 })
+    expect(resolveViewportSize(measured)).toBe(measured)
   })
 })
 

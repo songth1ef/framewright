@@ -32,6 +32,18 @@ export interface Viewport {
 
 export const DEFAULT_VIEWPORT: Viewport = { scale: 1, offsetX: 0, offsetY: 0 }
 
+export interface ViewportSize {
+  width: number
+  height: number
+}
+
+/** 未提供尺寸表示 host 尚未完成测量；回退为零尺寸，避免伪造可见区域。 */
+export const DEFAULT_VIEWPORT_SIZE: ViewportSize = { width: 0, height: 0 }
+
+export function resolveViewportSize(viewportSize: ViewportSize | undefined): ViewportSize {
+  return viewportSize ?? DEFAULT_VIEWPORT_SIZE
+}
+
 export interface RendererCallbacks {
   onSelectionRequest(fwIds: readonly string[], mode: SelectionMode): void
   onNodesMove(
@@ -79,6 +91,8 @@ export interface RenderContext {
   root: FrameNode
   selection: readonly string[]
   viewport: Viewport
+  /** host 测得的容器尺寸；未提供时按 DEFAULT_VIEWPORT_SIZE 处理。 */
+  viewportSize?: ViewportSize
   /** 未提供时按 DEFAULT_INTERACTION_MODE 处理，兼容尚未显式选择模式的调用方。 */
   interactionMode?: InteractionMode
   /**
