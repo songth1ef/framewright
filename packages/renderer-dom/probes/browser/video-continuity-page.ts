@@ -20,7 +20,10 @@ export interface VideoContinuityResult {
   renderer: RendererId
   transition: Transition
   before: PlaybackSnapshot
-  absentDuringTransition: boolean
+  mediaElementAbsentDuringTransition: boolean
+  videoDrawCallsBeforeTransition: number | null
+  videoDrawCallsDuringTransition: number | null
+  videoContentAbsentDuringTransition: boolean
   immediateAfterRemount: PlaybackSnapshot
   playError: string | null
   afterPlayReady: PlaybackSnapshot | null
@@ -44,6 +47,7 @@ if (view === null) throw new Error('缺少 #view')
 
 const trackedVideos: HTMLVideoElement[] = []
 const videoIds = new WeakMap<HTMLVideoElement, number>()
+const videoDrawCounts = new WeakMap<HTMLVideoElement, number>()
 const nativeCreateElement = Document.prototype.createElement
 Document.prototype.createElement = function createElement(
   tagName: string,
@@ -56,6 +60,18 @@ Document.prototype.createElement = function createElement(
     videoIds.set(video, trackedVideos.length)
   }
   return element
+}
+
+const nativeDrawImage = CanvasRenderingContext2D.prototype.drawImage as unknown as (
+  this: CanvasRenderingContext2D,
+  ...args: unknown[]
+) => void
+CanvasRenderingContext2D.prototype.drawImage = function drawImage(...args: unknown[]): void {
+  const source = args[0]
+  if (source instanceof HTMLVideoElement) {
+    videoDrawCounts.set(source, (videoDrawCounts.get(source) ?? 0) + 1)
+  }
+  nativeDrawImage.apply(this, args)
 }
 
 let renderer: RendererAdapter | null = null
@@ -84,6 +100,24 @@ function snapshot(id: RendererId): PlaybackSnapshot | null {
     readyState: video.readyState,
     totalVideoFrames: video.getVideoPlaybackQuality().totalVideoFrames,
   }
+}
+
+function videoDrawCount(id: RendererId): number {
+  const video = findVideo(id)
+  return video === null ? 0 : videoDrawCounts.get(video) ?? 0
+}
+
+function waitAnimationFrames(count: number): Promise<void> {
+  return new Promise((resolve) => {
+    const next = (remaining: number): void => {
+      if (remaining <= 0) {
+        resolve()
+        return
+      }
+      requestAnimationFrame(() => next(remaining - 1))
+    }
+    next(count)
+  })
 }
 
 function waitUntil<T>(read: () => T | null, label: string, timeoutMs = 20_000): Promise<T> {
@@ -171,18 +205,37 @@ async function runScenario(
 ): Promise<VideoContinuityResult> {
   await mount(id)
   const before = await beginPlayback(id)
+  const videoDrawCallsBeforeTransition = id === 'leafer'
+    ? await waitUntil(() => {
+        const count = videoDrawCount(id)
+        return count > 0 ? count : null
+      }, `${id}/${transition} 首次视频帧绘制`)
+    : null
 
   viewport = transitionViewport(transition)
   renderer?.update(context())
-  await waitUntil(() => findVideo(id) === null ? true : null, `${id}/${transition} 卸载视频`)
-  const absentDuringTransition = findVideo(id) === null
+  let mediaElementAbsentDuringTransition = false
+  let videoDrawCallsDuringTransition: number | null = null
+  let videoContentAbsentDuringTransition = false
+  if (id === 'dom') {
+    await waitUntil(() => findVideo(id) === null ? true : null, `${id}/${transition} 卸载视频`)
+    mediaElementAbsentDuringTransition = true
+    videoContentAbsentDuringTransition = true
+  } else {
+    await waitAnimationFrames(4)
+    const drawCountAtObservationStart = videoDrawCount(id)
+    await new Promise((resolve) => setTimeout(resolve, 250))
+    videoDrawCallsDuringTransition = videoDrawCount(id) - drawCountAtObservationStart
+    mediaElementAbsentDuringTransition = findVideo(id) === null
+    videoContentAbsentDuringTransition = videoDrawCallsDuringTransition === 0
+  }
 
   viewport = { scale: 1, offsetX: 0, offsetY: 0 }
   renderer?.update(context())
-  const immediateAfterRemount = await waitUntil(
-    () => snapshot(id),
-    `${id}/${transition} 重建视频元素`,
-  )
+  const immediateAfterRemount = snapshot(id) ?? await waitUntil(
+      () => snapshot(id),
+      `${id}/${transition} 重建视频元素`,
+    )
 
   const remountedVideo = findVideo(id)
   if (remountedVideo === null) throw new Error(`${id}/${transition} 重建后没有 video`)
@@ -229,7 +282,10 @@ async function runScenario(
     renderer: id,
     transition,
     before,
-    absentDuringTransition,
+    mediaElementAbsentDuringTransition,
+    videoDrawCallsBeforeTransition,
+    videoDrawCallsDuringTransition,
+    videoContentAbsentDuringTransition,
     immediateAfterRemount,
     playError,
     afterPlayReady,
