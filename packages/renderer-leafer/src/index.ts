@@ -1,9 +1,5 @@
 import {
   assertShapeCoverage,
-  collectConnectionItems,
-  isFrameNode,
-  type CanvasNode,
-  type Point,
   type Rect as CoreRect,
   type RenderContext,
   type RendererAdapter,
@@ -16,19 +12,20 @@ import {
   type CanvasCursor,
   type CanvasInteraction,
   type CanvasInteractionPreview,
-  type NodeResize,
 } from './canvas-interaction'
-import { buildConnectionLayer } from './connections'
 import { createLeaferHitProbe } from './hit-probe'
 import { buildInteractionOverlay } from './interaction-overlay'
 import { dispatchNodeActionTap } from './node-action'
 import { LEAFER_SHAPES } from './shapes/registry'
+import { LeaferViewportScene } from './viewport-culling'
 import { createViewportInteraction, type ViewportInteraction } from './viewport-interaction'
 
 export function createLeaferRenderer(): RendererAdapter {
   assertShapeCoverage('leafer', LEAFER_SHAPES)
 
   let leafer: Leafer | null = null
+  let scene: LeaferViewportScene | null = null
+  let interactionOverlay: IUI | null = null
   let interaction: ViewportInteraction | null = null
   let canvasInteraction: CanvasInteraction | null = null
   let interactionPreview: CanvasInteractionPreview = EMPTY_INTERACTION_PREVIEW
@@ -56,100 +53,41 @@ export function createLeaferRenderer(): RendererAdapter {
     leafer.y = viewport.offsetY
   }
 
-  const buildNode = (
-    node: CanvasNode,
-    parentAbsolute: Point,
-    parentVisible: boolean,
-    selection: readonly string[],
-    previewMoves: ReadonlyMap<string, Point>,
-    previewResizes: ReadonlyMap<string, NodeResize>,
-    parent: IUI | Leafer,
-    rootUnderlay?: IUI,
-  ): void => {
-    // 拖拽/缩放预览是纯呈现：只改画出来的位置与尺寸，不碰 node 树（契约 §1）
-    const previewResize = previewResizes.get(node.fwId)
-    const previewPosition = previewMoves.get(node.fwId)
-    const position: Point = previewResize ?? previewPosition ?? { x: node.x, y: node.y }
-    const size = previewResize ?? { width: node.width, height: node.height }
-    const absolute: Point = { x: parentAbsolute.x + position.x, y: parentAbsolute.y + position.y }
-    const visible = parentVisible && node.visible
-    bounds.set(node.fwId, {
-      x: absolute.x,
-      y: absolute.y,
-      width: size.width,
-      height: size.height,
-    })
-
-    const factory = LEAFER_SHAPES[node.fwType]
-    const ui = factory({
-      node,
-      position,
-      size,
-      selected: selection.includes(node.fwId),
-    })
-    // node 容器打 fwId 标记：内部按钮的 tap 分派沿父链找它（见 node-action.ts）
-    ui.data = { ...(ui.data as Record<string, unknown> | undefined), fwId: node.fwId }
-    parent.add(ui)
-    if (visible) visibleNodeIds.push(node.fwId)
-
-    if (isFrameNode(node)) {
-      // 溯源连线层只挂在 root frame 里、作为第一个孩子（connection-spec §2）：
-      // 在 root 自己的 background（画布底色）之上、一切业务节点之下。
-      // 若加在 root 之外，会被 root 的白色背景整个盖住。
-      if (rootUnderlay !== undefined) ui.add(rootUnderlay)
-      for (const child of node.children) {
-        buildNode(child, absolute, visible, selection, previewMoves, previewResizes, ui)
-      }
-    }
-  }
-
   const draw = (ctx: RenderContext): void => {
-    if (leafer === null) return
+    if (leafer === null || scene === null || cursorContainer === null) return
     currentCtx = ctx
-    leafer.clear()
-    bounds = new Map<string, CoreRect>()
-    visibleNodeIds = []
     applyViewport(ctx.viewport)
-    const previewMoves = new Map(
-      (interactionPreview.moves ?? []).map((move) => [move.fwId, { x: move.x, y: move.y }]),
+    interactionOverlay?.remove()
+    interactionOverlay?.destroy()
+    interactionOverlay = null
+    const viewportRect = cursorContainer.getBoundingClientRect()
+    const snapshot = scene.reconcile(
+      ctx,
+      {
+        width: Math.max(1, viewportRect.width || cursorContainer.clientWidth),
+        height: Math.max(1, viewportRect.height || cursorContainer.clientHeight),
+      },
+      interactionPreview,
     )
-    const previewResizes = new Map(
-      (interactionPreview.resizes ?? []).map((resize) => [resize.fwId, resize]),
-    )
-    // 连线不是 node：不进 node 树、不进 getRenderedBounds，只作为 root 的底层装饰注入
-    const connectionLayer = buildConnectionLayer(
-      collectConnectionItems(ctx.root),
-      ctx.selection,
-      ctx.viewport.scale,
-    )
-    buildNode(
-      ctx.root,
-      { x: 0, y: 0 },
-      true,
-      ctx.selection,
-      previewMoves,
-      previewResizes,
-      leafer,
-      connectionLayer,
-    )
+    bounds = snapshot.bounds
+    visibleNodeIds = snapshot.visibleNodeIds
     // 交互 overlay（框选框/选中描边/控制点）加在所有节点之上——不是 node，不进 bounds。
     // 包围盒取预览后的 bounds，跟随拖拽/缩放预览（与 DOM 侧同口径）
-    leafer.add(
-      buildInteractionOverlay({
-        preview: interactionPreview,
-        selectionBounds: ctx.selection.flatMap((fwId) => {
-          const rect = bounds.get(fwId)
-          return rect === undefined ? [] : [{ fwId, rect }]
-        }),
-        hoverBounds: (() => {
-          const fwId = interactionPreview.hoveredFwId
-          if (fwId === undefined || fwId === null) return null
-          const rect = bounds.get(fwId)
-          return rect === undefined ? null : { fwId, rect }
-        })(),
-        viewportScale: ctx.viewport.scale,
+    interactionOverlay = buildInteractionOverlay({
+      preview: interactionPreview,
+      selectionBounds: ctx.selection.flatMap((fwId) => {
+        const rect = bounds.get(fwId)
+        return rect === undefined ? [] : [{ fwId, rect }]
       }),
-    )
+      hoverBounds: (() => {
+        const fwId = interactionPreview.hoveredFwId
+        if (fwId === undefined || fwId === null) return null
+        const rect = bounds.get(fwId)
+        return rect === undefined ? null : { fwId, rect }
+      })(),
+      viewportScale: ctx.viewport.scale,
+    })
+    leafer.add(interactionOverlay)
   }
 
   return {
@@ -158,6 +96,7 @@ export function createLeaferRenderer(): RendererAdapter {
 
     mount(container, ctx) {
       leafer = new Leafer({ view: container })
+      scene = new LeaferViewportScene(leafer)
       cursorContainer = container
       // 建实例时显式确认内建手势为关（renderer-contract §3.1）：
       // 我们只把 Leafer 当感知器，视口手势由下面的原生事件状态机实现
@@ -203,6 +142,11 @@ export function createLeaferRenderer(): RendererAdapter {
       canvasInteraction?.destroy()
       canvasInteraction = null
       interactionPreview = EMPTY_INTERACTION_PREVIEW
+      interactionOverlay?.remove()
+      interactionOverlay?.destroy()
+      interactionOverlay = null
+      scene?.destroy()
+      scene = null
       leafer?.destroy()
       leafer = null
       currentCtx = null

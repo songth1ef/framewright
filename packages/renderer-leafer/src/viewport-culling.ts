@@ -1,0 +1,270 @@
+import {
+  getConnectionsInViewport,
+  getNodesInViewport,
+  isFrameNode,
+  type CanvasNode,
+  type Point,
+  type Rect as CoreRect,
+  type RenderContext,
+  type ViewportCullingOptions,
+} from '@framewright/core'
+import { Leafer, type IUI } from 'leafer-ui'
+import type { CanvasInteractionPreview, NodeResize } from './canvas-interaction'
+import { buildConnectionLayer } from './connections'
+import { toLeaferProps } from './node-props'
+import { LEAFER_SHAPES } from './shapes/registry'
+
+interface SceneDescriptor {
+  node: CanvasNode
+  parentFwId: string | null
+  depth: number
+  position: Point
+  size: { width: number; height: number }
+  absolute: Point
+  visible: boolean
+  selected: boolean
+}
+
+interface MountedNode {
+  descriptor: SceneDescriptor
+  ui: IUI
+}
+
+export interface LeaferSceneSnapshot {
+  bounds: Map<string, CoreRect>
+  visibleNodeIds: string[]
+}
+
+function samePoint(a: Point, b: Point): boolean {
+  return a.x === b.x && a.y === b.y
+}
+
+function sameSize(
+  a: { width: number; height: number },
+  b: { width: number; height: number },
+): boolean {
+  return a.width === b.width && a.height === b.height
+}
+
+function collectDescriptors(
+  ctx: RenderContext,
+  preview: CanvasInteractionPreview,
+): { descriptors: SceneDescriptor[]; snapshot: LeaferSceneSnapshot } {
+  const previewMoves = new Map(
+    (preview.moves ?? []).map((move) => [move.fwId, { x: move.x, y: move.y }]),
+  )
+  const previewResizes = new Map(
+    (preview.resizes ?? []).map((resize) => [resize.fwId, resize] as const),
+  )
+  const descriptors: SceneDescriptor[] = []
+  const bounds = new Map<string, CoreRect>()
+  const visibleNodeIds: string[] = []
+
+  const visit = (
+    node: CanvasNode,
+    parentFwId: string | null,
+    parentAbsolute: Point,
+    parentVisible: boolean,
+    depth: number,
+  ): void => {
+    const previewResize: NodeResize | undefined = previewResizes.get(node.fwId)
+    const position = previewResize ?? previewMoves.get(node.fwId) ?? { x: node.x, y: node.y }
+    const size = previewResize ?? { width: node.width, height: node.height }
+    const absolute = { x: parentAbsolute.x + position.x, y: parentAbsolute.y + position.y }
+    const visible = parentVisible && node.visible
+    const descriptor: SceneDescriptor = {
+      node,
+      parentFwId,
+      depth,
+      position,
+      size,
+      absolute,
+      visible,
+      selected: ctx.selection.includes(node.fwId),
+    }
+    descriptors.push(descriptor)
+    bounds.set(node.fwId, { x: absolute.x, y: absolute.y, width: size.width, height: size.height })
+    if (visible) visibleNodeIds.push(node.fwId)
+    if (isFrameNode(node)) {
+      for (const child of node.children) {
+        visit(child, node.fwId, absolute, visible, depth + 1)
+      }
+    }
+  }
+
+  visit(ctx.root, null, { x: 0, y: 0 }, true, 0)
+  return { descriptors, snapshot: { bounds, visibleNodeIds } }
+}
+
+/**
+ * 用 fwId 协调 Leafer 场景图：视口变化只增删跨过裁剪边界的实例，留在集合内的实例复用。
+ * 完整树的 bounds / visible 仍单独计算，裁剪不改变 RendererAdapter 的自报契约。
+ */
+export class LeaferViewportScene {
+  private readonly mounted = new Map<string, MountedNode>()
+  private mountedOrder: string[] = []
+  private connectionLayer: IUI | null = null
+
+  constructor(private readonly leafer: Leafer) {}
+
+  reconcile(
+    ctx: RenderContext,
+    cullingOptions: ViewportCullingOptions,
+    preview: CanvasInteractionPreview = {},
+  ): LeaferSceneSnapshot {
+    const { descriptors, snapshot } = collectDescriptors(ctx, preview)
+    const descriptorById = new Map(descriptors.map((descriptor) => [descriptor.node.fwId, descriptor]))
+    const desiredIds = getNodesInViewport(ctx.root, ctx.viewport, cullingOptions)
+
+    this.destroyConnectionLayer()
+
+    const removals = [...this.mounted.entries()]
+      .filter(([fwId]) => !desiredIds.has(fwId) || !descriptorById.has(fwId))
+      .sort((a, b) => b[1].descriptor.depth - a[1].descriptor.depth)
+    for (const [fwId] of removals) this.destroyMountedNode(fwId)
+
+    for (const descriptor of descriptors) {
+      const fwId = descriptor.node.fwId
+      if (!desiredIds.has(fwId)) continue
+      const previous = this.mounted.get(fwId)
+      if (previous === undefined) {
+        this.createMountedNode(descriptor)
+        continue
+      }
+
+      const typeChanged = previous.descriptor.node.fwType !== descriptor.node.fwType
+      const parentChanged = previous.descriptor.parentFwId !== descriptor.parentFwId
+      const leafChanged =
+        !isFrameNode(descriptor.node) &&
+        (previous.descriptor.node !== descriptor.node ||
+          !samePoint(previous.descriptor.position, descriptor.position) ||
+          !sameSize(previous.descriptor.size, descriptor.size) ||
+          previous.descriptor.selected !== descriptor.selected)
+
+      if (typeChanged || parentChanged || leafChanged) {
+        if ((typeChanged || parentChanged) && isFrameNode(previous.descriptor.node)) {
+          this.destroyMountedSubtree(fwId)
+        } else {
+          this.destroyMountedNode(fwId)
+        }
+        this.createMountedNode(descriptor)
+      } else {
+        previous.descriptor = descriptor
+        if (isFrameNode(descriptor.node)) {
+          previous.ui.set({
+            ...toLeaferProps(descriptor.node, descriptor.position, descriptor.size),
+            fill: descriptor.node.background ?? undefined,
+            overflow: descriptor.node.clip ? 'hide' : 'show',
+          })
+          previous.ui.data = {
+            ...(previous.ui.data as Record<string, unknown> | undefined),
+            fwId,
+          }
+        }
+      }
+    }
+
+    this.syncChildOrder(descriptors, desiredIds)
+    const rootUi = this.mounted.get(ctx.root.fwId)?.ui
+    if (rootUi !== undefined) {
+      this.connectionLayer = buildConnectionLayer(
+        getConnectionsInViewport(ctx.root, ctx.viewport, cullingOptions),
+        ctx.selection,
+        ctx.viewport.scale,
+      )
+      rootUi.add(this.connectionLayer, 0)
+    }
+    this.mountedOrder = descriptors
+      .map((descriptor) => descriptor.node.fwId)
+      .filter((fwId) => this.mounted.has(fwId))
+    return snapshot
+  }
+
+  getMountedNodeIds(): string[] {
+    return [...this.mountedOrder]
+  }
+
+  getMountedUi(fwId: string): IUI | undefined {
+    return this.mounted.get(fwId)?.ui
+  }
+
+  getConnectionLayer(): IUI | null {
+    return this.connectionLayer
+  }
+
+  destroy(): void {
+    this.destroyConnectionLayer()
+    const entries = [...this.mounted.entries()].sort(
+      (a, b) => b[1].descriptor.depth - a[1].descriptor.depth,
+    )
+    for (const [fwId] of entries) this.destroyMountedNode(fwId)
+    this.mountedOrder = []
+  }
+
+  private createMountedNode(descriptor: SceneDescriptor): void {
+    const parent =
+      descriptor.parentFwId === null
+        ? this.leafer
+        : this.mounted.get(descriptor.parentFwId)?.ui
+    if (parent === undefined) return
+    const ui = LEAFER_SHAPES[descriptor.node.fwType]({
+      node: descriptor.node,
+      position: descriptor.position,
+      size: descriptor.size,
+      selected: descriptor.selected,
+    })
+    ui.data = { ...(ui.data as Record<string, unknown> | undefined), fwId: descriptor.node.fwId }
+    parent.add(ui)
+    this.mounted.set(descriptor.node.fwId, { descriptor, ui })
+  }
+
+  private destroyMountedNode(fwId: string): void {
+    const mounted = this.mounted.get(fwId)
+    if (mounted === undefined) return
+    mounted.ui.remove()
+    mounted.ui.destroy()
+    this.mounted.delete(fwId)
+  }
+
+  private destroyMountedSubtree(rootFwId: string): void {
+    const isInSubtree = (mounted: MountedNode): boolean => {
+      let fwId: string | null = mounted.descriptor.node.fwId
+      while (fwId !== null) {
+        if (fwId === rootFwId) return true
+        fwId = this.mounted.get(fwId)?.descriptor.parentFwId ?? null
+      }
+      return false
+    }
+    const subtree = [...this.mounted.entries()]
+      .filter(([, mounted]) => isInSubtree(mounted))
+      .sort((a, b) => b[1].descriptor.depth - a[1].descriptor.depth)
+    for (const [fwId] of subtree) this.destroyMountedNode(fwId)
+  }
+
+  private destroyConnectionLayer(): void {
+    if (this.connectionLayer === null) return
+    this.connectionLayer.remove()
+    this.connectionLayer.destroy()
+    this.connectionLayer = null
+  }
+
+  private syncChildOrder(
+    descriptors: readonly SceneDescriptor[],
+    desiredIds: ReadonlySet<string>,
+  ): void {
+    const childrenByParent = new Map<string | null, IUI[]>()
+    for (const descriptor of descriptors) {
+      if (!desiredIds.has(descriptor.node.fwId)) continue
+      const ui = this.mounted.get(descriptor.node.fwId)?.ui
+      if (ui === undefined) continue
+      const siblings = childrenByParent.get(descriptor.parentFwId) ?? []
+      siblings.push(ui)
+      childrenByParent.set(descriptor.parentFwId, siblings)
+    }
+    for (const [parentFwId, children] of childrenByParent) {
+      const parent = parentFwId === null ? this.leafer : this.mounted.get(parentFwId)?.ui
+      if (parent === undefined) continue
+      children.forEach((child, index) => parent.add(child, index))
+    }
+  }
+}
