@@ -76,6 +76,18 @@ export class HtmlVideoSource {
   load(): Promise<void> {
     if (this._state === 'ready') return Promise.resolve()
     if (this.loadPromise !== null) return this.loadPromise
+
+    // 🔴 空 url 不进加载流程。
+    //
+    // `src` 的 schema 默认值是空字符串而不是 null，早期存下来的文档里 `src: ''` 遍地都是。
+    // 把它交给 `<video>` 会抛 `NotSupportedError: The element has no supported sources`，
+    // 而且是 unhandled rejection —— 控制台刷屏，却指不到「这个节点本来就没素材」这个事实。
+    // DOM 侧同一条数据触发的是浏览器的「empty string passed to src」警告。
+    if (this.url === '') {
+      this._state = 'error'
+      return Promise.resolve()
+    }
+
     this._state = 'loading'
     const el = this.createElement(this.url)
     this.el = el
