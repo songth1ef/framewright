@@ -473,7 +473,7 @@ export function RendererHost({
     <main
       data-testid="canvas-host"
       data-history-ready={String(historyReady)}
-      style={{ fontFamily: 'system-ui, sans-serif', padding: 16 }}
+      style={{ fontFamily: 'system-ui, sans-serif', padding: 12 }}
     >
       <ViewportToolbar
         activeRendererId={active?.id ?? ''}
@@ -534,7 +534,12 @@ export function RendererHost({
         </button>
       </div>
 
-      <div style={{ position: 'relative', width: 800, height: 450 }}>
+      {/*
+        画布占视口的大部分，而不是固定 800×450。
+        原先是写死尺寸，测大画布时可视区太小，看不出平移缩放与裁剪的效果。
+        用 vw/vh 而不是百分比：父级链上没有确定高度时，百分比高度会塌成 0。
+      */}
+      <div style={{ position: 'relative', width: '96vw', height: '80vh' }}>
         <div
           ref={containerRef}
           data-testid="canvas-container"
