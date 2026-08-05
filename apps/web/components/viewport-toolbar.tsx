@@ -15,6 +15,7 @@ interface ViewportToolbarProps {
   onZoomOut(): void
   onFitCanvas(): void
   onActualSize(): void
+  onShowShortcuts(): void
 }
 
 const toolbarStyle: CSSProperties = {
@@ -65,6 +66,7 @@ export function ViewportToolbar({
   onZoomOut,
   onFitCanvas,
   onActualSize,
+  onShowShortcuts,
 }: ViewportToolbarProps) {
   const activeIndex = renderers.findIndex((renderer) => renderer.id === activeRendererId)
   const active = renderers[activeIndex]
@@ -124,6 +126,16 @@ export function ViewportToolbar({
           style={{ ...buttonStyle, borderColor: '#d0d5dd', background: '#f9fafb' }}
         >
           切换
+        </button>
+        <button
+          type="button"
+          aria-label="打开快捷键帮助"
+          aria-haspopup="dialog"
+          title="键盘快捷键"
+          onClick={onShowShortcuts}
+          style={{ ...buttonStyle, minWidth: 32, padding: 0, borderColor: '#d0d5dd' }}
+        >
+          ?
         </button>
       </div>
     </div>

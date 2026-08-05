@@ -15,5 +15,7 @@ describe('ViewportToolbar', () => {
     expect(source).toContain('aria-label="渲染器"')
     expect(source).toContain('data-testid="renderer-switch"')
     expect(source).toContain('data-testid="active-renderer"')
+    expect(source).toContain('aria-label="打开快捷键帮助"')
+    expect(source).toContain('aria-haspopup="dialog"')
   })
 })

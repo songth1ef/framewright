@@ -26,6 +26,7 @@ import { createDomRenderer } from '@framewright/renderer-dom'
 import { createLeaferRenderer } from '@framewright/renderer-leafer'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DevPanelController, type DevPanelHandle } from './dev-panel'
+import { EmptyCanvasGuide, ShortcutHelpDialog } from './canvas-overlays'
 import { loadServerHistory } from './server-history'
 import type { ServerHistory } from './server-history'
 import {
@@ -104,6 +105,7 @@ export function RendererHost({
   const adapterRef = useRef<RendererAdapter | null>(null)
   const devPanelRef = useRef<DevPanelHandle | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [showShortcuts, setShowShortcuts] = useState(false)
   const getViewportSize = (): ViewportSize => ({
     width: containerRef.current?.clientWidth || 800,
     height: containerRef.current?.clientHeight || 450,
@@ -386,6 +388,7 @@ export function RendererHost({
           setViewport(centerContentAtActualSize(getContentBounds(rootRef.current), getViewportSize()))
         }
         onActualSize={() => setViewport((current) => setActualSize(current, getViewportSize()))}
+        onShowShortcuts={() => setShowShortcuts(true)}
       />
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
         {!historyReady ? <span role="status">正在加载撤销历史…</span> : null}
@@ -436,17 +439,22 @@ export function RendererHost({
         </button>
       </div>
 
-      <div
-        ref={containerRef}
-        data-testid="canvas-container"
-        style={{
-          width: 800,
-          height: 450,
-          overflow: 'hidden',
-          border: '1px solid #DDD',
-          position: 'relative',
-        }}
-      />
+      <div style={{ position: 'relative', width: 800, height: 450 }}>
+        <div
+          ref={containerRef}
+          data-testid="canvas-container"
+          style={{
+            width: '100%',
+            height: '100%',
+            overflow: 'hidden',
+            border: '1px solid #DDD',
+            position: 'relative',
+            boxSizing: 'border-box',
+          }}
+        />
+        {historyReady && root.children.length === 0 ? <EmptyCanvasGuide /> : null}
+      </div>
+      {showShortcuts ? <ShortcutHelpDialog onClose={() => setShowShortcuts(false)} /> : null}
       {DEV_PANEL_ENABLED ? (
         <DevPanelController ref={devPanelRef} selectedNodes={selectedNodes} />
       ) : null}
