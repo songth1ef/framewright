@@ -32,6 +32,7 @@ import { EmptyCanvasGuide, ShortcutHelpDialog } from './canvas-overlays'
 import { useCanvasDocumentFileActions } from './canvas-document-file-actions'
 import { CanvasDocumentStatus } from './canvas-document-status'
 import { createDerivedGenerationSubmitter } from './derived-actions'
+import { createDocumentAutosave, type DocumentAutosave } from './document-autosave'
 import { createGenerationController, type GenerationController, type GenerationNodePatch } from './generation-actions'
 import { createHttpGenerationBackend } from './generation-client'
 import { FpsMonitor } from './fps-monitor-view'
@@ -141,8 +142,7 @@ export function RendererHost({
   const historyRef = useRef<ReturnType<typeof createMemoryHistory> | ServerHistory>(
     createMemoryHistory(),
   )
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const saveRevisionRef = useRef(0)
+  const autosaveRef = useRef<DocumentAutosave<FrameNode> | null>(null)
   const savedRootRef = useRef(root)
   const dirtyRef = useRef(false)
   const mountedRef = useRef(true)
@@ -179,7 +179,7 @@ export function RendererHost({
     return 'getHistorySeq' in history ? history.getHistorySeq() : 0
   }
 
-  const saveDocument = async (snapshot: FrameNode, revision: number): Promise<void> => {
+  const saveDocument = async (snapshot: FrameNode): Promise<void> => {
     if (documentId === undefined || documentName === undefined) return
     const history = historyRef.current
     if ('flush' in history) await history.flush()
@@ -189,49 +189,44 @@ export function RendererHost({
       body: JSON.stringify({ name: documentName, root: snapshot, historySeq: getHistorySeq() }),
     })
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    if (revision !== saveRevisionRef.current) return
-    dirtyRef.current = false
-    savedRootRef.current = snapshot
-    if (mountedRef.current) setSaveStatus('saved')
   }
 
   useEffect(() => {
-    if (documentId === undefined || documentName === undefined || root === savedRootRef.current) return
-    dirtyRef.current = true
-    const revision = saveRevisionRef.current + 1
-    saveRevisionRef.current = revision
-    setSaveStatus('saving')
-    if (saveTimerRef.current !== null) clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(() => {
-      saveTimerRef.current = null
-      void saveDocument(root, revision).catch((error: unknown) => {
-        console.error('[framewright] 自动保存失败', error)
-        if (revision === saveRevisionRef.current && mountedRef.current) setSaveStatus('error')
-      })
-    }, 800)
-  }, [documentId, documentName, root])
-
-  useEffect(() => {
     mountedRef.current = true
+    if (documentId === undefined || documentName === undefined) return
+
+    const autosave = createDocumentAutosave<FrameNode>({
+      save: saveDocument,
+      flush: async (snapshot) => {
+        const history = historyRef.current
+        if ('flush' in history) void history.flush()
+        const response = await fetch(`/api/documents/${encodeURIComponent(documentId)}`, {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            name: documentName,
+            root: snapshot,
+            historySeq: getHistorySeq(),
+          }),
+          keepalive: true,
+        })
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      },
+      onStatus: (status) => {
+        if (mountedRef.current) setSaveStatus(status)
+      },
+      onSaved: (snapshot) => {
+        dirtyRef.current = false
+        savedRootRef.current = snapshot
+      },
+      onError: (error) => console.error('[framewright] 自动保存失败', error),
+    })
+    autosaveRef.current = autosave
+
     const flushPendingSave = (): void => {
-      if (!dirtyRef.current || documentId === undefined || documentName === undefined) return
+      if (!dirtyRef.current) return
       dirtyRef.current = false
-      if (saveTimerRef.current !== null) {
-        clearTimeout(saveTimerRef.current)
-        saveTimerRef.current = null
-      }
-      const history = historyRef.current
-      if ('flush' in history) void history.flush()
-      void fetch(`/api/documents/${encodeURIComponent(documentId)}`, {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          name: documentName,
-          root: rootRef.current,
-          historySeq: getHistorySeq(),
-        }),
-        keepalive: true,
-      }).catch((error: unknown) => console.error('[framewright] 离开页面前保存失败', error))
+      autosave.flushNow(rootRef.current)
     }
 
     window.addEventListener('pagehide', flushPendingSave)
@@ -239,11 +234,19 @@ export function RendererHost({
       mountedRef.current = false
       window.removeEventListener('pagehide', flushPendingSave)
       flushPendingSave()
+      autosave.dispose()
+      if (autosaveRef.current === autosave) autosaveRef.current = null
       // 文档切换 / 卸载时停掉所有在途轮询，避免补丁落到新文档的树上
       generationControllerRef.current?.dispose()
       generationControllerRef.current = null
     }
   }, [documentId, documentName])
+
+  useEffect(() => {
+    if (documentId === undefined || documentName === undefined || root === savedRootRef.current) return
+    dirtyRef.current = true
+    autosaveRef.current?.queue(root)
+  }, [documentId, documentName, root])
 
   const commitOps = (ops: readonly CanvasOp[]): void => {
     const op = groupOps(ops)
