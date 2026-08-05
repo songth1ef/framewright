@@ -1,4 +1,5 @@
 import {
+  createAudioNode,
   createAiImageNode,
   createAiVideoNode,
   createFrameNode,
@@ -8,13 +9,14 @@ import {
   type FrameNode,
 } from './node-schema'
 import {
+  PUBLIC_AUDIO_ASSETS,
   PUBLIC_IMAGE_ASSETS,
   PUBLIC_VIDEO_ASSETS,
   type PublicImageAsset,
   type PublicVideoAsset,
 } from './demo-media'
 
-export const SCALE_FIXTURE_NODE_TYPES = ['img', 'video', 'ai-image', 'ai-video'] as const
+export const SCALE_FIXTURE_NODE_TYPES = ['img', 'video', 'audio', 'ai-image', 'ai-video'] as const
 export type ScaleFixtureNodeType = (typeof SCALE_FIXTURE_NODE_TYPES)[number]
 export type ScaleFixtureConnectionPattern = 'none' | 'fanin' | 'distributed' | 'many-to-many'
 export type ScaleFixtureSeed = number | string
@@ -24,7 +26,7 @@ export interface ScaleFixtureOptions {
   nodeCount: number
   connectionPattern: ScaleFixtureConnectionPattern
   seed: ScaleFixtureSeed
-  /** 四种素材的相对权重。传入时未列出的类型权重视为 0。 */
+  /** 五种素材的相对权重。传入时未列出的类型权重视为 0。 */
   typeRatios?: Partial<Record<ScaleFixtureNodeType, number>>
   /** many-to-many 的每组结构：M 个素材 → K 个 v1 → K 个 v2。 */
   manyToMany?: {
@@ -36,6 +38,7 @@ export interface ScaleFixtureOptions {
 const DEFAULT_TYPE_RATIOS: Record<ScaleFixtureNodeType, number> = {
   img: 3,
   video: 1,
+  audio: 1,
   'ai-image': 4,
   'ai-video': 2,
 }
@@ -117,8 +120,9 @@ function allocateTypeCounts(
   return {
     img: counts[0] ?? 0,
     video: counts[1] ?? 0,
-    'ai-image': counts[2] ?? 0,
-    'ai-video': counts[3] ?? 0,
+    audio: counts[2] ?? 0,
+    'ai-image': counts[3] ?? 0,
+    'ai-video': counts[4] ?? 0,
   }
 }
 
@@ -212,6 +216,7 @@ function assignTypes(
   const remainingCounts: Record<ScaleFixtureNodeType, number> = {
     img: counts.img,
     video: counts.video,
+    audio: counts.audio,
     'ai-image': aiImageRemaining,
     'ai-video': aiVideoRemaining,
   }
@@ -240,6 +245,18 @@ function createMaterialNode(
   sourceFwIds: string[],
   random: () => number,
 ): CanvasNode {
+  if (type === 'audio') {
+    const audioAsset = pickAsset(PUBLIC_AUDIO_ASSETS, random)
+    return createAudioNode({
+      fwId: nodeId(index),
+      name: `规模夹具 ${index + 1} · ${audioAsset.id}`,
+      x,
+      y,
+      width: NODE_CELL_WIDTH,
+      height: NODE_CELL_HEIGHT,
+      src: audioAsset.url,
+    })
+  }
   const imageAsset: PublicImageAsset | undefined =
     type === 'img' || type === 'ai-image' ? pickAsset(PUBLIC_IMAGE_ASSETS, random) : undefined
   const videoAsset: PublicVideoAsset | undefined =

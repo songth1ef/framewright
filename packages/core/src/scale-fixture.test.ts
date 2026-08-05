@@ -18,7 +18,7 @@ function edgeCount(nodes: readonly CanvasNode[]): number {
 
 function mediaUrls(nodes: readonly CanvasNode[]): string[] {
   return nodes.map((node) => {
-    if (node.fwType === 'img' || node.fwType === 'video') return node.src
+    if (node.fwType === 'img' || node.fwType === 'video' || node.fwType === 'audio') return node.src
     if (node.fwType === 'ai-image' || node.fwType === 'ai-video') return node.src ?? ''
     return ''
   })
@@ -53,7 +53,7 @@ describe('createScaleFixture', () => {
     expect(different).not.toEqual(first)
   })
 
-  it('真实图片分配铺开至少八种宽高比与四档源分辨率', () => {
+  it('真实图片分配铺开至少八种宽高比与五档源分辨率', () => {
     const root = createScaleFixture({
       nodeCount: 900,
       connectionPattern: 'none',
@@ -68,7 +68,7 @@ describe('createScaleFixture', () => {
     expect(assigned.every(Boolean)).toBe(true)
     expect(new Set(assigned.map((asset) => asset?.aspectRatio)).size).toBeGreaterThanOrEqual(8)
     expect(new Set(assigned.map((asset) => asset?.resolutionTier))).toEqual(
-      new Set(['720p', '1K', '2K', '4K']),
+      new Set(['720p', '1K', '2K', '4K', '8K']),
     )
     expect(new Set(root.children.map((node) => node.width / node.height)).size).toBeGreaterThanOrEqual(8)
   })
@@ -91,6 +91,19 @@ describe('createScaleFixture', () => {
     expect(durations.some((duration) => duration >= 9 && duration < 15)).toBe(true)
     expect(durations.some((duration) => duration >= 30 && duration < 40)).toBe(true)
     expect(durations.some((duration) => duration >= 55 && duration < 62)).toBe(true)
+  })
+
+  it('audio 节点随机分配经过实测的真实公开音频', () => {
+    const root = createScaleFixture({
+      nodeCount: 300,
+      connectionPattern: 'none',
+      seed: 83,
+      typeRatios: { audio: 1 },
+    })
+
+    expect(root.children.every((node) => node.fwType === 'audio')).toBe(true)
+    expect(new Set(mediaUrls(root.children)).size).toBeGreaterThan(1)
+    expect(mediaUrls(root.children).every((url) => url.startsWith('https://'))).toBe(true)
   })
 
   it('nodeCount 表示画布内素材节点数，root frame 是额外的容器节点', () => {
@@ -151,11 +164,12 @@ describe('createScaleFixture', () => {
     const typeRatios: Record<ScaleFixtureNodeType, number> = {
       img: 1,
       video: 2,
-      'ai-image': 3,
-      'ai-video': 4,
+      audio: 3,
+      'ai-image': 4,
+      'ai-video': 5,
     }
     const root = createScaleFixture({
-      nodeCount: 1_000,
+      nodeCount: 1_500,
       connectionPattern: 'none',
       seed: 5,
       typeRatios,
@@ -167,7 +181,7 @@ describe('createScaleFixture', () => {
       ]),
     )
 
-    expect(counts).toEqual({ img: 100, video: 200, 'ai-image': 300, 'ai-video': 400 })
+    expect(counts).toEqual({ img: 100, video: 200, audio: 300, 'ai-image': 400, 'ai-video': 500 })
   })
 
   it('网格布局中任意节点都不重叠', () => {
