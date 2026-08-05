@@ -3,6 +3,7 @@ import {
   assertShapeCoverage,
   isAiImageNode,
   isAiVideoNode,
+  isAudioNode,
   isBoxNode,
   isFrameNode,
   isImgNode,
@@ -14,6 +15,7 @@ import {
 import { Box, Rect, type IUI } from 'leafer-ui'
 import { toLeaferProps } from '../node-props'
 import { createVideoShape } from '../video/video-node'
+import { createAudioShape } from './audio'
 import { createGenerationUnitShape } from './generation-unit'
 import { createImageShape } from './image'
 
@@ -53,6 +55,7 @@ export const LEAFER_SHAPES: Record<ShapeType, ShapeFactory> = {
   box: createBox,
   img: createImageShape(),
   video: createVideoShape(),
+  audio: createAudioShape(),
   'ai-image': createGenerationUnitShape(),
   'ai-video': createGenerationUnitShape(),
 }
@@ -154,6 +157,27 @@ export function updateLeaferShape(
         previousNode.width !== (size?.width ?? node.width) ||
         previousNode.height !== (size?.height ?? node.height)
       if (contentChanged) replaceChildren(ui, LEAFER_SHAPES.video(ctx))
+      break
+    }
+    case 'audio': {
+      const empty = !isAudioNode(node) || node.src === ''
+      ui.set({
+        ...geometry,
+        fill: empty ? '#DDDDDD' : '#171A21',
+        stroke: empty ? '#999999' : undefined,
+        strokeWidth: empty ? 1 : 0,
+        dashPattern: empty ? [4, 4] : undefined,
+        cornerRadius: empty ? 0 : 8,
+        overflow: 'hide',
+      })
+      const contentChanged =
+        !isAudioNode(previousNode) ||
+        !isAudioNode(node) ||
+        previousNode.src !== node.src ||
+        previousNode.name !== node.name ||
+        previousNode.width !== (size?.width ?? node.width) ||
+        previousNode.height !== (size?.height ?? node.height)
+      if (contentChanged) replaceChildren(ui, LEAFER_SHAPES.audio(ctx))
       break
     }
   }

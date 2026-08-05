@@ -12,6 +12,7 @@ import {
 } from '@framewright/core'
 import type { CSSProperties, ReactNode } from 'react'
 import { toNodeStyle } from '../node-style'
+import { AudioShape } from './audio'
 import { GenerationUnit } from './generation-unit'
 import { ImageShape } from './image'
 import { VideoShape } from './video'
@@ -90,6 +91,7 @@ export const DOM_SHAPES: Record<ShapeType, ShapeComponent> = {
   box: BoxShape,
   img: ImageShape,
   video: VideoShape,
+  audio: AudioShape,
   'ai-image': GenerationUnitShape,
   'ai-video': GenerationUnitShape,
 }

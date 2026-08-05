@@ -5,6 +5,7 @@ import {
   DEFAULT_VIEWPORT,
   GEN_UNIT_STYLE,
   NOOP_RENDERER_CALLBACKS,
+  createAudioNode,
   createAiImageNode,
   createAiVideoNode,
   createDemoDocument,
@@ -161,6 +162,33 @@ function makeImgContext(src = '/fixtures/reference.png'): RenderContext {
   }
 }
 
+function makeAudioContext(src = '/fixtures/theme.mp3'): RenderContext {
+  return {
+    root: createFrameNode({
+      fwId: 'root',
+      width: 800,
+      height: 600,
+      children: [
+        createAudioNode({
+          fwId: 'audio-1',
+          name: '主题音乐',
+          x: 12,
+          y: 34,
+          width: 320,
+          height: 120,
+          rotation: 5,
+          opacity: 0.75,
+          locked: true,
+          src,
+        }),
+      ],
+    }),
+    selection: [],
+    viewport: DEFAULT_VIEWPORT,
+    callbacks: NOOP_RENDERER_CALLBACKS,
+  }
+}
+
 function makeInteractiveVideoContext(
   selection: readonly string[] = [],
   callbacks: RendererCallbacks = NOOP_RENDERER_CALLBACKS,
@@ -304,6 +332,54 @@ describe('createDomRenderer', () => {
     expect(image.getAttribute('locked')).toBeNull()
     expect(image.getAttribute('children')).toBeNull()
     expect(image.getAttribute('name')).toBeNull()
+    await act(async () => renderer.destroy())
+  })
+
+  it('audio 有 src 时渲染深色卡片、名称与原生播放控件', async () => {
+    const renderer = await mountRenderer(makeAudioContext())
+    const card = container!.querySelector('[data-fw-id="audio-1"]') as HTMLElement
+    const audio = card.querySelector('audio') as HTMLAudioElement
+
+    expect(card).toBeInstanceOf(HTMLDivElement)
+    expect(card.dataset.fwAudioCard).toBe('true')
+    expect(card.dataset.fwAudioName).toBe('主题音乐')
+    expect(card.style.left).toBe('12px')
+    expect(card.style.top).toBe('34px')
+    expect(card.style.width).toBe('320px')
+    expect(card.style.height).toBe('120px')
+    expect(card.style.opacity).toBe('0.75')
+    expect(card.style.transform).toBe('rotate(5deg)')
+    expect(audio).toBeInstanceOf(HTMLAudioElement)
+    expect(audio.controls).toBe(true)
+    expect(audio.preload).toBe('none')
+    expect(audio.getAttribute('src')).toBe('/fixtures/theme.mp3')
+    expect(audio.dataset.fwInteraction).toBe('ignore')
+    expect(card.querySelectorAll('*')).toHaveLength(1)
+    expect(container!.querySelectorAll('style[data-fw-renderer-styles="true"]')).toHaveLength(1)
+    await act(async () => renderer.destroy())
+  })
+
+  it('audio 无 src 时渲染稳定占位，不创建空音频请求', async () => {
+    const renderer = await mountRenderer(makeAudioContext(''))
+    const placeholder = container!.querySelector('[data-fw-id="audio-1"]') as HTMLElement
+
+    expect(placeholder.dataset.fwAudioPlaceholder).toBe('true')
+    expect(placeholder.querySelector('audio')).toBeNull()
+    await act(async () => renderer.destroy())
+  })
+
+  it('audio 映射不向 DOM 泄漏 node 内部字段', async () => {
+    const renderer = await mountRenderer(makeAudioContext())
+    const card = container!.querySelector('[data-fw-id="audio-1"]') as HTMLElement
+    const audio = card.querySelector('audio') as HTMLAudioElement
+
+    for (const element of [card, audio]) {
+      expect(element.getAttribute('fwId')).toBeNull()
+      expect(element.getAttribute('fwType')).toBeNull()
+      expect(element.getAttribute('locked')).toBeNull()
+      expect(element.getAttribute('children')).toBeNull()
+      expect(element.getAttribute('name')).toBeNull()
+    }
     await act(async () => renderer.destroy())
   })
 
