@@ -72,13 +72,28 @@ describe('POST /api/generations/[id]/poll', () => {
     expect(service.pollGeneration).not.toHaveBeenCalled()
   })
 
-  it('server-core 异常统一映射为 500', async () => {
+  it('generation 不存在时按稳定错误码映射为 404', async () => {
     const service = createService()
-    vi.mocked(service.pollGeneration).mockRejectedValue(new Error('unknown generation'))
+    vi.mocked(service.pollGeneration).mockRejectedValue(
+      Object.assign(new Error('unknown generation'), { code: 'unknown-generation' }),
+    )
 
     const response = await createGenerationPollRouteHandlers(service).POST(
       request('{}'),
       context('missing'),
+    )
+
+    expect(response.status).toBe(404)
+    await expect(response.json()).resolves.toEqual({ error: 'generation_not_found' })
+  })
+
+  it('其它 server-core 异常仍映射为 500', async () => {
+    const service = createService()
+    vi.mocked(service.pollGeneration).mockRejectedValue(new Error('database offline'))
+
+    const response = await createGenerationPollRouteHandlers(service).POST(
+      request('{}'),
+      context('generation-a'),
     )
 
     expect(response.status).toBe(500)

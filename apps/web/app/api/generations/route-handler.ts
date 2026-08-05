@@ -61,6 +61,10 @@ function isGenerationKind(value: unknown): value is GenerationKind {
   return typeof value === 'string' && GENERATION_KINDS.includes(value as GenerationKind)
 }
 
+function hasErrorCode(error: unknown, code: string): boolean {
+  return isRecord(error) && error['code'] === code
+}
+
 function parseParams(value: unknown): GenerationParamsDto | null {
   if (!isRecord(value) || !isGenerationKind(value['kind'])) return null
   const prompt = parseRequiredText(value['prompt'])
@@ -137,7 +141,10 @@ export function createGenerationPollRouteHandlers(service: GenerationPollRouteSe
 
       try {
         return Response.json(await service.pollGeneration(generationId, taskId))
-      } catch {
+      } catch (error) {
+        if (hasErrorCode(error, 'unknown-generation')) {
+          return jsonError('generation_not_found', 404)
+        }
         return jsonError('internal_error', 500)
       }
     },

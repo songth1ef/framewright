@@ -8,6 +8,7 @@
   "exports": { ".": "./src/index.ts" },
   "dependencies": {
     "@framewright/core": "workspace:*",
+    "@framewright/provider": "workspace:*",
     "@prisma/adapter-better-sqlite3": "^6.19.3",
     "@prisma/client": "^6.19.3"
   },

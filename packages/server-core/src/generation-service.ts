@@ -6,15 +6,15 @@
  * Asset 并回填 `outputAssetIds`。
  *
  * 给调用方（apps/web 的 Route Handler，G3-5）的约定：
- * - 本层是纯 TS，不碰任何 Web 框架概念；由 Route Handler 组装依赖后调用。
+ * - 本层是纯 TS，不碰任何 Web 框架概念；默认依赖由 server-core 的
+ *   composition root 统一组装，Route Handler 只调用导出的业务函数。
  * - 🔴 产品安全底线：`submitGeneration` 是**显式入口**，只允许在「用户确认了
  *   生成计划」之后由 Route Handler 调用；LLM 或任何自动流程（含轮询）都
  *   不许触发它——轮询只有 `pollGeneration` 一条路，它永不提交新任务。
  *
- * 依赖注入说明：server-core 不依赖 `@framewright/provider` 包（保持包边界
- * 干净），这里用结构化接口 `GenerationProviderPort` 对齐 provider 的
- * `GenerationProvider`——字段形状一致，`MockGenerationProvider` 及未来
- * 真实厂商实现可直接传入（TS 结构化类型兼容）。
+ * 依赖注入说明：工厂继续只认结构化接口 `GenerationProviderPort`，与
+ * provider 的 `GenerationProvider` 字段形状一致；默认 mock 实现仅在
+ * composition root 组装，将来替换真实厂商只需改该处。
  */
 
 import { randomUUID } from 'node:crypto'
@@ -108,6 +108,19 @@ export interface GenerationService {
   pollGeneration(generationId: string, taskId?: string): Promise<StoredGeneration>
 }
 
+export type GenerationServiceErrorCode = 'unknown-generation'
+
+/** 生成编排层的稳定错误；code 供 HTTP 等调用方做机器判定。 */
+export class GenerationServiceError extends Error {
+  constructor(
+    readonly code: GenerationServiceErrorCode,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'GenerationServiceError'
+  }
+}
+
 /** 常见产物的 MIME → 扩展名；未识别的 MIME 不加扩展名。 */
 const EXT_BY_MIME: Record<string, string> = {
   'image/png': '.png',
@@ -155,7 +168,7 @@ export function createGenerationService(deps: GenerationServiceDeps): Generation
     async pollGeneration(generationId, taskId) {
       const current = await deps.generationStore.getGeneration(generationId)
       if (current === null) {
-        throw new Error(`未知的生成记录：${generationId}`)
+        throw new GenerationServiceError('unknown-generation', `未知的生成记录：${generationId}`)
       }
       // 幂等守卫：已终态直接返回，重复 poll 不产生重复素材
       if (TERMINAL_STATUSES.includes(current.status)) {

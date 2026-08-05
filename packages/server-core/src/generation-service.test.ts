@@ -217,10 +217,13 @@ describe('Generation service（生成任务编排）', () => {
     expect(recovered.status).toBe('succeeded')
   })
 
-  it('pollGeneration 对不存在的 generation 抛错', async () => {
+  it('pollGeneration 对不存在的 generation 抛出机器可判定的 unknown-generation', async () => {
     const provider = new FakeProvider({ status: 'succeeded', result: SUCCESS_RESULT }, 0)
     const service = createService(provider)
 
-    await expect(service.pollGeneration('missing', 'fake-task-1')).rejects.toThrow(/missing/)
+    await expect(service.pollGeneration('missing', 'fake-task-1')).rejects.toMatchObject({
+      code: 'unknown-generation',
+      message: expect.stringMatching(/missing/),
+    })
   })
 })

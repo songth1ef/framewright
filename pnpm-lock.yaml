@@ -107,6 +107,9 @@ importers:
       '@framewright/core':
         specifier: workspace:*
         version: link:../core
+      '@framewright/provider':
+        specifier: workspace:*
+        version: link:../provider
       '@prisma/adapter-better-sqlite3':
         specifier: ^6.19.3
         version: 6.19.3
