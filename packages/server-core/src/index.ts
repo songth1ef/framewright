@@ -1,3 +1,5 @@
+export * from './asset-storage'
+export * from './asset-store'
 export * from './document-store'
 export * from './history-store'
 export * from './project-store'
