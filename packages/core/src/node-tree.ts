@@ -30,6 +30,25 @@ export function walkTree(
   step(root, 0, 0)
 }
 
+/**
+ * 可按节点剪掉整棵子树的深度优先遍历。
+ * visit 返回 false 时不再进入该节点的 children；适合级联可见性与视口裁剪等热路径。
+ */
+export function walkTreePruned(
+  root: CanvasNode,
+  visit: (node: CanvasNode, absolute: Point) => boolean | void,
+): void {
+  const step = (node: CanvasNode, parentX: number, parentY: number): void => {
+    const x = parentX + node.x
+    const y = parentY + node.y
+    if (visit(node, { x, y }) === false) return
+    if (isFrameNode(node)) {
+      for (const child of node.children) step(child, x, y)
+    }
+  }
+  step(root, 0, 0)
+}
+
 export function findNodeById(root: CanvasNode, fwId: string): CanvasNode | null {
   let found: CanvasNode | null = null
   walkTree(root, (node) => {
