@@ -40,6 +40,9 @@ export function createLeaferHitProbe(leafer: Leafer): CanvasHitProbe {
     while (current !== undefined) {
       const data = current.data as Record<string, unknown> | undefined
       if (typeof data?.['fwInternalAction'] === 'string') hit.internalAction = true
+      // 视频控制条（C3-leafer）：与内部动作按钮同待遇——不参与选中/拖拽/框选，
+      // 但它不上报 onNodeAction（播放控制是渲染器本地的呈现行为，不是业务动作）
+      if (data?.['fwVideoControl'] === true) hit.internalAction = true
       const corner = data?.['fwResizeHandle']
       if (
         hit.resizeHandle === null &&

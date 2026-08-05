@@ -14,3 +14,10 @@ docs/agents-mail/
 
 # 演示视频产物,不入库
 demo-video/
+
+# 实测探针:源码入库(可复现),但构建产物与素材不入库
+# 素材是 2.4MB 二进制,git 无法增量压缩,入库等于永久负重;
+# 探针结果 JSON 例外 —— 那是证据,体积也小,要留。
+probes/.dist/
+probes/fixtures/*.webm
+probes/fixtures/*.mp4

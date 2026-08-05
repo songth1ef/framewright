@@ -30,6 +30,13 @@ beforeEach(() => {
   const button = new Rect({ x: 10, y: 10, width: 60, height: 20, fill: '#CCCCCC' })
   button.data = { fwInternalAction: 'retry' }
   genUnit.add(button)
+  // 视频控制条（C3）：fwVideoControl 标记，与内部动作按钮同待遇但不上报 onNodeAction
+  const videoNode = new Box({ x: 90, y: 160, width: 120, height: 40, fill: '#000000' })
+  videoNode.data = { fwId: 'video-1' }
+  const controlBar = new Rect({ x: 0, y: 20, width: 120, height: 20, fill: '#333333' })
+  controlBar.data = { fwVideoControl: true }
+  videoNode.add(controlBar)
+  rootBox.add(videoNode)
   rootBox.add(genUnit)
   // 选中 overlay 的控制点：挂在 root 之后（最上层），带 fwResizeHandle + 所属节点 fwId
   const handle = new Rect({ x: 26, y: 26, width: 8, height: 8, fill: '#FFFFFF' })
@@ -77,6 +84,14 @@ describe('D2-leafer 命中探针', () => {
       fwId: 'box-a',
       resizeHandle: { fwId: 'box-a', corner: 'se' },
       internalAction: false,
+    })
+  })
+
+  it('命中视频控制条：internalAction 为 true（排除画布手势）且能拿到所属节点 fwId', () => {
+    expect(probe({ x: 100, y: 190 })).toEqual({
+      fwId: 'video-1',
+      resizeHandle: null,
+      internalAction: true,
     })
   })
 

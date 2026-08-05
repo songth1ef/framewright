@@ -8,6 +8,7 @@ import {
 } from '@framewright/core'
 import { Box, Rect, type IUI } from 'leafer-ui'
 import { toLeaferProps } from '../node-props'
+import { createVideoShape } from '../video/video-node'
 import { createGenerationUnitShape } from './generation-unit'
 
 export interface ShapeContext {
@@ -61,7 +62,7 @@ export const LEAFER_SHAPES: Record<ShapeType, ShapeFactory> = {
   frame: createFrame,
   box: createBox,
   img: makeUnsupportedShape(),
-  video: makeUnsupportedShape(),
+  video: createVideoShape(),
   'ai-image': createGenerationUnitShape(),
   'ai-video': createGenerationUnitShape(),
 }

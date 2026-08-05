@@ -1,0 +1,118 @@
+{
+  "steps": [
+    {
+      "step": "单路-加载",
+      "duration": 23.32,
+      "naturalSize": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "step": "单路-播放1.2s",
+      "currentTime": 1.222316,
+      "playing": true,
+      "画面指纹变化": false,
+      "指纹": [
+        [
+          -1124751841
+        ],
+        [
+          -1124751841
+        ]
+      ]
+    },
+    {
+      "step": "单路-暂停",
+      "暂停时进度": 1.228544,
+      "400ms后进度": 1.228544,
+      "进度停住": true
+    },
+    {
+      "step": "单路-点按seek到50%",
+      "期望": 11.66,
+      "实际": 0,
+      "偏差秒": 11.66,
+      "指纹": [
+        [
+          -1124751841
+        ],
+        [
+          -1124751841
+        ],
+        [
+          -1124751841
+        ]
+      ]
+    },
+    {
+      "step": "诊断-进度点击",
+      "layoutBar": {
+        "x": 0,
+        "y": 234,
+        "width": 480,
+        "height": 36
+      },
+      "layoutProgress": {
+        "x": 40,
+        "y": 250,
+        "width": 282,
+        "height": 4
+      },
+      "hitByContainerLocal": {
+        "type": "seek",
+        "fraction": 0.5
+      },
+      "hitByViewLocal": null,
+      "source": {
+        "state": "ready",
+        "currentTime": 0,
+        "duration": 23.32,
+        "rawDuration": 23.32,
+        "playing": false
+      }
+    },
+    {
+      "step": "单路-点按音量25%",
+      "实际音量": 0.25
+    },
+    {
+      "step": "并发-1路播放-FPS",
+      "frames": 181,
+      "elapsedMs": 3010.5999999940395,
+      "fps": 60.12090613178713,
+      "longFrames": 0,
+      "内存MB": 9.5
+    },
+    {
+      "step": "并发-4路播放-FPS",
+      "frames": 180,
+      "elapsedMs": 3014.19999999404,
+      "fps": 59.71733793389819,
+      "longFrames": 0,
+      "内存MB": 9.5
+    },
+    {
+      "step": "并发-8路播放-FPS",
+      "frames": 177,
+      "elapsedMs": 3000.7000000119206,
+      "fps": 58.98623654457189,
+      "longFrames": 0,
+      "内存MB": 9.5
+    },
+    {
+      "step": "并发-8路-各路进度",
+      "progresses": [
+        7.153291,
+        7.145509,
+        7.144603,
+        7.141486,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "startedAt": "2026-08-05T02:32:03.304Z"
+}
