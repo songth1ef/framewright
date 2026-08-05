@@ -112,6 +112,7 @@ export function createDocumentStore(client: PrismaClient): DocumentStore {
 const defaultStore = createDocumentStore(prisma)
 
 export const listDocuments = defaultStore.listDocuments
+export const listProjectDocuments = defaultStore.listProjectDocuments
 export const getDocument = defaultStore.getDocument
 export const createDocument = defaultStore.createDocument
 export const saveDocument = defaultStore.saveDocument
