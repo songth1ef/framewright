@@ -131,14 +131,20 @@ test('生成视频从 pending、running 进入成功态，产物能被浏览器�
 
   const video = node.locator('video')
   await expect(video).toBeVisible()
-  await expect
-    .poll(() => video.evaluate((element: HTMLVideoElement) => element.readyState))
-    .toBeGreaterThanOrEqual(2)
 
+  // 🔴 顺序不能反：媒体元素是 `preload="none"`（大数据量画布下刻意不预载），
+  // 所以 `play()` 之前 `readyState` 恒为 0 —— 先断言 readyState>=2 会必然超时。
+  // 但也不能因此把可播性断言删掉，那这条用例就只剩「有个 <video> 标签」了。
+  // 正确顺序：先 play() 触发加载，再验 readyState（浏览器真的解出了数据）
+  // 和 currentTime 推进（真的在播），两者缺一不可 ——
+  // readyState 单独能被「元数据到位但卡住」骗过，currentTime 单独区分不了 0 帧空转。
   await video.evaluate(async (element: HTMLVideoElement) => {
     element.muted = true
     await element.play()
   })
+  await expect
+    .poll(() => video.evaluate((element: HTMLVideoElement) => element.readyState))
+    .toBeGreaterThanOrEqual(2)
   await expect
     .poll(() => video.evaluate((element: HTMLVideoElement) => element.currentTime > 0 || element.ended))
     .toBe(true)

@@ -30,6 +30,11 @@ test('编辑后自动保存节点树，刷新后仍可跨会话撤销', async ({
   await expect(page.getByTestId('save-status')).toHaveText('保存中…')
   await expect(page.getByTestId('save-status')).toHaveText('已保存')
   await page.reload()
+  // 🔴 渲染器选择不跨刷新保持（它是会话内的调试开关，不写进文档），
+  // 刷新后会回落到默认渲染器。这里断言的是 DOM 选择器，所以每次 reload 都得重选。
+  // 尤其注意下面的 `toHaveCount(0)`：在 Leafer 下 canvas 本就没有 DOM 节点，
+  // 不重选的话这条断言**恒真**，是假通过而不是失败 —— 比报错更危险。
+  await selectRenderer(page, 'HTML / DOM')
   await expect(page.getByTestId('canvas-host')).toHaveAttribute('data-history-ready', 'true')
   await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 70, y: 65 })
 
@@ -38,6 +43,7 @@ test('编辑后自动保存节点树，刷新后仍可跨会话撤销', async ({
   await expect(page.getByTestId('save-status')).toHaveText('保存中…')
   await expect(page.getByTestId('save-status')).toHaveText('已保存')
   await page.reload()
+  await selectRenderer(page, 'HTML / DOM')
   await expect(page.locator('[data-fw-id="box-back"]')).toHaveCount(0)
 
   await expect(page.getByTestId('canvas-host')).toHaveAttribute('data-history-ready', 'true')
