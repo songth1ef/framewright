@@ -137,8 +137,16 @@ Prisma client、SQLite 文件、迁移历史、`node_modules`、端口 3100 全�
 
 ### 测试策略
 
-并行时执行方只跑**自己包的 scoped 测试**（`pnpm vitest run packages/<x>`），不跑全量 `verify`——
+并行时执行方只跑**自己包的 scoped 测试**（`pnpm vitest run --project <x>`），不跑全量 `verify`——
 4 路并发跑全量会互相拖垮，且会争 DB。全量 verify 由编排方在收编时跑一次。
+
+**🔴 但 scoped 指令必须同时要求 `npx tsc --build packages/<x>`。**
+
+这是编排方踩过的坑：**vitest 不做类型检查**。只让执行方跑 scoped vitest，
+等于在整个并行期间把 typecheck 这一层砍掉了 —— 结果是 `--project renderer-dom`
+72 条测试全绿，而 `tsc --build` 在同一份代码上报 9 个 `possibly undefined`。
+
+**「测试绿」和「能编译」是两件事，scoped 模式下必须分别要求。**
 
 ### 执行方 CLI 备忘（实测，别再猜）
 
