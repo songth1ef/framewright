@@ -22,6 +22,24 @@ export interface GenerationUnitProps {
 const SKELETON_ANIMATION = 'fw-generation-skeleton-sweep'
 const PROGRESS_ANIMATION = 'fw-generation-progress-indeterminate'
 
+const GENERATION_TOOLBAR_STYLE = {
+  offset: 8,
+  gap: 4,
+  padding: 4,
+  borderRadius: 6,
+  background: '#FFFFFF',
+  borderColor: 'rgba(15, 23, 42, 0.14)',
+  textColor: '#1E293B',
+  shadow: '0 4px 14px rgba(15, 23, 42, 0.16)',
+  fontSize: 12,
+} as const
+
+const TOOLBAR_ACTIONS = [
+  { label: '重新生成', action: 'regenerate' },
+  { label: '下载', action: 'download' },
+  { label: '删除', action: 'delete' },
+] as const
+
 const centeredContent: CSSProperties = {
   width: '100%',
   height: '100%',
@@ -38,6 +56,62 @@ const interactionButtonStyle: CSSProperties = {
   color: 'inherit',
   font: 'inherit',
   cursor: 'pointer',
+}
+
+function NodeToolbar({
+  fwId,
+  onNodeAction,
+}: {
+  fwId: string
+  onNodeAction: GenerationUnitProps['onNodeAction']
+}): ReactNode {
+  return (
+    <div
+      data-fw-node-toolbar="true"
+      data-fw-interaction="ignore"
+      role="toolbar"
+      aria-label="节点操作"
+      style={{
+        position: 'absolute',
+        right: 0,
+        bottom: `calc(100% + ${GENERATION_TOOLBAR_STYLE.offset}px)`,
+        zIndex: 2,
+        display: 'flex',
+        gap: `${GENERATION_TOOLBAR_STYLE.gap}px`,
+        padding: `${GENERATION_TOOLBAR_STYLE.padding}px`,
+        border: `1px solid ${GENERATION_TOOLBAR_STYLE.borderColor}`,
+        borderRadius: `${GENERATION_TOOLBAR_STYLE.borderRadius}px`,
+        background: GENERATION_TOOLBAR_STYLE.background,
+        boxShadow: GENERATION_TOOLBAR_STYLE.shadow,
+        opacity: 0,
+        visibility: 'hidden',
+        pointerEvents: 'none',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {TOOLBAR_ACTIONS.map(({ label, action }) => (
+        <button
+          key={action}
+          data-fw-interaction="ignore"
+          type="button"
+          style={{
+            ...interactionButtonStyle,
+            padding: '3px 6px',
+            borderRadius: '4px',
+            color: GENERATION_TOOLBAR_STYLE.textColor,
+            fontSize: `${GENERATION_TOOLBAR_STYLE.fontSize}px`,
+            lineHeight: 1.4,
+          }}
+          onClick={(event) => {
+            event.stopPropagation()
+            onNodeAction(fwId, action)
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
 }
 
 function EmptyContent({ onAction }: { onAction(): void }): ReactNode {
@@ -226,7 +300,7 @@ export function GenerationUnit({
   const isFailed = node.status === 'failed'
   const style: CSSProperties = {
     ...toNodeStyle(node, position, size),
-    overflow: 'hidden',
+    overflow: 'visible',
     borderWidth: `${GEN_UNIT_STYLE.borderWidth}px`,
     borderStyle: isEmpty ? 'dashed' : 'solid',
     borderColor: isFailed ? GEN_UNIT_STYLE.failedBorderColor : GEN_UNIT_STYLE.borderColor,
@@ -234,7 +308,12 @@ export function GenerationUnit({
   }
 
   return (
-    <div data-fw-id={node.fwId} data-fw-type={node.fwType} style={style}>
+    <div
+      data-fw-id={node.fwId}
+      data-fw-type={node.fwType}
+      data-fw-generation-unit="true"
+      style={style}
+    >
       <style>{`
         @keyframes ${SKELETON_ANIMATION} {
           from { transform: translateX(-100%); }
@@ -244,8 +323,28 @@ export function GenerationUnit({
           0%, 100% { transform: translateX(-100%); }
           50% { transform: translateX(285%); }
         }
+        [data-fw-generation-unit="true"]:hover {
+          z-index: 1;
+        }
+        [data-fw-generation-unit="true"]:hover > [data-fw-node-toolbar="true"] {
+          opacity: 1 !important;
+          visibility: visible !important;
+          pointer-events: auto !important;
+        }
       `}</style>
-      {renderContent(node, onNodeAction)}
+      <NodeToolbar fwId={node.fwId} onNodeAction={onNodeAction} />
+      <div
+        data-fw-generation-surface="true"
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          overflow: 'hidden',
+          borderRadius: 'inherit',
+        }}
+      >
+        {renderContent(node, onNodeAction)}
+      </div>
     </div>
   )
 }

@@ -240,7 +240,7 @@ describe('createDomRenderer', () => {
   it('empty 生成单元渲染虚线外框与带交互忽略标记的生成按钮', async () => {
     const renderer = await mountRenderer(makeGenerationContext())
     const node = container!.querySelector('[data-fw-id="empty-image"]') as HTMLElement
-    const button = node.querySelector('button') as HTMLButtonElement
+    const button = node.querySelector('[data-fw-generation-surface] button') as HTMLButtonElement
 
     expect(node.dataset.fwUnsupported).toBeUndefined()
     expect(node.style.borderStyle).toBe('dashed')
@@ -292,7 +292,7 @@ describe('createDomRenderer', () => {
     const renderer = await mountRenderer(makeGenerationContext())
     const node = container!.querySelector('[data-fw-id="failed-video"]') as HTMLElement
     const error = node.querySelector('[data-fw-generation-error]') as HTMLElement
-    const button = node.querySelector('button') as HTMLButtonElement
+    const button = node.querySelector('[data-fw-generation-surface] button') as HTMLButtonElement
 
     expect(node.style.borderColor).toBe(normalizedCssColor(GEN_UNIT_STYLE.failedBorderColor))
     expect(error.textContent).toBe('生成失败')
@@ -405,7 +405,9 @@ describe('createDomRenderer', () => {
       onNodeAction: vi.fn(),
     }
     const renderer = await mountRenderer(makeGenerationContext(callbacks))
-    const button = container!.querySelector(`[data-fw-id="${fwId}"] button`) as HTMLButtonElement
+    const button = container!.querySelector(
+      `[data-fw-id="${fwId}"] [data-fw-generation-surface] button`,
+    ) as HTMLButtonElement
 
     await act(async () => button.click())
 
