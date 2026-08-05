@@ -6,6 +6,7 @@ import {
   isAiImageNode,
   isAiVideoNode,
   isFrameNode,
+  resolveViewportSize,
   assertShapeCoverage,
   type CanvasNode,
   type Point,
@@ -182,10 +183,14 @@ export function createDomRenderer(): RendererAdapter {
       bounds,
       visibleNodeIds,
     )
-    const viewportSize = {
-      width: cursorContainer?.clientWidth || ctx.root.width * scale,
-      height: cursorContainer?.clientHeight || ctx.root.height * scale,
-    }
+    const resolvedViewportSize = resolveViewportSize(ctx.viewportSize)
+    const viewportSize =
+      ctx.viewportSize === undefined
+        ? {
+            width: cursorContainer?.clientWidth || ctx.root.width * scale,
+            height: cursorContainer?.clientHeight || ctx.root.height * scale,
+          }
+        : resolvedViewportSize
     const mountedNodeIds = getNodesInViewport(ctx.root, ctx.viewport, viewportSize)
     const videoVisibleNodeIds =
       lod.detail === 'full'

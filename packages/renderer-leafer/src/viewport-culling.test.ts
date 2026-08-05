@@ -10,6 +10,7 @@ import {
   createVideoNode,
   getConnectionsInViewport,
   type RenderContext,
+  type ViewportSize,
 } from '@framewright/core'
 import { Leafer, Path } from 'leafer-ui'
 import { LeaferViewportScene } from './viewport-culling'
@@ -17,12 +18,18 @@ import { createLeaferRenderer } from './index'
 
 const screen = { width: 200, height: 200 }
 
-function context(root: RenderContext['root'], offsetX = 0, scale = 1): RenderContext {
+function context(
+  root: RenderContext['root'],
+  offsetX = 0,
+  scale = 1,
+  viewportSize?: ViewportSize,
+): RenderContext {
   return {
     root,
     selection: [],
     interactionMode: 'unified',
     viewport: { scale, offsetX, offsetY: 0 },
+    viewportSize,
     callbacks: {
       onSelectionRequest: () => undefined,
       onNodesMove: () => undefined,
@@ -50,6 +57,17 @@ function makeRoot() {
 }
 
 describe('LeaferViewportScene', () => {
+  it('以 ctx.viewportSize 为裁剪口径，不受容器回退尺寸影响', () => {
+    const leafer = new Leafer()
+    const scene = new LeaferViewportScene(leafer)
+
+    scene.reconcile(context(makeRoot(), 0, 1, screen), { width: 50, height: 50 })
+
+    expect(scene.getMountedNodeIds()).toEqual(['root', 'left', 'keeper'])
+    scene.destroy()
+    leafer.destroy()
+  })
+
   it('只挂载 core 裁剪集合内的节点', () => {
     const leafer = new Leafer()
     const scene = new LeaferViewportScene(leafer)

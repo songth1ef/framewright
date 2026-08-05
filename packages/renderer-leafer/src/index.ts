@@ -60,12 +60,11 @@ export function createLeaferRenderer(): RendererAdapter {
     interactionOverlay?.remove()
     interactionOverlay?.destroy()
     interactionOverlay = null
-    const viewportRect = cursorContainer.getBoundingClientRect()
     const snapshot = scene.reconcile(
       ctx,
       {
-        width: Math.max(1, viewportRect.width || cursorContainer.clientWidth),
-        height: Math.max(1, viewportRect.height || cursorContainer.clientHeight),
+        width: cursorContainer.clientWidth || ctx.root.width * ctx.viewport.scale,
+        height: cursorContainer.clientHeight || ctx.root.height * ctx.viewport.scale,
       },
       interactionPreview,
     )

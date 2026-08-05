@@ -9,6 +9,7 @@ import {
   createVideoNode,
   type RenderContext,
   type Viewport,
+  type ViewportSize,
 } from '@framewright/core'
 import { createDomRenderer } from './index'
 
@@ -25,11 +26,13 @@ afterEach(() => {
 function makeContext(
   children: Parameters<typeof createFrameNode>[0]['children'],
   viewport: Viewport = { scale: 1, offsetX: 0, offsetY: 0 },
+  viewportSize?: ViewportSize,
 ): RenderContext {
   return {
     root: createFrameNode({ fwId: 'root', width: 1_000, height: 1_000, children }),
     selection: [],
     viewport,
+    viewportSize,
     interactionMode: 'unified',
     callbacks: NOOP_RENDERER_CALLBACKS,
   }
@@ -48,6 +51,28 @@ async function mount(ctx: RenderContext) {
 }
 
 describe('DOM 视口裁剪', () => {
+  it('以 ctx.viewportSize 为裁剪口径，不受容器回退尺寸影响', async () => {
+    const ctx = makeContext(
+      [
+        createBoxNode({ fwId: 'left', x: 20, y: 20, width: 40, height: 40 }),
+        createBoxNode({ fwId: 'keeper', x: 350, y: 20, width: 40, height: 40 }),
+        createBoxNode({ fwId: 'right', x: 550, y: 20, width: 40, height: 40 }),
+        createBoxNode({ fwId: 'far', x: 1_200, y: 20, width: 40, height: 40 }),
+      ],
+      undefined,
+      { width: 200, height: 200 },
+    )
+    const renderer = await mount(ctx)
+
+    expect(
+      [...container!.querySelectorAll<HTMLElement>('[data-fw-id]')].map(
+        (element) => element.dataset.fwId,
+      ),
+    ).toEqual(['root', 'left', 'keeper'])
+
+    await act(async () => renderer.destroy())
+  })
+
   it('只挂载扩展视口内节点，但 Adapter 的全量 bounds 与 visible 语义不变', async () => {
     const ctx = makeContext([
       createBoxNode({ fwId: 'left', x: 10, y: 10, width: 20, height: 20 }),

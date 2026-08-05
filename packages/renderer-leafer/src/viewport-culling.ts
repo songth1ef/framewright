@@ -5,6 +5,7 @@ import {
   getViewportLod,
   getViewportCullingResult,
   isFrameNode,
+  resolveViewportSize,
   type CanvasNode,
   type ConnectionItem,
   type Point,
@@ -114,6 +115,11 @@ export class LeaferViewportScene {
     cullingOptions: ViewportCullingOptions,
     preview: CanvasInteractionPreview = {},
   ): LeaferSceneSnapshot {
+    const resolvedViewportSize = resolveViewportSize(ctx.viewportSize)
+    const resolvedCullingOptions =
+      ctx.viewportSize === undefined
+        ? cullingOptions
+        : { ...cullingOptions, ...resolvedViewportSize }
     const { descriptors, snapshot } = collectDescriptors(ctx, preview)
     const lod = getViewportLod(ctx.viewport.scale)
     const descriptorById = new Map(descriptors.map((descriptor) => [descriptor.node.fwId, descriptor]))
@@ -121,17 +127,17 @@ export class LeaferViewportScene {
       this.cullingCache !== null &&
       this.cullingCache.root === ctx.root &&
       this.cullingCache.connectionDetail === lod.connections &&
-      canReuseViewportCulling(this.cullingCache.result, ctx.viewport, cullingOptions)
+      canReuseViewportCulling(this.cullingCache.result, ctx.viewport, resolvedCullingOptions)
     if (!canReuse) {
       this.cullingCache = {
         root: ctx.root,
-        result: getViewportCullingResult(ctx.root, ctx.viewport, cullingOptions),
+        result: getViewportCullingResult(ctx.root, ctx.viewport, resolvedCullingOptions),
         connections: lod.connections === 'hidden'
           ? []
           : getConnectionsInViewport(
             ctx.root,
             ctx.viewport,
-            cullingOptions,
+            resolvedCullingOptions,
             this.connectionBoundsCache,
           ),
         connectionDetail: lod.connections,
