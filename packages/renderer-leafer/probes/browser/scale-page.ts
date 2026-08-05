@@ -4,7 +4,7 @@ import {
   type RenderContext,
   type Viewport,
 } from '@framewright/core'
-import { Leafer, Path, type IUI } from 'leafer-ui'
+import { Leafer, type IUI } from 'leafer-ui'
 import { LeaferViewportScene } from '../../src/viewport-culling'
 import {
   LEAFER_SCALE_PROBE_WORKLOAD,
@@ -105,7 +105,16 @@ function countMountedLeaferInstances(): number {
 }
 
 function countMountedConnections(): number {
-  return (scene.getConnectionLayer()?.children ?? []).filter((child) => child instanceof Path).length
+  return scene.getMountedConnectionCount()
+}
+
+function selectPaintableLeafId(mountedIds: readonly string[], nextRoot: FrameNode): string {
+  const mounted = new Set(mountedIds)
+  const generated = nextRoot.children.find(
+    (node) =>
+      mounted.has(node.fwId) && (node.fwType === 'ai-image' || node.fwType === 'ai-video'),
+  )
+  return generated?.fwId ?? selectMountedLeafId(mountedIds, nextRoot.fwId)
 }
 
 function sampleNodePixel(): number[] | null {
@@ -118,9 +127,9 @@ function sampleNodePixel(): number[] | null {
     const ctx = canvas.getContext('2d')
     if (ctx === null || cx < 2 || cy < 2 || cx >= canvas.width || cy >= canvas.height) continue
     const data = ctx.getImageData(cx - 2, cy - 2, 4, 4).data
-    let sum = 0
-    for (let index = 0; index < data.length; index += 1) sum += data[index] ?? 0
-    if (sum > 0 && sum < (data.length / 4) * 4 * 255) return Array.from(data.slice(0, 4))
+    for (let index = 3; index < data.length; index += 4) {
+      if ((data[index] ?? 0) > 0) return Array.from(data.slice(0, 4))
+    }
   }
   return null
 }
@@ -134,7 +143,7 @@ async function mountScenario(value: LeaferScaleProbeScenario): Promise<FirstScre
   const renderStart = performance.now()
   scene.reconcile(context(), screen)
   const mountedIds = scene.getMountedNodeIds()
-  evidenceNodeFwId = selectMountedLeafId(mountedIds, nextRoot.fwId)
+  evidenceNodeFwId = selectPaintableLeafId(mountedIds, nextRoot)
   let paintedPixel: number[] | null = null
   let paintedAfterFrames = 0
   for (let frame = 0; frame < 10; frame += 1) {

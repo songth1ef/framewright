@@ -161,10 +161,9 @@ describe('DOM 视口裁剪', () => {
       ]),
     )
 
-    const paths = container!.querySelectorAll('[data-fw-connections] path')
+    const paths = container!.querySelectorAll('[data-fw-connection-strokes]')
     expect(paths).toHaveLength(1)
-    expect(paths[0]?.getAttribute('data-fw-connection-from')).toBe('cross-source')
-    expect(paths[0]?.getAttribute('data-fw-connection-to')).toBe('cross-target')
+    expect(paths[0]?.getAttribute('data-fw-connection-count')).toBe('1')
 
     await act(async () => renderer.destroy())
   })

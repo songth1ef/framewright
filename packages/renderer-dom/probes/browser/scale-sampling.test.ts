@@ -35,6 +35,17 @@ describe('DOM 规模 probe', () => {
       mountedConnectionCount: 0,
       mountedConnectionElementTypes: {},
     })
+    expect(measureConnectionLayer({
+      children: [{ tagName: 'g' }, { tagName: 'g' }],
+      querySelectorAll: () => [
+        { getAttribute: () => '608' },
+        { getAttribute: () => '392' },
+      ],
+    })).toEqual({
+      connectionLayerPresent: true,
+      mountedConnectionCount: 1_000,
+      mountedConnectionElementTypes: { g: 2 },
+    })
   })
 
   it('从实际挂载集合选择叶子，不依赖 fixture 的第一个节点', () => {

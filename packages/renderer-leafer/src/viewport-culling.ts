@@ -222,6 +222,10 @@ export class LeaferViewportScene {
     return this.connectionLayer?.ui ?? null
   }
 
+  getMountedConnectionCount(): number {
+    return this.connectionLayer?.mountedConnectionCount ?? 0
+  }
+
   destroy(): void {
     this.destroyConnectionLayer()
     const entries = [...this.mounted.entries()].sort(

@@ -50,9 +50,18 @@ export function measureConnectionLayer(layer) {
     mountedConnectionElementTypes[elementType] =
       (mountedConnectionElementTypes[elementType] ?? 0) + 1
   }
+  const batches = typeof layer.querySelectorAll === 'function'
+    ? layer.querySelectorAll('[data-fw-connection-count]')
+    : []
+  const mountedConnectionCount = batches.length === 0
+    ? layer.children.length
+    : Array.from(batches).reduce(
+        (total, batch) => total + Number(batch.getAttribute('data-fw-connection-count') ?? 0),
+        0,
+      )
   return {
     connectionLayerPresent: true,
-    mountedConnectionCount: layer.children.length,
+    mountedConnectionCount,
     mountedConnectionElementTypes,
   }
 }

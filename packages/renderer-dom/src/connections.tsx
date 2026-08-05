@@ -69,6 +69,14 @@ function curvePath(curve: ConnectionCurve): string {
   return `M ${curve.p0.x} ${curve.p0.y} C ${curve.c1.x} ${curve.c1.y}, ${curve.c2.x} ${curve.c2.y}, ${curve.p3.x} ${curve.p3.y}`
 }
 
+function linePath(curve: ConnectionCurve): string {
+  return `M ${curve.p0.x} ${curve.p0.y} L ${curve.p3.x} ${curve.p3.y}`
+}
+
+function endpointCirclePath(x: number, y: number, radius: number): string {
+  return `M ${x - radius} ${y} a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${radius * -2} 0`
+}
+
 export function ConnectionLayer({
   items,
   selection,
@@ -78,13 +86,19 @@ export function ConnectionLayer({
 }: ConnectionLayerProps): ReactNode {
   const safeScale = scale > 0 ? scale : 1
   const radius = CONNECTION_STYLE.endpointRadius / safeScale
-  const occurrences = new Map<string, number>()
-  const keyedItems = items.map((item) => {
-    const pair = `${item.fromFwId}:${item.toFwId}`
-    const occurrence = occurrences.get(pair) ?? 0
-    occurrences.set(pair, occurrence + 1)
-    return { item, key: `${pair}:${occurrence}` }
-  })
+  const selected = new Set(selection)
+  const normalItems: ConnectionItem[] = []
+  const highlightedItems: ConnectionItem[] = []
+  for (const item of items) {
+    const target = selected.has(item.fromFwId) || selected.has(item.toFwId)
+      ? highlightedItems
+      : normalItems
+    target.push(item)
+  }
+  const batches = [
+    { key: 'normal', items: normalItems, highlighted: false },
+    { key: 'highlighted', items: highlightedItems, highlighted: true },
+  ] as const
 
   return (
     <svg
@@ -101,56 +115,39 @@ export function ConnectionLayer({
         pointerEvents: 'none',
       }}
     >
-      {keyedItems.map(({ item, key }) => {
-        const highlighted =
-          selection.includes(item.fromFwId) || selection.includes(item.toFwId)
+      {batches.map(({ key, items: batchItems, highlighted }) => {
+        if (batchItems.length === 0) return null
         const color = highlighted
           ? CONNECTION_STYLE.highlightColor
           : CONNECTION_STYLE.strokeColor
         const width =
           (highlighted ? CONNECTION_STYLE.highlightWidth : CONNECTION_STYLE.strokeWidth) /
           safeScale
-        if (detail === 'line') {
-          return (
-            <line
-              key={key}
-              data-fw-connection-from={item.fromFwId}
-              data-fw-connection-to={item.toFwId}
-              x1={item.curve.p0.x}
-              y1={item.curve.p0.y}
-              x2={item.curve.p3.x}
-              y2={item.curve.p3.y}
-              stroke={color}
-              strokeWidth={width}
-            />
-          )
-        }
+        const strokePath = batchItems
+          .map((item) => detail === 'line' ? linePath(item.curve) : curvePath(item.curve))
+          .join(' ')
+        const endpointPath = detail === 'curve' && CONNECTION_STYLE.endpointRadius > 0
+          ? batchItems.flatMap((item) => [item.curve.p0, item.curve.p3])
+              .map((point) => endpointCirclePath(point.x, point.y, radius))
+              .join(' ')
+          : null
         return (
           <g key={key}>
             <path
-              data-fw-connection-from={item.fromFwId}
-              data-fw-connection-to={item.toFwId}
-              d={curvePath(item.curve)}
+              data-fw-connection-strokes={key}
+              data-fw-connection-count={batchItems.length}
+              d={strokePath}
               fill="none"
               stroke={color}
               strokeWidth={width}
             />
-            {CONNECTION_STYLE.endpointRadius > 0 ? (
-              <>
-                <circle
-                  cx={item.curve.p0.x}
-                  cy={item.curve.p0.y}
-                  r={radius}
-                  fill={highlighted ? CONNECTION_STYLE.highlightColor : CONNECTION_STYLE.endpointColor}
-                />
-                <circle
-                  cx={item.curve.p3.x}
-                  cy={item.curve.p3.y}
-                  r={radius}
-                  fill={highlighted ? CONNECTION_STYLE.highlightColor : CONNECTION_STYLE.endpointColor}
-                />
-              </>
-            ) : null}
+            {endpointPath === null ? null : (
+              <path
+                data-fw-connection-endpoints={key}
+                d={endpointPath}
+                fill={highlighted ? CONNECTION_STYLE.highlightColor : CONNECTION_STYLE.endpointColor}
+              />
+            )}
           </g>
         )
       })}

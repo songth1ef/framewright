@@ -2,7 +2,7 @@
 import './leafer-test-stub'
 import { describe, expect, it } from 'vitest'
 import { CONNECTION_STYLE, collectConnectionItems, createDemoDocument } from '@framewright/core'
-import { Ellipse, Path } from 'leafer-ui'
+import { Path } from 'leafer-ui'
 import { buildConnectionLayer, LeaferConnectionLayer } from './connections'
 
 // collectConnectionItems 的锚点/悬空跳过测试在 packages/core/src/connections.test.ts（C2-core 收编后两侧共用）。
@@ -10,22 +10,29 @@ import { buildConnectionLayer, LeaferConnectionLayer } from './connections'
 describe('C2-leafer buildConnectionLayer', () => {
   const items = collectConnectionItems(createDemoDocument())
 
-  it('连线层是不可命中的 Group：每条线 = 1 条 Path + 2 个端点圆点', () => {
+  it('把千条同样式连线合并为一条 stroke path 与一条端点 path', () => {
+    const layer = new LeaferConnectionLayer()
+    layer.reconcile(Array.from({ length: 1_000 }, () => items[0]!), [], 1, 'curve')
+
+    expect(layer.ui.children).toHaveLength(2)
+    expect(layer.mountedConnectionCount).toBe(1_000)
+    layer.destroy()
+  })
+
+  it('连线层是不可命中的 Group：同样式曲线与端点各合并为一个 Path', () => {
     const layer = buildConnectionLayer(items, [], 1)
     expect(layer.tag).toBe('Group')
     expect(layer.hittable).toBe(false)
     const children = layer.children ?? []
-    expect(children).toHaveLength(2 * 3)
+    expect(children).toHaveLength(2)
     const paths = children.filter((c) => (c as Path).tag === 'Path') as unknown as Path[]
     expect(paths).toHaveLength(2)
-    // 贝塞尔路径串与 computeConnectionCurve 的四点一致
-    expect(paths[0]?.path).toBe('M 600 350 C 640 350, 580 350, 620 350')
-    // 端点圆点：半径 endpointRadius，圆心在 p0 / p3
-    const dots = children.filter((c) => (c as Ellipse).tag === 'Ellipse') as unknown as Ellipse[]
-    expect(dots).toHaveLength(4)
-    expect(dots[0]?.width).toBe(CONNECTION_STYLE.endpointRadius * 2)
-    expect(dots[0]?.x).toBe(600 - CONNECTION_STYLE.endpointRadius)
-    expect(dots[0]?.y).toBe(350 - CONNECTION_STYLE.endpointRadius)
+    expect(paths[0]?.path).toBe(
+      'M 600 350 C 640 350, 580 350, 620 350 M 600 350 C 640 350, 590 110, 630 110',
+    )
+    expect(String(paths[1]?.path)).toContain(
+      `M ${600 - CONNECTION_STYLE.endpointRadius} 350`,
+    )
   })
 
   it('🔴 线宽按 1/scale 反向补偿：scale=2 时 strokeWidth = 1.5/2', () => {
@@ -37,23 +44,19 @@ describe('C2-leafer buildConnectionLayer', () => {
 
   it('选中源节点时两条线同时高亮', () => {
     const layer = buildConnectionLayer(items, ['ai-image-1'], 1)
-    const paths = (layer.children ?? []).filter((c) => (c as Path).tag === 'Path') as unknown as Path[]
-    expect(paths).toHaveLength(2)
-    for (const p of paths) {
-      expect(p.stroke).toBe(CONNECTION_STYLE.highlightColor)
-      expect(p.strokeWidth).toBe(CONNECTION_STYLE.highlightWidth)
-    }
+    const paths = (layer.children ?? []).filter((c) => (c as Path).stroke !== undefined) as Path[]
+    expect(paths).toHaveLength(1)
+    expect(paths[0]?.stroke).toBe(CONNECTION_STYLE.highlightColor)
+    expect(paths[0]?.strokeWidth).toBe(CONNECTION_STYLE.highlightWidth)
   })
 
   it('只选中其中一个派生节点时，仅那一条高亮', () => {
     const layer = buildConnectionLayer(items, ['ai-video-1'], 1)
-    const paths = (layer.children ?? []).filter((c) => (c as Path).tag === 'Path') as unknown as Path[]
-    const toVideo1 = paths.find((p) => String(p.path).endsWith('620 350'))
-    const toVideo2 = paths.find((p) => String(p.path).endsWith('630 110'))
-    expect(toVideo1?.stroke).toBe(CONNECTION_STYLE.highlightColor)
-    expect(toVideo1?.strokeWidth).toBe(CONNECTION_STYLE.highlightWidth)
-    expect(toVideo2?.stroke).toBe(CONNECTION_STYLE.strokeColor)
-    expect(toVideo2?.strokeWidth).toBe(CONNECTION_STYLE.strokeWidth)
+    const paths = (layer.children ?? []).filter((c) => (c as Path).stroke !== undefined) as Path[]
+    const highlighted = paths.find((path) => path.stroke === CONNECTION_STYLE.highlightColor)
+    const normal = paths.find((path) => path.stroke === CONNECTION_STYLE.strokeColor)
+    expect(highlighted?.strokeWidth).toBe(CONNECTION_STYLE.highlightWidth)
+    expect(normal?.strokeWidth).toBe(CONNECTION_STYLE.strokeWidth)
   })
 
   it('高亮线宽同样按 1/scale 补偿', () => {
@@ -71,7 +74,7 @@ describe('C2-leafer buildConnectionLayer', () => {
 
     const nextPath = (layer.ui.children ?? []).find((child) => child instanceof Path) as Path
     expect(nextPath).toBe(path)
-    expect(nextPath.path).toBe('M 600 350 L 620 350')
+    expect(nextPath.path).toBe('M 600 350 L 620 350 M 600 350 L 630 110')
     layer.destroy()
   })
 

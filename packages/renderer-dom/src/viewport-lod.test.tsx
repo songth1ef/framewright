@@ -68,8 +68,8 @@ async function mount(ctx: RenderContext) {
 
 describe('DOM viewport LOD', () => {
   it.each([
-    { scale: 0.5, detail: 'full', minElements: 250, maxElements: 400 },
-    { scale: 0.2, detail: 'simplified', minElements: 70, maxElements: 100 },
+    { scale: 0.5, detail: 'full', minElements: 190, maxElements: 230 },
+    { scale: 0.2, detail: 'simplified', minElements: 45, maxElements: 60 },
     { scale: 0.1, detail: 'dot', minElements: 40, maxElements: 60 },
   ] as const)(
     '$detail 档真实控制 DOM 元素数量级',
@@ -88,8 +88,8 @@ describe('DOM viewport LOD', () => {
         expect(container!.querySelector('[data-fw-connections] path')).not.toBeNull()
       } else if (detail === 'simplified') {
         expect(container!.querySelector('[data-fw-generation-surface]')).toBeNull()
-        expect(container!.querySelector('[data-fw-connections] line')).not.toBeNull()
-        expect(container!.querySelector('[data-fw-connections] path')).toBeNull()
+        expect(container!.querySelector('[data-fw-connection-strokes]')).not.toBeNull()
+        expect(container!.querySelector('[data-fw-connection-endpoints]')).toBeNull()
       } else {
         expect(container!.querySelector('[data-fw-generation-surface]')).toBeNull()
         expect(container!.querySelector('[data-fw-connections]')).toBeNull()
@@ -164,7 +164,7 @@ describe('DOM viewport LOD', () => {
 
     await act(async () => renderer.update({ ...full, viewport: { ...full.viewport, scale: 0.2 } }))
     expect(container!.querySelector('[data-fw-generation-surface]')).toBeNull()
-    expect(container!.querySelector('[data-fw-connections] path')).toBeNull()
+    expect(container!.querySelector('[data-fw-connection-endpoints]')).toBeNull()
 
     const simplifiedNode = container!.querySelector('[data-fw-id="node-0"]')
     await act(async () =>

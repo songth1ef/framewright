@@ -52,7 +52,12 @@ export interface ConnectionLayerMeasurement {
 export function buildFrameStats(frameDurationsMs: readonly number[], longFrameThresholdMs: number): FrameStats
 export function selectMountedLeafId(mountedIds: readonly string[], rootFwId: string): string
 export function measureConnectionLayer(
-  layer: { children: Iterable<{ tagName: string }> & { length: number } } | null,
+  layer: {
+    children: Iterable<{ tagName: string }> & { length: number }
+    querySelectorAll?: (selector: string) => Iterable<{ getAttribute(name: string): string | null }> & {
+      length: number
+    }
+  } | null,
 ): ConnectionLayerMeasurement
 export function buildDragEvidence(start: DragSnapshot, end: DragSnapshot): DragEvidence
 export function buildZoomEvidence(start: ZoomSnapshot, end: ZoomSnapshot): ZoomEvidence
