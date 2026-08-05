@@ -194,6 +194,24 @@ describe('点选状态机', () => {
     expect(callbacks.onSelectionRequest).toHaveBeenCalledWith(['box-a'], 'toggle')
   })
 
+  it('locked 节点不遮挡命中，点击选中其下方的可选节点', () => {
+    const overlapRoot = createFrameNode({
+      fwId: 'overlap-root',
+      width: 100,
+      height: 100,
+      children: [
+        createBoxNode({ fwId: 'under-locked', x: 10, y: 10, width: 20, height: 20 }),
+        createBoxNode({ fwId: 'locked-overlay', x: 10, y: 10, width: 20, height: 20, locked: true }),
+      ],
+    })
+    const { callbacks } = setup({ ...makeContext(['box-b']), root: overlapRoot })
+
+    pointer('pointerdown', 15, 15)
+
+    expect(callbacks.onSelectionRequest).toHaveBeenCalledOnce()
+    expect(callbacks.onSelectionRequest).toHaveBeenCalledWith(['under-locked'], 'replace')
+  })
+
   it.each(['root', 'locked', 'transparent-frame'])(
     '%s 的内部按空白处理，点击清空选中',
     (fwId) => {
