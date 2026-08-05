@@ -12,6 +12,7 @@ import {
   renameCanvasDocument,
   type DocumentSummary,
 } from './document-list-actions'
+import { ScaleFixturePanel } from './scale-fixture-panel'
 
 export function DocumentList({ documents: initialDocuments }: { documents: readonly DocumentSummary[] }) {
   const router = useRouter()
@@ -102,6 +103,7 @@ export function DocumentList({ documents: initialDocuments }: { documents: reado
           {creating ? '正在新建…' : '新建画布'}
         </button>
       </div>
+      <ScaleFixturePanel />
       {error === '' ? null : (
         <p role="alert" data-testid="document-list-error" style={{ color: '#b42318' }}>
           {error}
