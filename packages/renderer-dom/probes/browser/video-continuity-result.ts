@@ -24,6 +24,7 @@ export interface VideoContinuityClassification {
   mediaBecameReadyAfterPlay: boolean
   playbackAdvancedAfterPlay: boolean
   decodedFramesAdvancedAfterPlay: boolean
+  mediaReadyAndPlayingAfterExplicitPlay: boolean
   newElementReloadedAndPlayed: boolean
 }
 
@@ -52,9 +53,15 @@ export function classifyVideoContinuity(
   const decodedFramesAdvancedAfterPlay =
     afterPlaybackProgress !== null &&
     afterPlaybackProgress.totalVideoFrames > playbackBaseline.totalVideoFrames
+  const mediaReadyAndPlayingAfterExplicitPlay =
+    playCallSucceeded &&
+    mediaBecameReadyAfterPlay &&
+    playbackAdvancedAfterPlay &&
+    decodedFramesAdvancedAfterPlay
+  const elementRecreated = immediateAfterRemount.elementId !== before.elementId
 
   return {
-    elementRecreated: immediateAfterRemount.elementId !== before.elementId,
+    elementRecreated,
     sessionCurrentTimePreserved:
       (afterPlayReady ?? immediateAfterRemount).currentTime >=
       before.currentTime - CURRENT_TIME_TOLERANCE_SECONDS,
@@ -65,10 +72,7 @@ export function classifyVideoContinuity(
     mediaBecameReadyAfterPlay,
     playbackAdvancedAfterPlay,
     decodedFramesAdvancedAfterPlay,
-    newElementReloadedAndPlayed:
-      playCallSucceeded &&
-      mediaBecameReadyAfterPlay &&
-      playbackAdvancedAfterPlay &&
-      decodedFramesAdvancedAfterPlay,
+    mediaReadyAndPlayingAfterExplicitPlay,
+    newElementReloadedAndPlayed: elementRecreated && mediaReadyAndPlayingAfterExplicitPlay,
   }
 }

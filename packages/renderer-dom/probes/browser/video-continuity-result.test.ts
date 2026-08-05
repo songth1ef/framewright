@@ -48,6 +48,7 @@ describe('视频连续性探针结果分类', () => {
       mediaBecameReadyAfterPlay: true,
       playbackAdvancedAfterPlay: true,
       decodedFramesAdvancedAfterPlay: true,
+      mediaReadyAndPlayingAfterExplicitPlay: true,
       newElementReloadedAndPlayed: true,
     })
   })
@@ -81,6 +82,30 @@ describe('视频连续性探针结果分类', () => {
       mediaBecameReadyAfterPlay: false,
       playbackAdvancedAfterPlay: false,
       decodedFramesAdvancedAfterPlay: false,
+      mediaReadyAndPlayingAfterExplicitPlay: false,
+      newElementReloadedAndPlayed: false,
+    })
+  })
+
+  it('原媒体元素持续存活时只报告可播放，不宣称新元素完成重载', () => {
+    const before = {
+      elementId: 7,
+      currentTime: 0.22,
+      paused: false,
+      ended: false,
+      readyState: 4,
+      totalVideoFrames: 4,
+    }
+
+    expect(classifyVideoContinuity({
+      before,
+      immediateAfterRemount: { ...before, currentTime: 0.25 },
+      afterPlayReady: { ...before, currentTime: 0.25 },
+      afterPlaybackProgress: { ...before, currentTime: 0.28, totalVideoFrames: 6 },
+      playError: null,
+    })).toMatchObject({
+      elementRecreated: false,
+      mediaReadyAndPlayingAfterExplicitPlay: true,
       newElementReloadedAndPlayed: false,
     })
   })
