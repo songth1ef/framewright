@@ -51,6 +51,8 @@ export interface DomZoomOutProbeWorkload {
   readonly scenarios: readonly (DomScaleProbeScenario & { readonly initialScale: number })[]
   readonly seed: 7
   readonly sampleWindowMs: number
+  readonly repeatCount: number
+  readonly repeatCooldownMs: number
   readonly caseTimeoutMs: number
   readonly viewport: DomScaleProbeWorkload['viewport']
   readonly viewportRole: string

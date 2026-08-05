@@ -42,6 +42,8 @@ export const LEAFER_ZOOM_OUT_PROBE_WORKLOAD = Object.freeze({
   ]),
   seed: 7,
   sampleWindowMs: 3000,
+  repeatCount: 5,
+  repeatCooldownMs: 1000,
   caseTimeoutMs: 120000,
   viewport: LEAFER_SCALE_PROBE_WORKLOAD.viewport,
   viewportRole: LEAFER_SCALE_PROBE_WORKLOAD.viewportRole,

@@ -11,6 +11,7 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { DOM_ZOOM_OUT_PROBE_WORKLOAD } from './probe-config.mjs'
 import { buildDragEvidence, buildPanEvidence } from './browser/scale-sampling.mjs'
+import { aggregateSamples } from './browser/repeated-sampling.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(here, '../../..')
@@ -22,6 +23,30 @@ const workload = DOM_ZOOM_OUT_PROBE_WORKLOAD
 const memoryReason =
   '页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。'
 const caseId = process.argv.find((arg) => arg.startsWith('--case='))?.slice('--case='.length)
+
+function positiveIntegerOption(name, fallback) {
+  const raw = process.argv.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3)
+  if (raw === undefined) return fallback
+  const value = Number(raw)
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error(`--${name} 必须是正整数，收到：${raw}`)
+  }
+  return value
+}
+
+function nonNegativeIntegerOption(name, fallback) {
+  const raw = process.argv.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3)
+  if (raw === undefined) return fallback
+  const value = Number(raw)
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`--${name} 必须是非负整数，收到：${raw}`)
+  }
+  return value
+}
+
+const repeatCount = positiveIntegerOption('samples', workload.repeatCount)
+const repeatCooldownMs = nonNegativeIntegerOption('cooldown-ms', workload.repeatCooldownMs)
+const coolDown = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 async function buildBundle() {
   const pnpmDir = path.join(repoRoot, 'node_modules/.pnpm')
@@ -174,14 +199,34 @@ if (caseId !== undefined) {
     probe: 'renderer-dom-scale-s4-zoom-out',
     startedAt: new Date().toISOString(),
     workload,
+    sampling: {
+      repeatCount,
+      repeatCooldownMs,
+      isolation: '每次样本启动独立子进程，并新建 browser 与 page',
+    },
     memory: null,
     memoryReason,
     scenarios: [],
   }
   for (const scenario of workload.scenarios) {
-    const result = await runIsolatedCase(scenario)
+    const samples = []
+    for (let sampleIndex = 1; sampleIndex <= repeatCount; sampleIndex += 1) {
+      if (sampleIndex > 1 && repeatCooldownMs > 0) await coolDown(repeatCooldownMs)
+      const sample = await runIsolatedCase(scenario)
+      samples.push({ sampleIndex, ...sample })
+      console.log(`[${scenario.id} ${sampleIndex}/${repeatCount}]`, JSON.stringify(sample))
+    }
+    const aggregation = aggregateSamples(samples)
+    const result = {
+      ...scenario,
+      status: aggregation.completedSampleCount === repeatCount
+        ? 'completed'
+        : aggregation.completedSampleCount === 0 ? 'timeout' : 'partial',
+      requestedSampleCount: repeatCount,
+      ...aggregation,
+    }
     results.scenarios.push(result)
-    console.log(`[${scenario.id}]`, JSON.stringify(result))
+    console.log(`[${scenario.id} aggregate]`, JSON.stringify(result.aggregate))
   }
   results.finishedAt = new Date().toISOString()
   await mkdir(resultsDir, { recursive: true })

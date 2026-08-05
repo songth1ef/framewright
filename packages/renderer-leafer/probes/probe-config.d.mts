@@ -38,6 +38,8 @@ export interface LeaferZoomOutProbeWorkload {
   readonly seed: 7
   readonly scenarios: readonly (LeaferScaleProbeScenario & { readonly initialScale: number })[]
   readonly sampleWindowMs: number
+  readonly repeatCount: number
+  readonly repeatCooldownMs: number
   readonly caseTimeoutMs: number
   readonly viewport: LeaferScaleProbeWorkload['viewport']
   readonly viewportRole: string
