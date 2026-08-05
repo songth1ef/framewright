@@ -22,8 +22,11 @@ export interface ViewportCullingOptions {
   overscan?: number
 }
 
-function getCullingBounds(viewport: Viewport, options: ViewportCullingOptions): Rect {
-  const overscan = Math.max(0, options.overscan ?? 1)
+function getViewportBounds(
+  viewport: Viewport,
+  options: ViewportCullingOptions,
+  overscan: number,
+): Rect {
   const topLeft = screenToCanvas(viewport, {
     x: -options.width * overscan,
     y: -options.height * overscan,
@@ -38,6 +41,10 @@ function getCullingBounds(viewport: Viewport, options: ViewportCullingOptions): 
     width: Math.abs(bottomRight.x - topLeft.x),
     height: Math.abs(bottomRight.y - topLeft.y),
   }
+}
+
+function getCullingBounds(viewport: Viewport, options: ViewportCullingOptions): Rect {
+  return getViewportBounds(viewport, options, Math.max(0, options.overscan ?? 1))
 }
 
 function intersects(a: Rect, b: Rect): boolean {
@@ -58,6 +65,22 @@ export function getNodesInViewport(
   viewport: Viewport,
   options: ViewportCullingOptions,
 ): ReadonlySet<string> {
+  return getViewportCullingResult(root, viewport, options).nodeIds
+}
+
+export interface ViewportCullingResult {
+  /** 上次扩展挂载区内的节点集合。 */
+  nodeIds: ReadonlySet<string>
+  /** 只要当前真实视口仍完整落在这里，上述集合就不会漏掉当前应显示的节点。 */
+  validViewportBounds: Rect
+}
+
+/** 返回节点裁剪集合及其可安全复用的画布区域。 */
+export function getViewportCullingResult(
+  root: FrameNode,
+  viewport: Viewport,
+  options: ViewportCullingOptions,
+): ViewportCullingResult {
   const bounds = getCullingBounds(viewport, options)
   const ids = new Set<string>()
 
@@ -75,7 +98,26 @@ export function getNodesInViewport(
     }
   })
 
-  return ids
+  return { nodeIds: ids, validViewportBounds: bounds }
+}
+
+/**
+ * 判断当前真实视口是否仍被上次扩展挂载区完整覆盖。
+ * 调用方还必须自行确认 node 树没有变化；本函数只处理视口几何。
+ */
+export function canReuseViewportCulling(
+  previous: ViewportCullingResult,
+  viewport: Viewport,
+  options: ViewportCullingOptions,
+): boolean {
+  const current = getViewportBounds(viewport, options, 0)
+  const valid = previous.validViewportBounds
+  return (
+    current.x >= valid.x &&
+    current.y >= valid.y &&
+    current.x + current.width <= valid.x + valid.width &&
+    current.y + current.height <= valid.y + valid.height
+  )
 }
 
 function cubicAt(p0: number, c1: number, c2: number, p3: number, t: number): number {
@@ -122,6 +164,48 @@ export function getConnectionBounds(curve: ConnectionCurve): Rect {
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
 }
 
+interface CachedConnectionBounds {
+  fromX: number
+  fromY: number
+  toX: number
+  toY: number
+  bounds: Rect
+}
+
+/** 按端点节点对缓存贝塞尔包围盒；任一端点几何改变时自动重算。 */
+export class ConnectionBoundsCache {
+  private readonly entries = new Map<string, CachedConnectionBounds>()
+
+  get(fromFwId: string, toFwId: string, curve: ConnectionCurve): Rect {
+    const key = `${fromFwId}\u0000${toFwId}`
+    const cached = this.entries.get(key)
+    if (
+      cached !== undefined &&
+      cached.fromX === curve.p0.x &&
+      cached.fromY === curve.p0.y &&
+      cached.toX === curve.p3.x &&
+      cached.toY === curve.p3.y
+    ) {
+      return cached.bounds
+    }
+    const bounds = getConnectionBounds(curve)
+    this.entries.set(key, {
+      fromX: curve.p0.x,
+      fromY: curve.p0.y,
+      toX: curve.p3.x,
+      toY: curve.p3.y,
+      bounds,
+    })
+    return bounds
+  }
+
+  retain(keys: ReadonlySet<string>): void {
+    for (const key of this.entries.keys()) {
+      if (!keys.has(key)) this.entries.delete(key)
+    }
+  }
+}
+
 /**
  * 连线独立按曲线包围盒裁剪。端点是否落在视口内不参与判断，避免漏掉横穿视口的线。
  */
@@ -129,6 +213,7 @@ export function getConnectionsInViewport(
   root: FrameNode,
   viewport: Viewport,
   options: ViewportCullingOptions,
+  boundsCache?: ConnectionBoundsCache,
 ): ConnectionItem[] {
   const bounds = getCullingBounds(viewport, options)
   const geometry = new Map<string, { node: CanvasNode; absolute: Point }>()
@@ -139,6 +224,7 @@ export function getConnectionsInViewport(
   })
 
   const connections: ConnectionItem[] = []
+  const connectionKeys = new Set<string>()
   for (const { node, absolute } of geometry.values()) {
     if (!isAiImageNode(node) && !isAiVideoNode(node)) continue
     for (const sourceFwId of node.sourceFwIds) {
@@ -151,9 +237,14 @@ export function getConnectionsInViewport(
         },
         { x: absolute.x, y: absolute.y + node.height / 2 },
       )
-      if (!intersects(bounds, getConnectionBounds(curve))) continue
+      const connectionKey = `${sourceFwId}\u0000${node.fwId}`
+      connectionKeys.add(connectionKey)
+      const connectionBounds =
+        boundsCache?.get(sourceFwId, node.fwId, curve) ?? getConnectionBounds(curve)
+      if (!intersects(bounds, connectionBounds)) continue
       connections.push({ fromFwId: sourceFwId, toFwId: node.fwId, curve })
     }
   }
+  boundsCache?.retain(connectionKeys)
   return connections
 }

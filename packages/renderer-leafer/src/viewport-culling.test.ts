@@ -108,6 +108,22 @@ describe('LeaferViewportScene', () => {
     leafer.destroy()
   })
 
+  it('在安全区内复用扩展挂载集，跨出安全区后及时挂入新进入视口的节点', () => {
+    const leafer = new Leafer()
+    const scene = new LeaferViewportScene(leafer)
+    const root = makeRoot()
+
+    scene.reconcile(context(root), screen)
+    scene.reconcile(context(root, -200), screen)
+    expect(scene.getMountedUi('keeper')).toBeDefined()
+    expect(scene.getMountedUi('right')).toBeUndefined()
+
+    scene.reconcile(context(root, -351), screen)
+    expect(scene.getMountedUi('right')).toBeDefined()
+    scene.destroy()
+    leafer.destroy()
+  })
+
   it('同一叶子节点位置变化时保持 Leafer 实例对象身份', () => {
     const leafer = new Leafer()
     const scene = new LeaferViewportScene(leafer)

@@ -1,7 +1,13 @@
 import { performance } from 'node:perf_hooks'
 import { describe, expect, it } from 'vitest'
 import { createAiImageNode, createBoxNode, createFrameNode } from './node-schema'
-import { getConnectionsInViewport, getNodesInViewport } from './viewport-culling'
+import {
+  ConnectionBoundsCache,
+  canReuseViewportCulling,
+  getConnectionsInViewport,
+  getNodesInViewport,
+  getViewportCullingResult,
+} from './viewport-culling'
 
 const viewport = { scale: 1, offsetX: 0, offsetY: 0 }
 const screen = { width: 100, height: 100 }
@@ -81,6 +87,27 @@ describe('getNodesInViewport', () => {
     expect([...getNodesInViewport(root, viewport, screen)]).toEqual(['root'])
   })
 
+  it('只在当前真实视口仍被上次扩展挂载区完整包含时允许复用', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      width: 1_000,
+      height: 100,
+      children: [
+        createBoxNode({ fwId: 'buffered', x: 150, y: 20, width: 10, height: 10 }),
+        createBoxNode({ fwId: 'next', x: 250, y: 20, width: 10, height: 10 }),
+      ],
+    })
+    const previous = getViewportCullingResult(root, viewport, screen)
+
+    expect(previous.nodeIds.has('buffered')).toBe(true)
+    expect(previous.nodeIds.has('next')).toBe(false)
+    expect(canReuseViewportCulling(previous, { ...viewport, offsetX: -100 }, screen)).toBe(true)
+    expect(canReuseViewportCulling(previous, { ...viewport, offsetX: -101 }, screen)).toBe(false)
+
+    const refreshed = getViewportCullingResult(root, { ...viewport, offsetX: -101 }, screen)
+    expect(refreshed.nodeIds.has('next')).toBe(true)
+  })
+
   it('10000 节点裁剪保持在 1ms 级', () => {
     const children = Array.from({ length: 10_000 }, (_, index) =>
       createBoxNode({
@@ -150,5 +177,33 @@ describe('getConnectionsInViewport', () => {
     })
 
     expect(getConnectionsInViewport(root, viewport, { ...screen, overscan: 0 })).toEqual([])
+  })
+
+  it('端点节点几何变化后使包围盒缓存失效', () => {
+    const cache = new ConnectionBoundsCache()
+    const makeRoot = (targetX: number) =>
+      createFrameNode({
+        fwId: 'root',
+        width: 1_000,
+        height: 500,
+        children: [
+          createBoxNode({ fwId: 'source', x: 300, y: 20, width: 20, height: 20 }),
+          createAiImageNode({
+            fwId: 'target',
+            x: targetX,
+            y: 20,
+            width: 20,
+            height: 20,
+            sourceFwIds: ['source'],
+          }),
+        ],
+      })
+
+    expect(
+      getConnectionsInViewport(makeRoot(400), viewport, { ...screen, overscan: 0 }, cache),
+    ).toEqual([])
+    expect(
+      getConnectionsInViewport(makeRoot(70), viewport, { ...screen, overscan: 0 }, cache),
+    ).toHaveLength(1)
   })
 })

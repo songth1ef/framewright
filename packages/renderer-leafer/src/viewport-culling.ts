@@ -1,12 +1,16 @@
 import {
+  canReuseViewportCulling,
+  ConnectionBoundsCache,
   getConnectionsInViewport,
-  getNodesInViewport,
+  getViewportCullingResult,
   isFrameNode,
   type CanvasNode,
+  type ConnectionItem,
   type Point,
   type Rect as CoreRect,
   type RenderContext,
   type ViewportCullingOptions,
+  type ViewportCullingResult,
 } from '@framewright/core'
 import { Leafer, type IUI } from 'leafer-ui'
 import type { CanvasInteractionPreview, NodeResize } from './canvas-interaction'
@@ -90,8 +94,14 @@ function collectDescriptors(
  */
 export class LeaferViewportScene {
   private readonly mounted = new Map<string, MountedNode>()
+  private readonly connectionBoundsCache = new ConnectionBoundsCache()
   private mountedOrder: string[] = []
   private connectionLayer: LeaferConnectionLayer | null = null
+  private cullingCache: {
+    root: RenderContext['root']
+    result: ViewportCullingResult
+    connections: ConnectionItem[]
+  } | null = null
 
   constructor(private readonly leafer: Leafer) {}
 
@@ -102,7 +112,25 @@ export class LeaferViewportScene {
   ): LeaferSceneSnapshot {
     const { descriptors, snapshot } = collectDescriptors(ctx, preview)
     const descriptorById = new Map(descriptors.map((descriptor) => [descriptor.node.fwId, descriptor]))
-    const desiredIds = getNodesInViewport(ctx.root, ctx.viewport, cullingOptions)
+    const canReuse =
+      this.cullingCache !== null &&
+      this.cullingCache.root === ctx.root &&
+      canReuseViewportCulling(this.cullingCache.result, ctx.viewport, cullingOptions)
+    if (!canReuse) {
+      this.cullingCache = {
+        root: ctx.root,
+        result: getViewportCullingResult(ctx.root, ctx.viewport, cullingOptions),
+        connections: getConnectionsInViewport(
+          ctx.root,
+          ctx.viewport,
+          cullingOptions,
+          this.connectionBoundsCache,
+        ),
+      }
+    }
+    const cullingCache = this.cullingCache
+    if (cullingCache === null) throw new Error('裁剪缓存初始化失败')
+    const desiredIds = cullingCache.result.nodeIds
 
     const removals = [...this.mounted.entries()]
       .filter(([fwId]) => !desiredIds.has(fwId) || !descriptorById.has(fwId))
@@ -150,7 +178,7 @@ export class LeaferViewportScene {
         rootUi.add(this.connectionLayer.ui, 0)
       }
       this.connectionLayer.reconcile(
-        getConnectionsInViewport(ctx.root, ctx.viewport, cullingOptions),
+        cullingCache.connections,
         ctx.selection,
         ctx.viewport.scale,
       )
@@ -181,6 +209,7 @@ export class LeaferViewportScene {
     )
     for (const [fwId] of entries) this.destroyMountedNode(fwId)
     this.mountedOrder = []
+    this.cullingCache = null
   }
 
   private createMountedNode(descriptor: SceneDescriptor): void {
