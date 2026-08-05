@@ -9,7 +9,7 @@ describe('React Flow 探针节点', () => {
       <ReactFlowProvider><ProbeNodeView
         id="video-1"
         type="probe"
-        data={{ shape: 'video', src: '/video.webm', poster: '/poster.webp', fit: 'cover' }}
+        data={{ shape: 'video', src: '/video.webm', poster: '/poster.webp', fit: 'cover', rotation: 0 }}
         selected={false}
         dragging={false}
         draggable
@@ -34,7 +34,7 @@ describe('React Flow 探针节点', () => {
       <ReactFlowProvider><ProbeNodeView
         id="audio-1"
         type="probe"
-        data={{ shape: 'unsupported', unsupportedShape: 'audio' }}
+        data={{ shape: 'unsupported', unsupportedShape: 'audio', rotation: 0 }}
         selected={false}
         dragging={false}
         draggable={false}

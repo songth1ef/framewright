@@ -21,25 +21,26 @@ export type ProbeNodeData = Record<string, unknown> & {
   poster?: string | null
   fit?: ObjectFit
   unsupportedShape?: string
+  rotation: number
 }
 
 export type ProbeNode = Node<ProbeNodeData, 'probe'>
 export type ProbeEdge = Edge<Record<string, never>, 'default'>
 
 function mapData(node: CanvasNode): ProbeNodeData {
-  if (isFrameNode(node)) return { shape: 'frame', fill: node.background ?? 'transparent' }
-  if (isBoxNode(node)) return { shape: 'box', fill: node.fill }
-  if (isImgNode(node)) return { shape: 'img', src: node.src, fit: node.fit }
+  if (isFrameNode(node)) return { shape: 'frame', fill: node.background ?? 'transparent', rotation: node.rotation }
+  if (isBoxNode(node)) return { shape: 'box', fill: node.fill, rotation: node.rotation }
+  if (isImgNode(node)) return { shape: 'img', src: node.src, fit: node.fit, rotation: node.rotation }
   if (isVideoNode(node)) {
-    return { shape: 'video', src: node.src, poster: node.poster, fit: node.fit }
+    return { shape: 'video', src: node.src, poster: node.poster, fit: node.fit, rotation: node.rotation }
   }
   if (isAiImageNode(node)) {
-    return { shape: 'ai-image', src: node.src, fit: node.fit }
+    return { shape: 'ai-image', src: node.src, fit: node.fit, rotation: node.rotation }
   }
   if (isAiVideoNode(node)) {
-    return { shape: 'ai-video', src: node.src, poster: node.poster, fit: node.fit }
+    return { shape: 'ai-video', src: node.src, poster: node.poster, fit: node.fit, rotation: node.rotation }
   }
-  return { shape: 'unsupported', unsupportedShape: node.fwType }
+  return { shape: 'unsupported', unsupportedShape: node.fwType, rotation: node.rotation }
 }
 
 function mapStyle(node: CanvasNode): CSSProperties {
@@ -47,8 +48,6 @@ function mapStyle(node: CanvasNode): CSSProperties {
     width: node.width,
     height: node.height,
     opacity: node.opacity,
-    transform: node.rotation === 0 ? undefined : `rotate(${node.rotation}deg)`,
-    transformOrigin: 'center',
   }
 }
 
@@ -87,6 +86,8 @@ export function mapFrameToReactFlow(
   const pairOccurrences = new Map<string, number>()
 
   walkTree(root, (node, absolute) => {
+    // React Flow 的 pane 自己就是根画布；把 root frame 也做成 node 会遮住 pane，原生平移无法命中。
+    if (node.fwId === root.fwId) return
     nodes.push(mapNode(node, absolute, selected.has(node.fwId)))
     if (!isAiImageNode(node) && !isAiVideoNode(node)) return
     for (const source of node.sourceFwIds) {

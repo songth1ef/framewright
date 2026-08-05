@@ -51,6 +51,8 @@ export function ProbeNodeView({ id, data, selected }: NodeProps<ProbeNode>): Rea
         overflow: data.shape === 'frame' ? 'visible' : 'hidden',
         background,
         outline: selected ? '2px solid #2563eb' : undefined,
+        transform: data.rotation === 0 ? undefined : `rotate(${data.rotation}deg)`,
+        transformOrigin: 'center',
       }}
     >
       <Handle type="target" position={Position.Left} isConnectable={false} />

@@ -26,7 +26,7 @@ describe('core node → React Flow 映射', () => {
     })
 
     const mapped = mapFrameToReactFlow(root, ['video-1'])
-    expect(mapped.nodes[1]).toMatchObject({
+    expect(mapped.nodes[0]).toMatchObject({
       id: 'video-1',
       position: { x: 40, y: 60 },
       width: 320,
@@ -60,7 +60,7 @@ describe('core node → React Flow 映射', () => {
   it('不把 core node 整体泄漏到 React Flow node/data/style', () => {
     const node = createVideoNode({ fwId: 'video-1', locked: true, src: '/video.webm' })
     const root = createFrameNode({ fwId: 'root', children: [node] })
-    const mapped = mapFrameToReactFlow(root, []).nodes[1]!
+    const mapped = mapFrameToReactFlow(root, []).nodes[0]!
     const serialized = JSON.stringify({ data: mapped.data, style: mapped.style })
     for (const forbidden of ['fwId', 'fwType', 'locked', 'children']) {
       expect(serialized).not.toContain(forbidden)
@@ -72,7 +72,7 @@ describe('core node → React Flow 映射', () => {
       fwId: 'root',
       children: [createAudioNode({ fwId: 'audio-1', src: '/audio.mp3' })],
     })
-    expect(mapFrameToReactFlow(root, []).nodes[1]).toMatchObject({
+    expect(mapFrameToReactFlow(root, []).nodes[0]).toMatchObject({
       id: 'audio-1',
       data: { shape: 'unsupported', unsupportedShape: 'audio' },
     })
