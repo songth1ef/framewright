@@ -1,0 +1,2408 @@
+{
+  "probe": "renderer-leafer-scale-s4-zoom-out",
+  "startedAt": "2026-08-05T15:56:57.324Z",
+  "workload": {
+    "renderer": "Leafer Canvas（生产 LeaferViewportScene + core createScaleFixture）",
+    "scenarios": [
+      {
+        "id": "zoom-100",
+        "label": "100%",
+        "nodeCount": 10000,
+        "connectionPattern": "fanin",
+        "initialScale": 1
+      },
+      {
+        "id": "zoom-50",
+        "label": "50%",
+        "nodeCount": 10000,
+        "connectionPattern": "fanin",
+        "initialScale": 0.5
+      },
+      {
+        "id": "zoom-25",
+        "label": "25%",
+        "nodeCount": 10000,
+        "connectionPattern": "fanin",
+        "initialScale": 0.25
+      },
+      {
+        "id": "zoom-10",
+        "label": "10%",
+        "nodeCount": 10000,
+        "connectionPattern": "fanin",
+        "initialScale": 0.1
+      }
+    ],
+    "seed": 7,
+    "sampleWindowMs": 3000,
+    "repeatCount": 5,
+    "repeatCooldownMs": 1000,
+    "caseTimeoutMs": 120000,
+    "viewport": {
+      "width": 1024,
+      "height": 1400,
+      "viewWidth": 960,
+      "viewHeight": 1300
+    },
+    "viewportRole": "browser viewport 1024×1400；#view 960×1300；与 DOM 侧严格同口径。",
+    "dragDelta": {
+      "x": 240,
+      "y": 120
+    },
+    "panDelta": {
+      "x": -1200,
+      "y": -800
+    },
+    "longFrameThresholdMs": 50
+  },
+  "sampling": {
+    "repeatCount": 5,
+    "repeatCooldownMs": 1000,
+    "isolation": "每次样本启动独立子进程，并新建 browser 与 page"
+  },
+  "memory": null,
+  "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。",
+  "scenarios": [
+    {
+      "id": "zoom-100",
+      "label": "100%",
+      "nodeCount": 10000,
+      "connectionPattern": "fanin",
+      "initialScale": 1,
+      "status": "completed",
+      "requestedSampleCount": 5,
+      "samples": [
+        {
+          "sampleIndex": 1,
+          "id": "zoom-100",
+          "label": "100%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 1,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 96,
+            "fixtureBuildMs": 12.400000005960464,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 170,
+            "mountedConnectionCount": 145,
+            "mountedLeaferInstanceCount": 1489,
+            "mountedToTotalRatio": 0.017,
+            "paintedPixel": [
+              255,
+              255,
+              255,
+              255
+            ],
+            "paintedAfterFrames": 2,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 181,
+            "elapsedMs": 3015.5,
+            "fps": 60.02321339744652,
+            "frameTimeMs": {
+              "median": 16.799999982118607,
+              "p95": 18.30000001192093,
+              "max": 21.799999982118607
+            },
+            "longFrames": 0,
+            "avgFps": 60.02321339744652,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 162,
+            "elapsedMs": 3012.800000011921,
+            "fps": 53.77057886330291,
+            "frameTimeMs": {
+              "median": 18.099999994039536,
+              "p95": 23.100000023841858,
+              "max": 28.69999998807907
+            },
+            "longFrames": 0,
+            "avgFps": 53.77057886330291,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "0408c5d880ea2b420fc9f7ef7fc90e53e83f8c041f20c5ee9dc951bd6782f1b8",
+                "endFingerprint": "b6648bc06ed53d1b55470e4ca71e15387724a6fd67da1148c4d00c2ab250ae1f",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 145,
+                "mountedConnectionCountEnd": 316,
+                "connectionCountChanged": true
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 2,
+          "id": "zoom-100",
+          "label": "100%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 1,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 93.2000000178814,
+            "fixtureBuildMs": 11.400000005960464,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 170,
+            "mountedConnectionCount": 145,
+            "mountedLeaferInstanceCount": 1489,
+            "mountedToTotalRatio": 0.017,
+            "paintedPixel": [
+              255,
+              255,
+              255,
+              255
+            ],
+            "paintedAfterFrames": 2,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 180,
+            "elapsedMs": 3009,
+            "fps": 59.82053838484547,
+            "frameTimeMs": {
+              "median": 16.599999994039536,
+              "p95": 18.5,
+              "max": 33.400000005960464
+            },
+            "longFrames": 0,
+            "avgFps": 59.82053838484547,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 155,
+            "elapsedMs": 3003,
+            "fps": 51.61505161505161,
+            "frameTimeMs": {
+              "median": 18.69999998807907,
+              "p95": 24.900000005960464,
+              "max": 38
+            },
+            "longFrames": 0,
+            "avgFps": 51.61505161505161,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "0408c5d880ea2b420fc9f7ef7fc90e53e83f8c041f20c5ee9dc951bd6782f1b8",
+                "endFingerprint": "d452ee444158c89ddfda00ca48e96e93886d5b1e95334707cc6ac5deac7ad5fa",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 145,
+                "mountedConnectionCountEnd": 316,
+                "connectionCountChanged": true
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 3,
+          "id": "zoom-100",
+          "label": "100%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 1,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 101.39999997615814,
+            "fixtureBuildMs": 11.599999994039536,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 170,
+            "mountedConnectionCount": 145,
+            "mountedLeaferInstanceCount": 1489,
+            "mountedToTotalRatio": 0.017,
+            "paintedPixel": [
+              255,
+              255,
+              255,
+              255
+            ],
+            "paintedAfterFrames": 2,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 181,
+            "elapsedMs": 3007.199999988079,
+            "fps": 60.18888002152085,
+            "frameTimeMs": {
+              "median": 16.700000017881393,
+              "p95": 18.30000001192093,
+              "max": 28
+            },
+            "longFrames": 0,
+            "avgFps": 60.18888002152085,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 156,
+            "elapsedMs": 3001.0999999940395,
+            "fps": 51.98094032198522,
+            "frameTimeMs": {
+              "median": 18.399999991059303,
+              "p95": 27.400000005960464,
+              "max": 35.20000001788139
+            },
+            "longFrames": 0,
+            "avgFps": 51.98094032198522,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "0ce15eb26ef0c9e671550f6d2fe13ba039a233ce7a891408dca93b0aba865e4e",
+                "endFingerprint": "747c671d4dd69c61fd31b595250355ccb298a27547e1f5a14a0e9264ad0e5ef6",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 145,
+                "mountedConnectionCountEnd": 316,
+                "connectionCountChanged": true
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 4,
+          "id": "zoom-100",
+          "label": "100%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 1,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 89.30000001192093,
+            "fixtureBuildMs": 10.900000005960464,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 170,
+            "mountedConnectionCount": 145,
+            "mountedLeaferInstanceCount": 1489,
+            "mountedToTotalRatio": 0.017,
+            "paintedPixel": [
+              255,
+              255,
+              255,
+              255
+            ],
+            "paintedAfterFrames": 2,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 180,
+            "elapsedMs": 3002.5,
+            "fps": 59.95004163197335,
+            "frameTimeMs": {
+              "median": 16.599999994039536,
+              "p95": 18.5,
+              "max": 31.599999994039536
+            },
+            "longFrames": 0,
+            "avgFps": 59.95004163197335,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 159,
+            "elapsedMs": 3020.5,
+            "fps": 52.640291342492965,
+            "frameTimeMs": {
+              "median": 18.5,
+              "p95": 23.399999976158142,
+              "max": 38.599999994039536
+            },
+            "longFrames": 0,
+            "avgFps": 52.640291342492965,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "024c9ad2ec2097584f1166a2c6cf99dda656357a5667028c9e3da15fade4ef60",
+                "endFingerprint": "6a7399a69a6d726fab84f5b46adb62fb14eba99e7c76b1ec9a5c7bb31003a4f2",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 145,
+                "mountedConnectionCountEnd": 316,
+                "connectionCountChanged": true
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 5,
+          "id": "zoom-100",
+          "label": "100%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 1,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 93.80000001192093,
+            "fixtureBuildMs": 10.700000017881393,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 170,
+            "mountedConnectionCount": 145,
+            "mountedLeaferInstanceCount": 1489,
+            "mountedToTotalRatio": 0.017,
+            "paintedPixel": [
+              255,
+              255,
+              255,
+              255
+            ],
+            "paintedAfterFrames": 2,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 181,
+            "elapsedMs": 3013.0999999940395,
+            "fps": 60.07102319881785,
+            "frameTimeMs": {
+              "median": 16.69999998807907,
+              "p95": 18.899999976158142,
+              "max": 26.30000001192093
+            },
+            "longFrames": 0,
+            "avgFps": 60.07102319881785,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 157,
+            "elapsedMs": 3008.9000000059605,
+            "fps": 52.178537006776224,
+            "frameTimeMs": {
+              "median": 18.900000005960464,
+              "p95": 25,
+              "max": 27.30000001192093
+            },
+            "longFrames": 0,
+            "avgFps": 52.178537006776224,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "0ce15eb26ef0c9e671550f6d2fe13ba039a233ce7a891408dca93b0aba865e4e",
+                "endFingerprint": "b6b0ef2223b3e08a60613c15a8bcc982b3674e58d4552e53a0eacaeaba2ca96d",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 145,
+                "mountedConnectionCountEnd": 316,
+                "connectionCountChanged": true
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        }
+      ],
+      "completedSampleCount": 5,
+      "aggregate": {
+        "firstScreen": {
+          "elapsedMs": {
+            "median": 93.80000001192093,
+            "q1": 91.25000001490116,
+            "q3": 98.69999998807907,
+            "iqr": 7.44999997317791
+          }
+        },
+        "drag": {
+          "avgFps": {
+            "median": 60.02321339744652,
+            "q1": 59.88529000840941,
+            "q3": 60.12995161016935,
+            "iqr": 0.2446616017599368
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 16.69999998807907,
+              "q1": 16.599999994039536,
+              "q3": 16.75,
+              "iqr": 0.15000000596046448
+            },
+            "p95": {
+              "median": 18.5,
+              "q1": 18.30000001192093,
+              "q3": 18.69999998807907,
+              "iqr": 0.3999999761581421
+            },
+            "max": {
+              "median": 28,
+              "q1": 24.049999997019768,
+              "q3": 32.5,
+              "iqr": 8.450000002980232
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        },
+        "pan": {
+          "avgFps": {
+            "median": 52.178537006776224,
+            "q1": 51.79799596851842,
+            "q3": 53.20543510289794,
+            "iqr": 1.4074391343795156
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 18.5,
+              "q1": 18.24999999254942,
+              "q3": 18.799999997019768,
+              "iqr": 0.5500000044703484
+            },
+            "p95": {
+              "median": 24.900000005960464,
+              "q1": 23.25,
+              "q3": 26.200000002980232,
+              "iqr": 2.9500000029802322
+            },
+            "max": {
+              "median": 35.20000001788139,
+              "q1": 28,
+              "q3": 38.29999999701977,
+              "iqr": 10.299999997019768
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "zoom-50",
+      "label": "50%",
+      "nodeCount": 10000,
+      "connectionPattern": "fanin",
+      "initialScale": 0.5,
+      "status": "completed",
+      "requestedSampleCount": 5,
+      "samples": [
+        {
+          "sampleIndex": 1,
+          "id": "zoom-50",
+          "label": "50%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.5,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 152.40000000596046,
+            "fixtureBuildMs": 11,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 660,
+            "mountedConnectionCount": 610,
+            "mountedLeaferInstanceCount": 5845,
+            "mountedToTotalRatio": 0.066,
+            "paintedPixel": [
+              255,
+              255,
+              255,
+              255
+            ],
+            "paintedAfterFrames": 2,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 98,
+            "elapsedMs": 3005.699999988079,
+            "fps": 32.604717703160226,
+            "frameTimeMs": {
+              "median": 30.099999994039536,
+              "p95": 34.900000005960464,
+              "max": 42.70000001788139
+            },
+            "longFrames": 0,
+            "avgFps": 32.604717703160226,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 61,
+            "elapsedMs": 3009.7000000178814,
+            "fps": 20.26780077736571,
+            "frameTimeMs": {
+              "median": 47.79999998211861,
+              "p95": 74.19999998807907,
+              "max": 85.7000000178814
+            },
+            "longFrames": 25,
+            "avgFps": 20.26780077736571,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "7cf41e4739eb6400babc34b6c124beea3b6b26719e47ddd28e2ceedc7e9cbe74",
+                "endFingerprint": "556f1c34ebb7c104099ca9580c97cc4895f9ecd4ace4395eef263062ed857c83",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 610,
+                "mountedConnectionCountEnd": 1000,
+                "connectionCountChanged": true
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 2,
+          "id": "zoom-50",
+          "label": "50%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.5,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 157.19999998807907,
+            "fixtureBuildMs": 10.5,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 660,
+            "mountedConnectionCount": 610,
+            "mountedLeaferInstanceCount": 5845,
+            "mountedToTotalRatio": 0.066,
+            "paintedPixel": [
+              255,
+              255,
+              255,
+              255
+            ],
+            "paintedAfterFrames": 2,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 95,
+            "elapsedMs": 3016.9000000059605,
+            "fps": 31.48927707242942,
+            "frameTimeMs": {
+              "median": 31.099999994039536,
+              "p95": 38.19999998807907,
+              "max": 43.89999997615814
+            },
+            "longFrames": 0,
+            "avgFps": 31.48927707242942,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 60,
+            "elapsedMs": 3004.899999976158,
+            "fps": 19.96738660204202,
+            "frameTimeMs": {
+              "median": 47.94999998807907,
+              "p95": 73.40000000596046,
+              "max": 80.10000002384186
+            },
+            "longFrames": 28,
+            "avgFps": 19.96738660204202,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "7cf41e4739eb6400babc34b6c124beea3b6b26719e47ddd28e2ceedc7e9cbe74",
+                "endFingerprint": "ab981da05e731e3af4adfda2894c7efe71f295c7373f0df07d5723e24bc8238f",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 610,
+                "mountedConnectionCountEnd": 1000,
+                "connectionCountChanged": true
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 3,
+          "id": "zoom-50",
+          "label": "50%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.5,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 152.89999997615814,
+            "fixtureBuildMs": 11.400000005960464,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 660,
+            "mountedConnectionCount": 610,
+            "mountedLeaferInstanceCount": 5845,
+            "mountedToTotalRatio": 0.066,
+            "paintedPixel": [
+              255,
+              255,
+              255,
+              255
+            ],
+            "paintedAfterFrames": 2,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 97,
+            "elapsedMs": 3020,
+            "fps": 32.11920529801325,
+            "frameTimeMs": {
+              "median": 30.599999994039536,
+              "p95": 38,
+              "max": 43.400000005960464
+            },
+            "longFrames": 0,
+            "avgFps": 32.11920529801325,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 62,
+            "elapsedMs": 3060.0999999940395,
+            "fps": 20.26077579168026,
+            "frameTimeMs": {
+              "median": 48.55000001192093,
+              "p95": 71.09999999403954,
+              "max": 76.69999998807907
+            },
+            "longFrames": 29,
+            "avgFps": 20.26077579168026,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "171a4f5d51b57c54e52427ab921bf91cc82da2559879bed6f468f32b543642c6",
+                "endFingerprint": "43ec3f1cf794287c3e7a9959bb12a6e72aa403376f76a3b2274bf2b723829b13",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 610,
+                "mountedConnectionCountEnd": 1000,
+                "connectionCountChanged": true
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 4,
+          "id": "zoom-50",
+          "label": "50%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.5,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 156.09999999403954,
+            "fixtureBuildMs": 10.800000011920929,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 660,
+            "mountedConnectionCount": 610,
+            "mountedLeaferInstanceCount": 5845,
+            "mountedToTotalRatio": 0.066,
+            "paintedPixel": [
+              255,
+              255,
+              255,
+              255
+            ],
+            "paintedAfterFrames": 2,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 96,
+            "elapsedMs": 3014.300000011921,
+            "fps": 31.848190292811047,
+            "frameTimeMs": {
+              "median": 30.850000008940697,
+              "p95": 39.5,
+              "max": 41.5
+            },
+            "longFrames": 0,
+            "avgFps": 31.848190292811047,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 62,
+            "elapsedMs": 3043.4000000059605,
+            "fps": 20.3719524215938,
+            "frameTimeMs": {
+              "median": 49.150000005960464,
+              "p95": 68,
+              "max": 76.80000001192093
+            },
+            "longFrames": 27,
+            "avgFps": 20.3719524215938,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "ff0da592f1d1318ef0180a5df17e23db4f13f717c3633547e68068f418891007",
+                "endFingerprint": "43ec3f1cf794287c3e7a9959bb12a6e72aa403376f76a3b2274bf2b723829b13",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 610,
+                "mountedConnectionCountEnd": 1000,
+                "connectionCountChanged": true
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 5,
+          "id": "zoom-50",
+          "label": "50%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.5,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 164.90000000596046,
+            "fixtureBuildMs": 13.900000005960464,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 660,
+            "mountedConnectionCount": 610,
+            "mountedLeaferInstanceCount": 5845,
+            "mountedToTotalRatio": 0.066,
+            "paintedPixel": [
+              255,
+              255,
+              255,
+              255
+            ],
+            "paintedAfterFrames": 2,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 94,
+            "elapsedMs": 3015.4000000059605,
+            "fps": 31.173310340191744,
+            "frameTimeMs": {
+              "median": 31.450000002980232,
+              "p95": 40.20000001788139,
+              "max": 45.79999998211861
+            },
+            "longFrames": 0,
+            "avgFps": 31.173310340191744,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 63,
+            "elapsedMs": 3062.9000000059605,
+            "fps": 20.56874204181573,
+            "frameTimeMs": {
+              "median": 45.69999998807907,
+              "p95": 71.80000001192093,
+              "max": 82.2000000178814
+            },
+            "longFrames": 24,
+            "avgFps": 20.56874204181573,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "bc125ee19ae55987b607f5c2be751139d97e9e0f5780b10eed81fb9fa3b2de4b",
+                "endFingerprint": "556f1c34ebb7c104099ca9580c97cc4895f9ecd4ace4395eef263062ed857c83",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 610,
+                "mountedConnectionCountEnd": 1000,
+                "connectionCountChanged": true
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        }
+      ],
+      "completedSampleCount": 5,
+      "aggregate": {
+        "firstScreen": {
+          "elapsedMs": {
+            "median": 156.09999999403954,
+            "q1": 152.6499999910593,
+            "q3": 161.04999999701977,
+            "iqr": 8.400000005960464
+          }
+        },
+        "drag": {
+          "avgFps": {
+            "median": 31.848190292811047,
+            "q1": 31.331293706310582,
+            "q3": 32.36196150058674,
+            "iqr": 1.0306677942761553
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 30.850000008940697,
+              "q1": 30.349999994039536,
+              "q3": 31.274999998509884,
+              "iqr": 0.9250000044703484
+            },
+            "p95": {
+              "median": 38.19999998807907,
+              "q1": 36.45000000298023,
+              "q3": 39.8500000089407,
+              "iqr": 3.4000000059604645
+            },
+            "max": {
+              "median": 43.400000005960464,
+              "q1": 42.1000000089407,
+              "q3": 44.849999979138374,
+              "iqr": 2.7499999701976776
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        },
+        "pan": {
+          "avgFps": {
+            "median": 20.26780077736571,
+            "q1": 20.11408119686114,
+            "q3": 20.470347231704764,
+            "iqr": 0.3562660348436246
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 47.94999998807907,
+              "q1": 46.74999998509884,
+              "q3": 48.8500000089407,
+              "iqr": 2.100000023841858
+            },
+            "p95": {
+              "median": 71.80000001192093,
+              "q1": 69.54999999701977,
+              "q3": 73.79999999701977,
+              "iqr": 4.25
+            },
+            "max": {
+              "median": 80.10000002384186,
+              "q1": 76.75,
+              "q3": 83.9500000178814,
+              "iqr": 7.200000017881393
+            }
+          },
+          "longFrames": {
+            "median": 27,
+            "q1": 24.5,
+            "q3": 28.5,
+            "iqr": 4
+          }
+        }
+      }
+    },
+    {
+      "id": "zoom-25",
+      "label": "25%",
+      "nodeCount": 10000,
+      "connectionPattern": "fanin",
+      "initialScale": 0.25,
+      "status": "completed",
+      "requestedSampleCount": 5,
+      "samples": [
+        {
+          "sampleIndex": 1,
+          "id": "zoom-25",
+          "label": "25%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.25,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 97.69999998807907,
+            "fixtureBuildMs": 10.299999982118607,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 1499,
+            "mountedConnectionCount": 1000,
+            "mountedLeaferInstanceCount": 4501,
+            "mountedToTotalRatio": 0.1499,
+            "paintedPixel": [
+              170,
+              183,
+              196,
+              255
+            ],
+            "paintedAfterFrames": 1,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 66,
+            "elapsedMs": 3016.4000000059605,
+            "fps": 21.880387216506293,
+            "frameTimeMs": {
+              "median": 45.29999999701977,
+              "p95": 51.79999998211861,
+              "max": 57.5
+            },
+            "longFrames": 10,
+            "avgFps": 21.880387216506293,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 47,
+            "elapsedMs": 3019.2000000178814,
+            "fps": 15.56703762576896,
+            "frameTimeMs": {
+              "median": 66.09999999403954,
+              "p95": 78.09999999403954,
+              "max": 81.5
+            },
+            "longFrames": 43,
+            "avgFps": 15.56703762576896,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "345aa657ea7b2d928f6c36da046d39391c00897e335173057c7490bb7d7f839b",
+                "endFingerprint": "fe30af062b13c5220a6ea3561fae2e0ff1775da35a980552fb2262fbebc8224e",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 1000,
+                "mountedConnectionCountEnd": 1000,
+                "connectionCountChanged": false
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 2,
+          "id": "zoom-25",
+          "label": "25%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.25,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 92.09999999403954,
+            "fixtureBuildMs": 10.900000005960464,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 1499,
+            "mountedConnectionCount": 1000,
+            "mountedLeaferInstanceCount": 4501,
+            "mountedToTotalRatio": 0.1499,
+            "paintedPixel": [
+              170,
+              183,
+              196,
+              255
+            ],
+            "paintedAfterFrames": 1,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 67,
+            "elapsedMs": 3024.199999988079,
+            "fps": 22.154619403565935,
+            "frameTimeMs": {
+              "median": 44.80000001192093,
+              "p95": 52,
+              "max": 55.5
+            },
+            "longFrames": 7,
+            "avgFps": 22.154619403565935,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 47,
+            "elapsedMs": 3036.9000000059605,
+            "fps": 15.476308077285308,
+            "frameTimeMs": {
+              "median": 67.5,
+              "p95": 77.80000001192093,
+              "max": 80.30000001192093
+            },
+            "longFrames": 44,
+            "avgFps": 15.476308077285308,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "345aa657ea7b2d928f6c36da046d39391c00897e335173057c7490bb7d7f839b",
+                "endFingerprint": "fe30af062b13c5220a6ea3561fae2e0ff1775da35a980552fb2262fbebc8224e",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 1000,
+                "mountedConnectionCountEnd": 1000,
+                "connectionCountChanged": false
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 3,
+          "id": "zoom-25",
+          "label": "25%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.25,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 92.7999999821186,
+            "fixtureBuildMs": 11.599999994039536,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 1499,
+            "mountedConnectionCount": 1000,
+            "mountedLeaferInstanceCount": 4501,
+            "mountedToTotalRatio": 0.1499,
+            "paintedPixel": [
+              170,
+              183,
+              196,
+              255
+            ],
+            "paintedAfterFrames": 1,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 65,
+            "elapsedMs": 3033.100000023842,
+            "fps": 21.430219906857364,
+            "frameTimeMs": {
+              "median": 47,
+              "p95": 52.89999997615814,
+              "max": 61.30000001192093
+            },
+            "longFrames": 8,
+            "avgFps": 21.430219906857364,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 47,
+            "elapsedMs": 3043.0999999940395,
+            "fps": 15.444776707992526,
+            "frameTimeMs": {
+              "median": 66.7000000178814,
+              "p95": 75.69999998807907,
+              "max": 93.30000001192093
+            },
+            "longFrames": 44,
+            "avgFps": 15.444776707992526,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "345aa657ea7b2d928f6c36da046d39391c00897e335173057c7490bb7d7f839b",
+                "endFingerprint": "fe30af062b13c5220a6ea3561fae2e0ff1775da35a980552fb2262fbebc8224e",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 1000,
+                "mountedConnectionCountEnd": 1000,
+                "connectionCountChanged": false
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 4,
+          "id": "zoom-25",
+          "label": "25%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.25,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 89.40000000596046,
+            "fixtureBuildMs": 10.5,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 1499,
+            "mountedConnectionCount": 1000,
+            "mountedLeaferInstanceCount": 4501,
+            "mountedToTotalRatio": 0.1499,
+            "paintedPixel": [
+              170,
+              183,
+              196,
+              255
+            ],
+            "paintedAfterFrames": 1,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 66,
+            "elapsedMs": 3042.5999999940395,
+            "fps": 21.69197396967373,
+            "frameTimeMs": {
+              "median": 45.44999998807907,
+              "p95": 53.099999994039536,
+              "max": 59.70000001788139
+            },
+            "longFrames": 15,
+            "avgFps": 21.69197396967373,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 46,
+            "elapsedMs": 3019.7999999821186,
+            "fps": 15.232796874055364,
+            "frameTimeMs": {
+              "median": 69.5,
+              "p95": 75.69999998807907,
+              "max": 77.2999999821186
+            },
+            "longFrames": 42,
+            "avgFps": 15.232796874055364,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "345aa657ea7b2d928f6c36da046d39391c00897e335173057c7490bb7d7f839b",
+                "endFingerprint": "fe30af062b13c5220a6ea3561fae2e0ff1775da35a980552fb2262fbebc8224e",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 1000,
+                "mountedConnectionCountEnd": 1000,
+                "connectionCountChanged": false
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 5,
+          "id": "zoom-25",
+          "label": "25%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.25,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 94.69999998807907,
+            "fixtureBuildMs": 10.700000017881393,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 1499,
+            "mountedConnectionCount": 1000,
+            "mountedLeaferInstanceCount": 4501,
+            "mountedToTotalRatio": 0.1499,
+            "paintedPixel": [
+              170,
+              183,
+              196,
+              255
+            ],
+            "paintedAfterFrames": 1,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 66,
+            "elapsedMs": 3026.0999999940395,
+            "fps": 21.810250817927365,
+            "frameTimeMs": {
+              "median": 46.20000001788139,
+              "p95": 52.400000005960464,
+              "max": 60.5
+            },
+            "longFrames": 7,
+            "avgFps": 21.810250817927365,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 48,
+            "elapsedMs": 3048.300000011921,
+            "fps": 15.746481645445753,
+            "frameTimeMs": {
+              "median": 64.25,
+              "p95": 74,
+              "max": 77.19999998807907
+            },
+            "longFrames": 46,
+            "avgFps": 15.746481645445753,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "345aa657ea7b2d928f6c36da046d39391c00897e335173057c7490bb7d7f839b",
+                "endFingerprint": "fe30af062b13c5220a6ea3561fae2e0ff1775da35a980552fb2262fbebc8224e",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 1000,
+                "mountedConnectionCountEnd": 1000,
+                "connectionCountChanged": false
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        }
+      ],
+      "completedSampleCount": 5,
+      "aggregate": {
+        "firstScreen": {
+          "elapsedMs": {
+            "median": 92.7999999821186,
+            "q1": 90.75,
+            "q3": 96.19999998807907,
+            "iqr": 5.449999988079071
+          }
+        },
+        "drag": {
+          "avgFps": {
+            "median": 21.810250817927365,
+            "q1": 21.561096938265546,
+            "q3": 22.017503310036112,
+            "iqr": 0.45640637177056576
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 45.44999998807907,
+              "q1": 45.05000000447035,
+              "q3": 46.6000000089407,
+              "iqr": 1.5500000044703484
+            },
+            "p95": {
+              "median": 52.400000005960464,
+              "q1": 51.8999999910593,
+              "q3": 52.99999998509884,
+              "iqr": 1.0999999940395355
+            },
+            "max": {
+              "median": 59.70000001788139,
+              "q1": 56.5,
+              "q3": 60.900000005960464,
+              "iqr": 4.4000000059604645
+            }
+          },
+          "longFrames": {
+            "median": 8,
+            "q1": 7,
+            "q3": 12.5,
+            "iqr": 5.5
+          }
+        },
+        "pan": {
+          "avgFps": {
+            "median": 15.476308077285308,
+            "q1": 15.338786791023946,
+            "q3": 15.656759635607356,
+            "iqr": 0.31797284458341046
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 66.7000000178814,
+              "q1": 65.17499999701977,
+              "q3": 68.5,
+              "iqr": 3.3250000029802322
+            },
+            "p95": {
+              "median": 75.69999998807907,
+              "q1": 74.84999999403954,
+              "q3": 77.95000000298023,
+              "iqr": 3.1000000089406967
+            },
+            "max": {
+              "median": 80.30000001192093,
+              "q1": 77.24999998509884,
+              "q3": 87.40000000596046,
+              "iqr": 10.150000020861626
+            }
+          },
+          "longFrames": {
+            "median": 44,
+            "q1": 42.5,
+            "q3": 45,
+            "iqr": 2.5
+          }
+        }
+      }
+    },
+    {
+      "id": "zoom-10",
+      "label": "10%",
+      "nodeCount": 10000,
+      "connectionPattern": "fanin",
+      "initialScale": 0.1,
+      "status": "completed",
+      "requestedSampleCount": 5,
+      "samples": [
+        {
+          "sampleIndex": 1,
+          "id": "zoom-10",
+          "label": "10%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.1,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 43.5,
+            "fixtureBuildMs": 10.900000005960464,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-1610",
+            "mountedLogicalNodeCount": 1499,
+            "mountedConnectionCount": 0,
+            "mountedLeaferInstanceCount": 1501,
+            "mountedToTotalRatio": 0.1499,
+            "paintedPixel": [
+              170,
+              183,
+              196,
+              255
+            ],
+            "paintedAfterFrames": 1,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 180,
+            "elapsedMs": 3009.100000023842,
+            "fps": 59.81855039665475,
+            "frameTimeMs": {
+              "median": 16.599999994039536,
+              "p95": 19.400000005960464,
+              "max": 29.19999998807907
+            },
+            "longFrames": 0,
+            "avgFps": 59.81855039665475,
+            "workEvidence": {
+              "fwId": "scale-node-1610",
+              "start": {
+                "x": 2040,
+                "y": 2600
+              },
+              "end": {
+                "x": 2280,
+                "y": 2720
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 154,
+            "elapsedMs": 3007.9000000059605,
+            "fps": 51.19851058868142,
+            "frameTimeMs": {
+              "median": 19.150000005960464,
+              "p95": 24.5,
+              "max": 27.599999994039536
+            },
+            "longFrames": 0,
+            "avgFps": 51.19851058868142,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "1c8c59f7dabfd2cac55643993f275fb8d3635e277ba9764bcc2c3a482a911ec5",
+                "endFingerprint": "325feaabca22f62a206555ab93bfaaaeead4f4584f7a45b26f384efb682938b2",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 0,
+                "mountedConnectionCountEnd": 0,
+                "connectionCountChanged": false
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 2,
+          "id": "zoom-10",
+          "label": "10%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.1,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 45.5,
+            "fixtureBuildMs": 10.400000005960464,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-1610",
+            "mountedLogicalNodeCount": 1499,
+            "mountedConnectionCount": 0,
+            "mountedLeaferInstanceCount": 1501,
+            "mountedToTotalRatio": 0.1499,
+            "paintedPixel": [
+              170,
+              183,
+              196,
+              255
+            ],
+            "paintedAfterFrames": 1,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 181,
+            "elapsedMs": 3003.5999999940395,
+            "fps": 60.261020109321876,
+            "frameTimeMs": {
+              "median": 16.5,
+              "p95": 18.599999994039536,
+              "max": 28.80000001192093
+            },
+            "longFrames": 0,
+            "avgFps": 60.261020109321876,
+            "workEvidence": {
+              "fwId": "scale-node-1610",
+              "start": {
+                "x": 2040,
+                "y": 2600
+              },
+              "end": {
+                "x": 2280,
+                "y": 2720
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 152,
+            "elapsedMs": 3003.7999999821186,
+            "fps": 50.602570078202554,
+            "frameTimeMs": {
+              "median": 19.099999994039536,
+              "p95": 25,
+              "max": 33.599999994039536
+            },
+            "longFrames": 0,
+            "avgFps": 50.602570078202554,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "1c8c59f7dabfd2cac55643993f275fb8d3635e277ba9764bcc2c3a482a911ec5",
+                "endFingerprint": "325feaabca22f62a206555ab93bfaaaeead4f4584f7a45b26f384efb682938b2",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 0,
+                "mountedConnectionCountEnd": 0,
+                "connectionCountChanged": false
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 3,
+          "id": "zoom-10",
+          "label": "10%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.1,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 47.099999994039536,
+            "fixtureBuildMs": 13,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-1610",
+            "mountedLogicalNodeCount": 1499,
+            "mountedConnectionCount": 0,
+            "mountedLeaferInstanceCount": 1501,
+            "mountedToTotalRatio": 0.1499,
+            "paintedPixel": [
+              170,
+              183,
+              196,
+              255
+            ],
+            "paintedAfterFrames": 1,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 181,
+            "elapsedMs": 3009.7999999821186,
+            "fps": 60.13688617219594,
+            "frameTimeMs": {
+              "median": 16.599999994039536,
+              "p95": 19.19999998807907,
+              "max": 23.5
+            },
+            "longFrames": 0,
+            "avgFps": 60.13688617219594,
+            "workEvidence": {
+              "fwId": "scale-node-1610",
+              "start": {
+                "x": 2040,
+                "y": 2600
+              },
+              "end": {
+                "x": 2280,
+                "y": 2720
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 148,
+            "elapsedMs": 3002.5999999940395,
+            "fps": 49.290614800604075,
+            "frameTimeMs": {
+              "median": 19.75,
+              "p95": 25.19999998807907,
+              "max": 29.900000005960464
+            },
+            "longFrames": 0,
+            "avgFps": 49.290614800604075,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "1c8c59f7dabfd2cac55643993f275fb8d3635e277ba9764bcc2c3a482a911ec5",
+                "endFingerprint": "325feaabca22f62a206555ab93bfaaaeead4f4584f7a45b26f384efb682938b2",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 0,
+                "mountedConnectionCountEnd": 0,
+                "connectionCountChanged": false
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 4,
+          "id": "zoom-10",
+          "label": "10%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.1,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 48.69999998807907,
+            "fixtureBuildMs": 10.599999994039536,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-1610",
+            "mountedLogicalNodeCount": 1499,
+            "mountedConnectionCount": 0,
+            "mountedLeaferInstanceCount": 1501,
+            "mountedToTotalRatio": 0.1499,
+            "paintedPixel": [
+              170,
+              183,
+              196,
+              255
+            ],
+            "paintedAfterFrames": 1,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 181,
+            "elapsedMs": 3003.5999999940395,
+            "fps": 60.261020109321876,
+            "frameTimeMs": {
+              "median": 16.5,
+              "p95": 18.799999982118607,
+              "max": 28.900000005960464
+            },
+            "longFrames": 0,
+            "avgFps": 60.261020109321876,
+            "workEvidence": {
+              "fwId": "scale-node-1610",
+              "start": {
+                "x": 2040,
+                "y": 2600
+              },
+              "end": {
+                "x": 2280,
+                "y": 2720
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 155,
+            "elapsedMs": 3014.0999999940395,
+            "fps": 51.424969311007104,
+            "frameTimeMs": {
+              "median": 19.099999994039536,
+              "p95": 22.099999994039536,
+              "max": 36.30000001192093
+            },
+            "longFrames": 0,
+            "avgFps": 51.424969311007104,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "1c8c59f7dabfd2cac55643993f275fb8d3635e277ba9764bcc2c3a482a911ec5",
+                "endFingerprint": "325feaabca22f62a206555ab93bfaaaeead4f4584f7a45b26f384efb682938b2",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 0,
+                "mountedConnectionCountEnd": 0,
+                "connectionCountChanged": false
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        },
+        {
+          "sampleIndex": 5,
+          "id": "zoom-10",
+          "label": "10%",
+          "nodeCount": 10000,
+          "connectionPattern": "fanin",
+          "initialScale": 0.1,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 44.80000001192093,
+            "fixtureBuildMs": 12.399999976158142,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 9999,
+            "evidenceNodeFwId": "scale-node-1610",
+            "mountedLogicalNodeCount": 1499,
+            "mountedConnectionCount": 0,
+            "mountedLeaferInstanceCount": 1501,
+            "mountedToTotalRatio": 0.1499,
+            "paintedPixel": [
+              170,
+              183,
+              196,
+              255
+            ],
+            "paintedAfterFrames": 1,
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "drag": {
+            "frames": 181,
+            "elapsedMs": 3010,
+            "fps": 60.13289036544851,
+            "frameTimeMs": {
+              "median": 16.5,
+              "p95": 19.400000005960464,
+              "max": 24
+            },
+            "longFrames": 0,
+            "avgFps": 60.13289036544851,
+            "workEvidence": {
+              "fwId": "scale-node-1610",
+              "start": {
+                "x": 2040,
+                "y": 2600
+              },
+              "end": {
+                "x": 2280,
+                "y": 2720
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "pan": {
+            "frames": 151,
+            "elapsedMs": 3015.199999988079,
+            "fps": 50.07959671020065,
+            "frameTimeMs": {
+              "median": 19.5,
+              "p95": 23.69999998807907,
+              "max": 34.80000001192093
+            },
+            "longFrames": 0,
+            "avgFps": 50.07959671020065,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "1c8c59f7dabfd2cac55643993f275fb8d3635e277ba9764bcc2c3a482a911ec5",
+                "endFingerprint": "325feaabca22f62a206555ab93bfaaaeead4f4584f7a45b26f384efb682938b2",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 0,
+                "mountedConnectionCountEnd": 0,
+                "connectionCountChanged": false
+              }
+            },
+            "memory": null,
+            "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲、Leafer 实例与 GPU 资源，故不采集。"
+        }
+      ],
+      "completedSampleCount": 5,
+      "aggregate": {
+        "firstScreen": {
+          "elapsedMs": {
+            "median": 45.5,
+            "q1": 44.150000005960464,
+            "q3": 47.8999999910593,
+            "iqr": 3.749999985098839
+          }
+        },
+        "drag": {
+          "avgFps": {
+            "median": 60.13688617219594,
+            "q1": 59.97572038105163,
+            "q3": 60.261020109321876,
+            "iqr": 0.2852997282702461
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 16.5,
+              "q1": 16.5,
+              "q3": 16.599999994039536,
+              "iqr": 0.09999999403953552
+            },
+            "p95": {
+              "median": 19.19999998807907,
+              "q1": 18.69999998807907,
+              "q3": 19.400000005960464,
+              "iqr": 0.7000000178813934
+            },
+            "max": {
+              "median": 28.80000001192093,
+              "q1": 23.75,
+              "q3": 29.049999997019768,
+              "iqr": 5.299999997019768
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        },
+        "pan": {
+          "avgFps": {
+            "median": 50.602570078202554,
+            "q1": 49.68510575540236,
+            "q3": 51.31173994984427,
+            "iqr": 1.6266341944419054
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 19.150000005960464,
+              "q1": 19.099999994039536,
+              "q3": 19.625,
+              "iqr": 0.5250000059604645
+            },
+            "p95": {
+              "median": 24.5,
+              "q1": 22.899999991059303,
+              "q3": 25.099999994039536,
+              "iqr": 2.2000000029802322
+            },
+            "max": {
+              "median": 33.599999994039536,
+              "q1": 28.75,
+              "q3": 35.55000001192093,
+              "iqr": 6.800000011920929
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        }
+      }
+    }
+  ],
+  "finishedAt": "2026-08-05T15:59:37.259Z"
+}

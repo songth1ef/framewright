@@ -3,16 +3,33 @@ import {
   type ConnectionItem,
   type ConnectionDetailLevel,
 } from '@framewright/core'
-import { Group, Path, type IUI } from 'leafer-ui'
+import { Ellipse, Group, Path, type IUI } from 'leafer-ui'
 
 // 🔴 collectConnectionItems / ConnectionItem 已收编进 core（packages/core/src/connections.ts）——
 // 锚点提取规则两侧唯一真相源，本文件只保留 Leafer 专属的绘制层构建。
 export type { ConnectionItem }
 
+interface MountedConnection {
+  path: Path
+  endpoints: [Ellipse, Ellipse] | null
+}
+
+function keyedConnectionItems(items: readonly ConnectionItem[]): Array<[string, ConnectionItem]> {
+  const occurrences = new Map<string, number>()
+  return items.map((item) => {
+    const baseKey = `${item.fromFwId}\u0000${item.toFwId}`
+    const occurrence = occurrences.get(baseKey) ?? 0
+    occurrences.set(baseKey, occurrence + 1)
+    return [`${baseKey}\u0000${occurrence}`, item]
+  })
+}
+
 function connectionStyle(
-  highlighted: boolean,
+  item: ConnectionItem,
+  selection: readonly string[],
   viewportScale: number,
 ): { stroke: string; strokeWidth: number } {
+  const highlighted = selection.includes(item.fromFwId) || selection.includes(item.toFwId)
   return {
     stroke: highlighted ? CONNECTION_STYLE.highlightColor : CONNECTION_STYLE.strokeColor,
     strokeWidth:
@@ -34,14 +51,10 @@ function connectionPath(item: ConnectionItem, detail: ConnectionDetailLevel): st
   return curvePath(item)
 }
 
-function endpointCirclePath(x: number, y: number, radius: number): string {
-  return `M ${x - radius} ${y} a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${radius * -2} 0`
-}
-
 /** 长期存活的连线层：按端点 key 增删，已有连线只原地更新。 */
 export class LeaferConnectionLayer {
   readonly ui = new Group({ hittable: false })
-  private readonly mounted = new Map<string, Path>()
+  private readonly mounted = new Map<string, MountedConnection>()
   mountedConnectionCount = 0
 
   reconcile(
@@ -51,60 +64,33 @@ export class LeaferConnectionLayer {
     detail: ConnectionDetailLevel = 'curve',
   ): void {
     this.mountedConnectionCount = detail === 'hidden' ? 0 : items.length
-    const selected = new Set(selection)
-    const normalItems: ConnectionItem[] = []
-    const highlightedItems: ConnectionItem[] = []
-    if (detail !== 'hidden') {
-      for (const item of items) {
-        const target = selected.has(item.fromFwId) || selected.has(item.toFwId)
-          ? highlightedItems
-          : normalItems
-        target.push(item)
-      }
-    }
-
-    const desired = new Map<string, { path: string; stroke?: string; strokeWidth?: number; fill?: string }>()
-    for (const [key, batchItems, highlighted] of [
-      ['normal-strokes', normalItems, false],
-      ['highlighted-strokes', highlightedItems, true],
-    ] as const) {
-      if (batchItems.length === 0) continue
-      desired.set(key, {
-        path: batchItems.map((item) => connectionPath(item, detail)).join(' '),
-        ...connectionStyle(highlighted, viewportScale),
-      })
-    }
-    if (detail === 'curve' && CONNECTION_STYLE.endpointRadius > 0 && items.length > 0) {
-      desired.set('endpoints', {
-        path: items.flatMap((item) => [item.curve.p0, item.curve.p3])
-          .map((point) => endpointCirclePath(
-            point.x,
-            point.y,
-            CONNECTION_STYLE.endpointRadius,
-          ))
-          .join(' '),
-        fill: CONNECTION_STYLE.endpointColor,
-      })
-    }
-
+    const keyedItems = detail === 'hidden' ? [] : keyedConnectionItems(items)
+    const desiredKeys = new Set(keyedItems.map(([key]) => key))
     for (const [key, mounted] of this.mounted) {
-      if (desired.has(key)) continue
-      mounted.remove()
-      mounted.destroy()
+      if (desiredKeys.has(key)) continue
+      mounted.path.remove()
+      mounted.path.destroy()
+      mounted.endpoints?.forEach((endpoint) => {
+        endpoint.remove()
+        endpoint.destroy()
+      })
       this.mounted.delete(key)
     }
-    let index = 0
-    for (const [key, attributes] of desired) {
+
+    keyedItems.forEach(([key, item], index) => {
       let mounted = this.mounted.get(key)
       if (mounted === undefined) {
-        mounted = new Path(attributes)
+        mounted = this.create(item, selection, viewportScale, detail)
         this.mounted.set(key, mounted)
       } else {
-        mounted.set(attributes)
+        this.update(mounted, item, selection, viewportScale, detail)
       }
-      this.ui.add(mounted, index)
-      index += 1
-    }
+      const childIndex = index * (CONNECTION_STYLE.endpointRadius > 0 ? 3 : 1)
+      this.ui.add(mounted.path, childIndex)
+      mounted.endpoints?.forEach((endpoint, endpointIndex) => {
+        this.ui.add(endpoint, childIndex + endpointIndex + 1)
+      })
+    })
   }
 
   destroy(): void {
@@ -112,6 +98,67 @@ export class LeaferConnectionLayer {
     this.mountedConnectionCount = 0
     this.ui.remove()
     this.ui.destroy()
+  }
+
+  private create(
+    item: ConnectionItem,
+    selection: readonly string[],
+    viewportScale: number,
+    detail: ConnectionDetailLevel,
+  ): MountedConnection {
+    const path = new Path({
+      path: connectionPath(item, detail),
+      ...connectionStyle(item, selection, viewportScale),
+    })
+    let endpoints: MountedConnection['endpoints'] = null
+    if (CONNECTION_STYLE.endpointRadius > 0) {
+      const diameter = CONNECTION_STYLE.endpointRadius * 2
+      const [p0, p3] = [item.curve.p0, item.curve.p3]
+      endpoints = [
+        new Ellipse({
+          x: p0.x - CONNECTION_STYLE.endpointRadius,
+          y: p0.y - CONNECTION_STYLE.endpointRadius,
+          width: diameter,
+          height: diameter,
+          fill: CONNECTION_STYLE.endpointColor,
+        }),
+        new Ellipse({
+          x: p3.x - CONNECTION_STYLE.endpointRadius,
+          y: p3.y - CONNECTION_STYLE.endpointRadius,
+          width: diameter,
+          height: diameter,
+          fill: CONNECTION_STYLE.endpointColor,
+        }),
+      ]
+    }
+    return { path, endpoints }
+  }
+
+  private update(
+    mounted: MountedConnection,
+    item: ConnectionItem,
+    selection: readonly string[],
+    viewportScale: number,
+    detail: ConnectionDetailLevel,
+  ): void {
+    mounted.path.set({
+      path: connectionPath(item, detail),
+      ...connectionStyle(item, selection, viewportScale),
+    })
+    if (mounted.endpoints !== null) {
+      const diameter = CONNECTION_STYLE.endpointRadius * 2
+      const updateEndpoint = (endpoint: ConnectionItem['curve']['p0'], ui: Ellipse): void => {
+        ui.set({
+          x: endpoint.x - CONNECTION_STYLE.endpointRadius,
+          y: endpoint.y - CONNECTION_STYLE.endpointRadius,
+          width: diameter,
+          height: diameter,
+          fill: CONNECTION_STYLE.endpointColor,
+        })
+      }
+      updateEndpoint(item.curve.p0, mounted.endpoints[0])
+      updateEndpoint(item.curve.p3, mounted.endpoints[1])
+    }
   }
 }
 

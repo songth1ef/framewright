@@ -384,10 +384,10 @@ describe('LeaferViewportScene', () => {
     scene.reconcile(ctx, screen)
 
     const paths = (scene.getConnectionLayer()?.children ?? []).filter(
-      (child) => (child as Path).stroke !== undefined,
+      (child) => (child as Path).tag === 'Path',
     )
     expect(expected).toHaveLength(1)
-    expect(paths).toHaveLength(1)
+    expect(paths).toHaveLength(expected.length)
     expect(scene.getMountedConnectionCount()).toBe(expected.length)
     scene.destroy()
     leafer.destroy()
