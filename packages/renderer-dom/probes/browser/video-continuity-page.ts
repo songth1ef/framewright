@@ -68,7 +68,7 @@ function context(): RenderContext {
 
 function findVideo(id: RendererId): HTMLVideoElement | null {
   if (id === 'dom') {
-    return view.querySelector('[data-fw-id="video-1"][data-fw-type="video"]')
+    return view.querySelector('video[data-fw-id="video-1"][data-fw-type="video"]')
   }
   return trackedVideos.findLast((video) => video.src.startsWith('data:video/')) ?? null
 }
