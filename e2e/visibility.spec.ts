@@ -4,10 +4,11 @@ import {
   createDemoDocument,
   type FrameNode,
 } from '../packages/core/src/index'
+import { selectRenderer } from './renderer'
 
 const CASES = [
-  { label: 'HTML / DOM', switches: 0 },
-  { label: 'LeaferJS', switches: 1 },
+  { label: 'HTML / DOM' },
+  { label: 'LeaferJS' },
 ] as const
 
 function expectedVisible(innerFrameVisible: boolean): readonly string[] {
@@ -28,9 +29,7 @@ async function openRenderer(
   testCase: (typeof CASES)[number],
 ): Promise<void> {
   await page.goto('/')
-  for (let i = 0; i < testCase.switches; i += 1) {
-    await page.getByTestId('renderer-switch').click()
-  }
+  await selectRenderer(page, testCase.label)
   await expect(page.getByTestId('active-renderer')).toHaveText(testCase.label)
 }
 

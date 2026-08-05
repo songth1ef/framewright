@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { selectRenderer } from './renderer'
 
 interface Rect {
   x: number
@@ -9,8 +10,8 @@ interface Rect {
 type Bounds = Record<string, Rect>
 
 const CASES = [
-  { label: 'HTML / DOM', switches: 0, snapshot: 'bounds-dom.json' },
-  { label: 'LeaferJS', switches: 1, snapshot: 'bounds-leafer.json' },
+  { label: 'HTML / DOM', snapshot: 'bounds-dom.json' },
+  { label: 'LeaferJS', snapshot: 'bounds-leafer.json' },
 ] as const
 
 test('几何基线路径与运行平台无关', async ({}, testInfo) => {
@@ -21,9 +22,7 @@ test('几何基线路径与运行平台无关', async ({}, testInfo) => {
 for (const testCase of CASES) {
   test(`几何基线：${testCase.label}`, async ({ page }) => {
     await page.goto('/')
-    for (let i = 0; i < testCase.switches; i += 1) {
-      await page.getByTestId('renderer-switch').click()
-    }
+    await selectRenderer(page, testCase.label)
     await expect(page.getByTestId('active-renderer')).toHaveText(testCase.label)
 
     const bounds = (await page.evaluate(
