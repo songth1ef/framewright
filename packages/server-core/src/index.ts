@@ -1,5 +1,6 @@
 export * from './asset-storage'
 export * from './asset-store'
+export * from './asset-service'
 export * from './document-store'
 export * from './generation-service'
 export * from './generation-store'

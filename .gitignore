@@ -8,6 +8,7 @@ playwright-report/
 .env.local
 *.db
 *.db-journal
+.data/assets/
 
 # agent 之间的异步信箱：过程通信，不是项目资产。协议见 docs/agents-mail.md
 docs/agents-mail/

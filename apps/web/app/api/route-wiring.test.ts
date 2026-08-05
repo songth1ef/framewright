@@ -17,6 +17,10 @@ const serverCore = vi.hoisted(() => ({
   linkGenerations: vi.fn(),
   linkNodeFwIds: vi.fn(),
   findMessageByNodeFwId: vi.fn(),
+  listProjectAssets: vi.fn(),
+  uploadAsset: vi.fn(),
+  getAssetContent: vi.fn(),
+  removeAsset: vi.fn(),
 }))
 
 vi.mock('@framewright/server-core', () => serverCore)
@@ -31,6 +35,9 @@ beforeEach(() => {
   serverCore.listProjectSessions.mockResolvedValue([])
   serverCore.listMessages.mockResolvedValue([])
   serverCore.deleteSession.mockResolvedValue(undefined)
+  serverCore.listProjectAssets.mockResolvedValue([])
+  serverCore.getAssetContent.mockResolvedValue(null)
+  serverCore.removeAsset.mockResolvedValue(false)
 })
 
 describe('projects / sessions / messages 生产路由接线', () => {
@@ -45,6 +52,8 @@ describe('projects / sessions / messages 生产路由接线', () => {
     const generations = await import('./messages/[id]/generations/route')
     const nodes = await import('./messages/[id]/nodes/route')
     const reverseLookup = await import('./documents/[id]/nodes/[nodeFwId]/message/route')
+    const assets = await import('./projects/[id]/assets/route')
+    const asset = await import('./assets/[id]/route')
 
     await projects.GET()
     await projects.POST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify({ name: '项目' }) }))
@@ -62,6 +71,13 @@ describe('projects / sessions / messages 生产路由接线', () => {
     await generations.POST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify({ generationIds: ['generation-a'] }) }), context('message-a'))
     await nodes.POST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify({ nodeFwIds: ['node-a'] }) }), context('message-a'))
     await reverseLookup.GET(new Request('http://localhost/x'), { params: Promise.resolve({ id: 'document-a', nodeFwId: 'node-a' }) })
+    await assets.GET(new Request('http://localhost/x'), context('project-a'))
+    const upload = new FormData()
+    upload.set('file', new File(['x'], 'neutral.png', { type: 'image/png' }))
+    upload.set('kind', 'image')
+    await assets.POST(new Request('http://localhost/x', { method: 'POST', body: upload }), context('project-a'))
+    await asset.GET(new Request('http://localhost/x'), context('asset-a'))
+    await asset.DELETE(new Request('http://localhost/x'), context('asset-a'))
 
     expect(serverCore.listProjects).toHaveBeenCalledOnce()
     expect(serverCore.createProject).toHaveBeenCalledOnce()
@@ -79,6 +95,9 @@ describe('projects / sessions / messages 生产路由接线', () => {
     expect(serverCore.linkGenerations).toHaveBeenCalledOnce()
     expect(serverCore.linkNodeFwIds).toHaveBeenCalledOnce()
     expect(serverCore.findMessageByNodeFwId).toHaveBeenCalledWith('document-a', 'node-a')
+    expect(serverCore.listProjectAssets).toHaveBeenCalledWith('project-a')
+    expect(serverCore.uploadAsset).toHaveBeenCalledOnce()
+    expect(serverCore.getAssetContent).toHaveBeenCalledWith('asset-a')
+    expect(serverCore.removeAsset).toHaveBeenCalledWith('asset-a')
   })
 })
-

@@ -24,6 +24,8 @@ describe('LocalAssetStorage', () => {
 
     const onDisk = await readFile(join(rootDir, 'proj-a', 'asset-1.png'))
     expect(new Uint8Array(onDisk)).toEqual(data)
+    await expect(storage.get('proj-a/asset-1.png')).resolves.toEqual(data)
+    await expect(storage.get('proj-a/missing.png')).resolves.toBeNull()
   })
 
   it('getUrl 默认拼 /api/assets 前缀，可用 urlPrefix 覆盖', async () => {
@@ -47,6 +49,7 @@ describe('LocalAssetStorage', () => {
     const data = new Uint8Array([1])
     for (const bad of ['../escape.png', 'a/../../escape.png', '/abs.png', 'C:\\x.png', 'a\\b.png', '']) {
       await expect(storage.put(bad, data, 'image/png')).rejects.toThrow()
+      await expect(storage.get(bad)).rejects.toThrow()
       await expect(storage.delete(bad)).rejects.toThrow()
       await expect(storage.getUrl(bad)).rejects.toThrow()
     }

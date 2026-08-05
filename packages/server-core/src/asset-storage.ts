@@ -6,12 +6,14 @@
  * 由部署方按同一接口提供。
  */
 
-import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
 export interface AssetStorage {
   /** 把字节写入 key 指向的位置（本地=相对路径，生产=对象存储 key）。 */
   put(key: string, data: Uint8Array, mimeType: string): Promise<void>
+  /** 读取 key 指向的字节；key 不存在时返回 null。 */
+  get(key: string): Promise<Uint8Array | null>
   /** 取可访问 URL。本地实现返回走 Route Handler 的相对 URL；生产实现返回签名 URL。 */
   getUrl(key: string): Promise<string>
   /** 删除 key 指向的文件；key 不存在时不视为错误。 */
@@ -52,6 +54,23 @@ export function createLocalAssetStorage(options: LocalAssetStorageOptions): Asse
       const filePath = join(options.rootDir, key)
       await mkdir(dirname(filePath), { recursive: true })
       await writeFile(filePath, data)
+    },
+
+    async get(key) {
+      assertSafeKey(key)
+      try {
+        return new Uint8Array(await readFile(join(options.rootDir, key)))
+      } catch (error) {
+        if (
+          typeof error === 'object' &&
+          error !== null &&
+          'code' in error &&
+          error.code === 'ENOENT'
+        ) {
+          return null
+        }
+        throw error
+      }
     },
 
     async getUrl(key) {
