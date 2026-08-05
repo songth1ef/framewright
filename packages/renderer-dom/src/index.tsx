@@ -31,6 +31,12 @@ import { GenerationUnitToolbar } from './shapes/generation-unit'
 import { DOM_SHAPES, LodShape } from './shapes/registry'
 import { createViewportInteraction, type ViewportInteraction } from './viewport-interaction'
 
+export {
+  createVideoPlaybackSessionWriteAction,
+  parseVideoPlaybackSessionAction,
+  type VideoPlaybackSessionState,
+} from './video-playback-session-channel'
+
 function renderNode(
   node: CanvasNode,
   parentAbsolute: Point,

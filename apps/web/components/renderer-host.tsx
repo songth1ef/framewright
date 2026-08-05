@@ -68,6 +68,7 @@ import {
   readStoredViewport,
   type ViewportStorageWriter,
 } from './viewport-storage'
+import { createVideoPlaybackSessionStore } from './video-playback-session-store'
 
 type Factory = () => RendererAdapter
 
@@ -168,6 +169,7 @@ export function RendererHost({
     documentId === undefined ? DEFAULT_VIEWPORT : readStoredViewport(documentId),
   )
   const [root, setRoot] = useState(() => initialRoot ?? createDemoDocument())
+  const [videoPlaybackSessions] = useState(() => createVideoPlaybackSessionStore())
   const [lastAction, setLastAction] = useState('')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [historyReady, setHistoryReady] = useState(documentId === undefined)
@@ -207,6 +209,10 @@ export function RendererHost({
     setMinimapVisible(next)
     writeStoredMinimapVisibility(next)
   }, [])
+
+  useEffect(() => {
+    videoPlaybackSessions.clear()
+  }, [documentId, videoPlaybackSessions])
 
   useEffect(() => {
     const restored = documentId === undefined ? DEFAULT_VIEWPORT : readStoredViewport(documentId)
@@ -463,13 +469,15 @@ export function RendererHost({
       onViewportChange: commitViewport,
       onNodeActivate: (fwId) => setLastAction(`${fwId}:activate`),
       onNodeAction: (fwId: string, action: string) => {
+        const playback = videoPlaybackSessions.handleAction(fwId, action)
+        if (playback.handled) return playback.response
         setLastAction(`${fwId}:${action}`)
         // 🔴 生成类动作（generate/retry/regenerate）在这里进入提交链路——
         // 渲染器只在用户点卡片内主 CTA 或工具条「重新生成」时上报，没有自动触发路径
         getGenerationController().handleAction(fwId, action)
       },
     }),
-    [],
+    [videoPlaybackSessions],
   )
 
   useEffect(() => {

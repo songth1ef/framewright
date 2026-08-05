@@ -8,6 +8,10 @@ import {
 import { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDomRenderer } from './index'
+import {
+  parseVideoPlaybackSessionAction,
+  type VideoPlaybackSessionState,
+} from './video-playback-session-channel'
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true
@@ -15,8 +19,10 @@ import { createDomRenderer } from './index'
 const playing = new WeakMap<HTMLMediaElement, boolean>()
 let container: HTMLDivElement | null = null
 let pausedDescriptor: PropertyDescriptor | undefined
+let hostCallbacks: RenderContext['callbacks']
 
 beforeEach(() => {
+  hostCallbacks = createHostCallbacks()
   pausedDescriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'paused')
   Object.defineProperty(HTMLMediaElement.prototype, 'paused', {
     configurable: true,
@@ -66,7 +72,19 @@ function context(viewport = DEFAULT_VIEWPORT): RenderContext {
     selection: [],
     viewport,
     interactionMode: 'unified',
-    callbacks: NOOP_RENDERER_CALLBACKS,
+    callbacks: hostCallbacks,
+  }
+}
+
+function createHostCallbacks(): RenderContext['callbacks'] {
+  const sessions = new Map<string, VideoPlaybackSessionState>()
+  return {
+    ...NOOP_RENDERER_CALLBACKS,
+    onNodeAction(fwId, action) {
+      const message = parseVideoPlaybackSessionAction(action)
+      if (message?.kind === 'read') return sessions.get(fwId)
+      if (message?.kind === 'write') sessions.set(fwId, message.state)
+    },
   }
 }
 
@@ -150,5 +168,30 @@ describe('DOM 视频会话连续性', () => {
     expect(restored.currentTime).toBe(9.125)
     expect(restored.paused).toBe(false)
     await act(async () => second.destroy())
+  })
+
+  it('timeupdate 上报会节流，但卸载前仍同步最新位置', async () => {
+    const onNodeAction = vi.fn(createHostCallbacks().onNodeAction)
+    const sharedContext = context()
+    sharedContext.callbacks = { ...sharedContext.callbacks, onNodeAction }
+    const renderer = await mount(sharedContext)
+    const video = container!.querySelector('video')!
+
+    for (let index = 0; index < 10; index += 1) {
+      video.currentTime = index / 10
+      video.dispatchEvent(new Event('timeupdate'))
+    }
+
+    const writesBeforeUnmount = onNodeAction.mock.calls.filter(([, action]) =>
+      action.startsWith('video-playback-session:write:'),
+    )
+    expect(writesBeforeUnmount).toHaveLength(1)
+
+    video.currentTime = 1.25
+    await act(async () => renderer.update(context({ scale: 1, offsetX: 0, offsetY: -2_000 })))
+    const writesAfterUnmount = onNodeAction.mock.calls.filter(([, action]) =>
+      action.startsWith('video-playback-session:write:'),
+    )
+    expect(writesAfterUnmount).toHaveLength(2)
   })
 })
