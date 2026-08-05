@@ -6,7 +6,11 @@ import {
   type RenderContext,
   type RendererCallbacks,
 } from '@framewright/core'
-import { createCanvasInteraction, type CanvasInteraction } from './canvas-interaction'
+import {
+  createCanvasInteraction,
+  resolveSelectableHit,
+  type CanvasInteraction,
+} from './canvas-interaction'
 
 let container: HTMLDivElement
 let interaction: CanvasInteraction | null
@@ -48,12 +52,13 @@ function makeCallbacks(): RendererCallbacks {
 function makeContext(
   selection: readonly string[] = [],
   callbacks = makeCallbacks(),
+  interactionMode: RenderContext['interactionMode'] = 'unified',
 ): RenderContext {
   return {
     root,
     selection,
     viewport: { scale: 1, offsetX: 0, offsetY: 0 },
-    interactionMode: 'unified',
+    interactionMode,
     callbacks,
   }
 }
@@ -169,6 +174,76 @@ describe('点选状态机', () => {
       expect(callbacks.onSelectionRequest).toHaveBeenCalledWith([], 'replace')
     },
   )
+})
+
+describe('native 拾取', () => {
+  it('从 PointerEvent.target 沿祖先找最近的 data-fw-id', () => {
+    const box = addTarget('box-a')
+    const child = document.createElement('span')
+    box.appendChild(child)
+    const { callbacks } = setup(makeContext([], makeCallbacks(), 'native'))
+
+    pointer(child, 'pointerdown', 15, 15)
+
+    expect(callbacks.onSelectionRequest).toHaveBeenCalledWith(['box-a'], 'replace')
+  })
+
+  it.each(['locked', 'transparent-frame'])(
+    '%s 候选仍由 core 统一过滤为空白',
+    (fwId) => {
+      const target = addTarget(fwId)
+      const { callbacks } = setup(makeContext(['box-a'], makeCallbacks(), 'native'))
+
+      pointer(target, 'pointerdown', fwId === 'locked' ? 75 : 140, 15)
+      pointer(window, 'pointerup', fwId === 'locked' ? 75 : 140, 15)
+
+      expect(callbacks.onSelectionRequest).toHaveBeenCalledOnce()
+      expect(callbacks.onSelectionRequest).toHaveBeenCalledWith([], 'replace')
+    },
+  )
+
+  it('update(ctx) 后立即从 unified 切到 native，无需重新挂载', () => {
+    const boxA = addTarget('box-a')
+    const boxB = addTarget('box-b')
+    const unifiedCallbacks = makeCallbacks()
+    setup(makeContext([], unifiedCallbacks, 'unified'))
+
+    pointer(boxA, 'pointerdown', 15, 15)
+    pointer(window, 'pointerup', 15, 15)
+    expect(unifiedCallbacks.onSelectionRequest).toHaveBeenCalledWith(['box-a'], 'replace')
+
+    const nativeCallbacks = makeCallbacks()
+    interaction?.update(makeContext([], nativeCallbacks, 'native'))
+    pointer(boxB, 'pointerdown', 45, 15)
+
+    expect(nativeCallbacks.onSelectionRequest).toHaveBeenCalledWith(['box-b'], 'replace')
+  })
+
+  it('开发态 native 严格比较同渲染器的 unified 结果并记录完整诊断', () => {
+    const nativeTarget = addTarget('box-b')
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    expect(() =>
+      resolveSelectableHit({
+        root,
+        interactionMode: 'native',
+        target: nativeTarget,
+        canvasPoint: { x: 15, y: 15 },
+        development: true,
+      }),
+    ).toThrow('DOM native 拾取与 unified 拾取不一致')
+    expect(error).toHaveBeenCalledWith(
+      'DOM native 拾取与 unified 拾取不一致',
+      {
+        rendererId: 'dom',
+        canvasPoint: { x: 15, y: 15 },
+        nativeCandidateFwId: 'box-b',
+        unifiedCandidateFwId: 'box-a',
+        nativeFwId: 'box-b',
+        unifiedFwId: 'box-a',
+      },
+    )
+  })
 })
 
 describe('框选状态机', () => {

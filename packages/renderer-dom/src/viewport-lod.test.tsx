@@ -108,7 +108,9 @@ describe('DOM viewport LOD', () => {
     await act(async () => renderer.destroy())
   })
 
-  it('dot 档仍按完整树命中并维持 bounds / visible 契约', async () => {
+  it.each(['unified', 'native'] as const)(
+    'dot 档在 $interactionMode 拾取下仍能选中退化节点并维持 bounds / visible 契约',
+    async (interactionMode) => {
     const onSelectionRequest = vi.fn<RendererCallbacks['onSelectionRequest']>()
     const root = createFrameNode({
       fwId: 'root',
@@ -123,7 +125,7 @@ describe('DOM viewport LOD', () => {
       root,
       selection: [],
       viewport: { scale: 0.1, offsetX: 0, offsetY: 0 },
-      interactionMode: 'unified',
+      interactionMode,
       callbacks: { ...NOOP_RENDERER_CALLBACKS, onSelectionRequest },
     })
 
@@ -151,8 +153,9 @@ describe('DOM viewport LOD', () => {
     })
     expect(renderer.getVisibleNodeIds()).toEqual(['root', 'near', 'far'])
 
-    await act(async () => renderer.destroy())
-  })
+      await act(async () => renderer.destroy())
+    },
+  )
 
   it('跨档切换会移除旧档专属结构且不重建保留节点', async () => {
     const full = makeLodContext(0.5)
