@@ -114,6 +114,38 @@
 5. **裁定**：执行方报的设计缺口，能自己定就定并落文档，属七类才升级给人
 6. **更新汇报**：`docs/reports/2026-08-05-晨间汇报.md`
 
+## 🔴 并行派发规则（2026-08-04 立，多路同时跑时适用）
+
+**并行的约束不在文件路径，在共享运行时状态。** 我之前按「文件领地不重叠」推理然后翻车过一次——
+Prisma client、SQLite 文件、迁移历史、`node_modules`、端口 3100 全是共享的，跟改哪个文件无关。
+
+### 四样独占资源（同一时刻只能一个 agent 持有）
+
+| 资源 | 谁会撞 | 规避 |
+|---|---|---|
+| **端口 3100** | 任何起 dev server 的 | 只给需要端到端验证的那一路 |
+| **`prisma/dev.db` + migration** | 任何跑 DB 测试或迁移的 | 同一时刻只一个 agent 动 DB 层 |
+| **`pnpm install` / lockfile / `node_modules`** | 任何加依赖或建新包的 | **编排方预建包骨架并预先 install**，执行方一律禁止装包 |
+| **`.git/index.lock`** | 任何 commit 的 | 撞了等几秒重试，**绝不许删 lock 文件**——删别人正在用的锁会毁坏仓库状态 |
+
+### 切分方法
+
+**按 package 切领地**，每路一个包，并显式列出「不许碰」的包名（光说「只改自己的」不够，要点名）。
+
+**共享文件要单独点名。** 典型：`packages/core/src/demo-document.ts` 两个渲染器都依赖，
+两侧同做视频节点时都想往里加示例节点 → **由编排方统一加**，执行方各用自己的测试 fixture。
+
+### 测试策略
+
+并行时执行方只跑**自己包的 scoped 测试**（`pnpm vitest run packages/<x>`），不跑全量 `verify`——
+4 路并发跑全量会互相拖垮，且会争 DB。全量 verify 由编排方在收编时跑一次。
+
+### 执行方 CLI 备忘（实测，别再猜）
+
+- **Codex**：`codex exec -C <dir> --dangerously-bypass-approvals-and-sandbox "<prompt>"`
+- **Kimi**：`kimi -p "<prompt>"` —— **`-p` 不能和 `-y` / `--auto` 并用**（会直接 exit 1：
+  `Cannot combine --prompt with --yolo`）。`-p` 本身就是非交互自主模式，不需要额外授权 flag。
+
 ## 🔴 硬约束（每次派发都要带）
 
 - **同一时刻只允许一个 agent 动数据库层**（schema / migration / generate）
