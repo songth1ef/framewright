@@ -26,6 +26,13 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'renderer-reactflow',
+          environment: 'jsdom',
+          include: ['packages/renderer-reactflow/src/**/*.test.{ts,tsx}'],
+        },
+      },
+      {
+        test: {
           // 实测探针的纯函数部分（采样开窗判定等）。放在 `probes/` 而不是 `src/`，
           // 所以必须单列一项 —— 否则各包只能在包内塞一份 vitest.config 自测，
           // 那等于绕过全量门禁：测试存在、单跑能过、`pnpm test` 里根本不执行。
