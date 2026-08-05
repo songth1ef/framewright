@@ -4,6 +4,7 @@ import {
   type GenerationTask,
 } from '../packages/provider/src/index'
 import { selectRenderer } from './renderer'
+import { createDocument } from './create-document'
 
 type ProviderOptions = ConstructorParameters<typeof MockGenerationProvider>[0]
 
@@ -104,8 +105,7 @@ async function installGenerationTransport(
 
 async function openDocument(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByTestId('create-document').click()
-  await expect(page).toHaveURL(/\/canvas\/[^/]+$/)
+  await createDocument(page)
   await expect(page.getByTestId('canvas-host')).toHaveAttribute('data-history-ready', 'true')
   await selectRenderer(page, 'HTML / DOM')
   await expect(page.getByTestId('active-renderer')).toHaveText('HTML / DOM')

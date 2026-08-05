@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { selectRenderer } from './renderer'
+import { resetDocuments } from './reset-documents'
 
 test('Leafer 渲染器能在真实浏览器里挂载并报告全部节点的 bounds', async ({ page }) => {
+  await resetDocuments(page)
   await page.goto('/')
   await selectRenderer(page, 'LeaferJS')
   await expect(page.getByTestId('active-renderer')).toHaveText('LeaferJS')

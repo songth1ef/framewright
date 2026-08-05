@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test'
 import { selectRenderer } from './renderer'
+import { resetDocuments } from './reset-documents'
 
 // D1-leafer 验收（renderer-contract §3.1 末端）：在 Leafer 侧做视口手势后立刻切换渲染器，
 // viewport 必须与切换前一致——视口状态住在 host，渲染器只是它的投影。
 
 test('Leafer 侧滚轮平移后立刻切换渲染器，viewport 与切换前一致', async ({ page }) => {
+  await resetDocuments(page)
   await page.goto('/')
   const container = page.getByTestId('canvas-container')
 

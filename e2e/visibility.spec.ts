@@ -5,6 +5,7 @@ import {
   type FrameNode,
 } from '../packages/core/src/index'
 import { selectRenderer } from './renderer'
+import { resetDocuments } from './reset-documents'
 
 const CASES = [
   { label: 'HTML / DOM' },
@@ -28,6 +29,7 @@ async function openRenderer(
   page: import('@playwright/test').Page,
   testCase: (typeof CASES)[number],
 ): Promise<void> {
+  await resetDocuments(page)
   await page.goto('/')
   await selectRenderer(page, testCase.label)
   await expect(page.getByTestId('active-renderer')).toHaveText(testCase.label)

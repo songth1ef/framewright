@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test'
+import { createDocument } from './create-document'
 
 test('新建画布后进入文档路由，并能从首页列表再次打开', async ({ page }) => {
   await page.goto('/')
 
-  await page.getByTestId('create-document').click()
-  await expect(page).toHaveURL(/\/canvas\/[^/]+$/)
+  await createDocument(page)
   await expect(page.getByTestId('document-name')).toHaveText('未命名画布')
 
   const documentUrl = page.url()

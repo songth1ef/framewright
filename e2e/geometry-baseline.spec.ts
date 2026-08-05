@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { selectRenderer } from './renderer'
+import { resetDocuments } from './reset-documents'
 
 interface Rect {
   x: number
@@ -21,6 +22,7 @@ test('几何基线路径与运行平台无关', async ({}, testInfo) => {
 
 for (const testCase of CASES) {
   test(`几何基线：${testCase.label}`, async ({ page }) => {
+    await resetDocuments(page)
     await page.goto('/')
     await selectRenderer(page, testCase.label)
     await expect(page.getByTestId('active-renderer')).toHaveText(testCase.label)

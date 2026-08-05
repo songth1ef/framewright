@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { selectRenderer } from './renderer'
+import { resetDocuments } from './reset-documents'
 
 test('切换渲染器后选中态保留', async ({ page }) => {
+  await resetDocuments(page)
   await page.goto('/')
   await selectRenderer(page, 'HTML / DOM')
   await page.getByTestId('select-box-back').click()

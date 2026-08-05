@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
+import { createDocument } from './create-document'
+import { selectRenderer } from './renderer'
 
 type Bounds = Record<string, { x: number; y: number; width: number; height: number }>
 
@@ -13,8 +15,8 @@ async function readBounds(page: Page): Promise<Bounds> {
 
 test('编辑后自动保存节点树，刷新后仍可跨会话撤销', async ({ page }) => {
   await page.goto('/')
-  await page.getByTestId('create-document').click()
-  await expect(page).toHaveURL(/\/canvas\/[^/]+$/)
+  await createDocument(page)
+  await selectRenderer(page, 'HTML / DOM')
   await expect(page.getByTestId('canvas-host')).toHaveAttribute('data-history-ready', 'true')
 
   const node = page.locator('[data-fw-id="box-back"]')
@@ -45,8 +47,8 @@ test('编辑后自动保存节点树，刷新后仍可跨会话撤销', async ({
 
 test('自动保存失败时显示错误，不静默吞掉', async ({ page }) => {
   await page.goto('/')
-  await page.getByTestId('create-document').click()
-  await expect(page).toHaveURL(/\/canvas\/[^/]+$/)
+  await createDocument(page)
+  await selectRenderer(page, 'HTML / DOM')
   await expect(page.getByTestId('canvas-host')).toHaveAttribute('data-history-ready', 'true')
   await page.route('**/api/documents/*', async (route) => {
     if (route.request().method() === 'PUT') {
@@ -65,8 +67,8 @@ test('自动保存失败时显示错误，不静默吞掉', async ({ page }) => 
 
 test('防抖窗口内切页会立即 flush 最后一次编辑', async ({ page }) => {
   await page.goto('/')
-  await page.getByTestId('create-document').click()
-  await expect(page).toHaveURL(/\/canvas\/[^/]+$/)
+  await createDocument(page)
+  await selectRenderer(page, 'HTML / DOM')
   await expect(page.getByTestId('canvas-host')).toHaveAttribute('data-history-ready', 'true')
   const documentUrl = page.url()
 

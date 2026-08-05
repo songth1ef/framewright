@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test'
 import { selectRenderer } from './renderer'
+import { resetDocuments } from './reset-documents'
 
 // D2-leafer 验收：点选与框选在真实浏览器里走 Leafer 命中探针（selector.getByPoint），
 // 单测的桩环境覆盖不了真实 hit canvas。行为口径与 DOM 侧一致（host-interaction.spec.ts）。
 
 test.beforeEach(async ({ page }) => {
+  await resetDocuments(page)
   await page.goto('/')
   await selectRenderer(page, 'LeaferJS')
   await expect(page.getByTestId('active-renderer')).toHaveText('LeaferJS')

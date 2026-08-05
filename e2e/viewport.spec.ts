@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { selectRenderer } from './renderer'
+import { resetDocuments } from './reset-documents'
 
 test('host 接收 DOM viewport 上报并显示当前缩放比例', async ({ page }) => {
+  await resetDocuments(page)
   await page.goto('/')
   await selectRenderer(page, 'HTML / DOM')
   const container = page.getByTestId('canvas-container')

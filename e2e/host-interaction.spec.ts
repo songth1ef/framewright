@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { selectRenderer } from './renderer'
+import { resetDocuments } from './reset-documents'
 
 type Bounds = Record<string, { x: number; y: number; width: number; height: number }>
 
@@ -10,6 +11,7 @@ async function readBounds(page: Page): Promise<Bounds> {
 }
 
 test.beforeEach(async ({ page }) => {
+  await resetDocuments(page)
   await page.goto('/')
   await selectRenderer(page, 'HTML / DOM')
   await expect(page.getByTestId('active-renderer')).toHaveText('HTML / DOM')
