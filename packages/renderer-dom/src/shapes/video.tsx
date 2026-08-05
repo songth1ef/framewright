@@ -1,10 +1,20 @@
 import { isVideoNode } from '@framewright/core'
 import type { CSSProperties, ReactNode } from 'react'
 import { toNodeStyle } from '../node-style'
+import { useVideoPlaybackSession } from '../video-playback-session'
 import type { ShapeProps } from './registry'
 
-export function VideoShape({ node, position, size, active, videoVisible }: ShapeProps): ReactNode {
+export function VideoShape({
+  node,
+  position,
+  size,
+  active,
+  videoVisible,
+  onNodeAction,
+}: ShapeProps): ReactNode {
   if (!isVideoNode(node)) return null
+
+  const videoRef = useVideoPlaybackSession(node.fwId, node.src, onNodeAction)
 
   const base = toNodeStyle(node, position, size)
 
@@ -52,6 +62,7 @@ export function VideoShape({ node, position, size, active, videoVisible }: Shape
 
   return (
     <video
+      ref={videoRef}
       data-fw-id={node.fwId}
       data-fw-type="video"
       data-fw-active={active ? 'true' : undefined}
