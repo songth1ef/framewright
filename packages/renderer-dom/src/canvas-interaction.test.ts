@@ -3,6 +3,7 @@ import {
   NOOP_RENDERER_CALLBACKS,
   createBoxNode,
   createFrameNode,
+  type Point,
   type RenderContext,
   type RendererCallbacks,
 } from '@framewright/core'
@@ -177,6 +178,30 @@ describe('点选状态机', () => {
 })
 
 describe('native 拾取', () => {
+  it('两种模式在同一位置返回相同最终 id', () => {
+    const box = addTarget('box-a')
+    const canvasPoint = { x: 15, y: 15 }
+
+    expect(
+      resolveSelectableHit({
+        root,
+        interactionMode: 'unified',
+        target: box,
+        canvasPoint,
+        development: true,
+      }),
+    ).toBe('box-a')
+    expect(
+      resolveSelectableHit({
+        root,
+        interactionMode: 'native',
+        target: box,
+        canvasPoint,
+        development: true,
+      }),
+    ).toBe('box-a')
+  })
+
   it('从 PointerEvent.target 沿祖先找最近的 data-fw-id', () => {
     const box = addTarget('box-a')
     const child = document.createElement('span')
@@ -243,6 +268,25 @@ describe('native 拾取', () => {
         unifiedFwId: 'box-a',
       },
     )
+  })
+
+  it('生产态 native 不执行 unified 几何查询', () => {
+    const nativeTarget = addTarget('box-a')
+    const canvasPoint = {} as Point
+    Object.defineProperties(canvasPoint, {
+      x: { get: () => { throw new Error('不应读取 x') } },
+      y: { get: () => { throw new Error('不应读取 y') } },
+    })
+
+    expect(
+      resolveSelectableHit({
+        root,
+        interactionMode: 'native',
+        target: nativeTarget,
+        canvasPoint,
+        development: false,
+      }),
+    ).toBe('box-a')
   })
 })
 
