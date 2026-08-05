@@ -307,3 +307,31 @@ Leafer 侧在 E-Q4 指出这笔税在交互上兑现：
 - DOM 侧因为天然嵌套，完全没有这两个问题
 
 **这不是做不到，是 flat 方案在每个交互上都要补的税。** P2 开工前应重新评估「打平 vs 嵌套」——并且**无论选哪个，这笔账都要如实记进 `docs/architecture.md` §8.2 实现成本对照表**，它正是选型结论的原始素材。
+
+---
+
+## 附录 · 视口尺寸归属（2026-08-05 裁定）
+
+### 问题
+
+Leafer 接入视口裁剪后上报：
+
+> `ViewportCullingOptions.width/height` 不在 `RenderContext`，渲染器只能从
+> container 的 `getBoundingClientRect()` 读取；单纯容器 resize 且 host 不触发 update 时不会主动重裁。
+
+### 裁定：视口尺寸进 `RenderContext`，由 host 提供
+
+**依据是本项目的铁律：状态不许存在渲染器内部。**
+
+裁剪需要的是「视口有多大」，这是**会话状态**，跟 `viewport.scale/offset` 是同一类东西 ——
+而后者早就在 `RenderContext` 里了。把尺寸单独留给渲染器自己去读 DOM，等于把一份状态
+劈成两半：一半 host 管，一半渲染器各自管。
+
+**两个渲染器各自读 `getBoundingClientRect()` 还有第二个问题**：它们会在不同时机读到
+不同的值，于是「同一份数据两套实现画出来要一样」这条对照前提被悄悄破坏 ——
+而这类不一致极难被测试发现，因为两边各自的测试都会绿。
+
+**做法**：`RenderContext` 增加 `viewportSize: { width: number; height: number }`，
+host 从容器测量并在 resize 时触发 update。两侧渲染器一律用它，不再自己读 DOM 尺寸。
+
+⚠️ 这是 `RendererAdapter` 契约变更，**两侧必须同时改**，不许一边先行。
