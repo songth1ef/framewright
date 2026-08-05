@@ -1,169 +1,106 @@
-import React, { type CSSProperties, type ReactNode } from 'react'
-import { createRoot, type Root } from 'react-dom/client'
-import { flushSync } from 'react-dom'
 import {
-  DOM_SCALE_PROBE_WORKLOAD,
-  type DomScaleProbeScenario,
-} from '../probe-config.mjs'
-import type { DragSnapshot, ZoomSnapshot } from './scale-sampling.mjs'
+  NOOP_RENDERER_CALLBACKS,
+  applyNodeMoves,
+  type FrameNode,
+  type RenderContext,
+  type RendererAdapter,
+  type Viewport,
+} from '@framewright/core'
+import { createDomRenderer } from '../../src/index'
+import { DOM_SCALE_PROBE_WORKLOAD, type DomScaleProbeScenario } from '../probe-config.mjs'
+import { buildScaleFixture, countFixtureConnections } from './scale-fixture'
+import { buildFrameStats, type FrameStats } from './scale-sampling.mjs'
 
-interface Point { x: number; y: number }
-interface Edge { from: number; to: number }
-interface FpsSample { frames: number; elapsedMs: number; fps: number; longFrames: number }
 interface FirstScreenSample {
   elapsedMs: number
-  mountedNodeCount: number
+  fixtureBuildMs: number
+  totalNodeCount: number
+  totalConnectionCount: number
+  mountedLogicalNodeCount: number
   mountedConnectionCount: number
-  visibleNodeCount: number
+  mountedDomElementCount: number
+  mountedToTotalRatio: number
 }
+
+interface PanSnapshot { offsetX: number; offsetY: number }
+interface DragSnapshot { fwId: string; x: number; y: number }
+interface ZoomSnapshot { scale: number }
 
 interface DomScaleProbe {
   mountScenario(scenario: DomScaleProbeScenario): Promise<FirstScreenSample>
-  sampleDrag(ms: number, longFrameThresholdMs: number): Promise<FpsSample>
-  sampleZoom(ms: number, longFrameThresholdMs: number): Promise<FpsSample>
+  sampleDrag(ms: number, longFrameThresholdMs: number): Promise<FrameStats>
+  sampleZoom(ms: number, longFrameThresholdMs: number): Promise<FrameStats>
+  samplePan(ms: number, longFrameThresholdMs: number): Promise<FrameStats>
   dragSnapshot(): DragSnapshot
   zoomSnapshot(): ZoomSnapshot
+  panSnapshot(): PanSnapshot
+  destroy(): void
 }
 
 declare global {
   interface Window { __scaleProbe: DomScaleProbe }
 }
 
-function requireView(): HTMLElement {
-  const element = document.getElementById('view')
-  if (element === null) throw new Error('缺少 #view')
-  return element
-}
-
 const workload = DOM_SCALE_PROBE_WORKLOAD
-const view = requireView()
-const root: Root = createRoot(view)
-let scenario: DomScaleProbeScenario | null = null
-let positions: Point[] = []
-let edges: Edge[] = []
-let scale = workload.zoom.startScale
+const view = document.getElementById('view')
+if (view === null) throw new Error('缺少 #view')
 
-function makePositions(count: number): Point[] {
-  const { columns, originX, originY, gapX, gapY } = workload.layout
-  return Array.from({ length: count }, (_, index) => ({
-    x: originX + (index % columns) * (workload.nodeSize.width + gapX),
-    y: originY + Math.floor(index / columns) * (workload.nodeSize.height + gapY),
-  }))
-}
+let renderer: RendererAdapter | null = null
+let root: FrameNode | null = null
+let viewport: Viewport = { scale: workload.zoom.startScale, offsetX: 0, offsetY: 0 }
 
-function makeEdges(value: DomScaleProbeScenario): Edge[] {
-  if (value.connectionPattern === 'fanin') {
-    const target = value.nodeCount - 1
-    return Array.from({ length: value.connectionCount }, (_, index) => ({ from: index, to: target }))
-  }
-  if (value.connectionPattern === 'distributed') {
-    return Array.from({ length: value.connectionCount }, (_, index) => ({
-      from: index % value.nodeCount,
-      to: (index * 37 + 113) % value.nodeCount,
-    }))
-  }
-  return []
-}
-
-function connectionPath(edge: Edge): string {
-  const from = positions[edge.from]
-  const to = positions[edge.to]
-  if (from === undefined || to === undefined) throw new Error('连线引用了不存在的节点')
-  const x1 = from.x + workload.nodeSize.width
-  const y1 = from.y + workload.nodeSize.height / 2
-  const x2 = to.x
-  const y2 = to.y + workload.nodeSize.height / 2
-  const bend = Math.max(40, Math.abs(x2 - x1) / 2)
-  return `M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`
-}
-
-function ProbeCanvas(): ReactNode {
-  if (scenario === null) return null
-  const worldWidth = workload.layout.originX * 2 + workload.layout.columns *
-    (workload.nodeSize.width + workload.layout.gapX)
-  const rows = Math.ceil(scenario.nodeCount / workload.layout.columns)
-  const worldHeight = workload.layout.originY * 2 + rows *
-    (workload.nodeSize.height + workload.layout.gapY)
-  const viewportStyle: CSSProperties = {
-    position: 'relative',
-    width: `${worldWidth}px`,
-    height: `${worldHeight}px`,
-    transform: `scale(${scale})`,
-    transformOrigin: 'top left',
-  }
-  return (
-    <div data-probe-viewport="true" style={viewportStyle}>
-      <svg
-        data-probe-connections="true"
-        viewBox={`0 0 ${worldWidth} ${worldHeight}`}
-        preserveAspectRatio="none"
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none' }}
-      >
-        {edges.map((edge, index) => (
-          <path
-            key={`${edge.from}:${edge.to}:${index}`}
-            data-probe-connection={index}
-            d={connectionPath(edge)}
-            fill="none"
-            stroke="#78909c"
-            strokeWidth={2 / scale}
-          />
-        ))}
-      </svg>
-      {positions.map((position, index) => (
-        <div
-          key={index}
-          data-probe-node={index}
-          style={{
-            position: 'absolute',
-            left: `${position.x}px`,
-            top: `${position.y}px`,
-            width: `${workload.nodeSize.width}px`,
-            height: `${workload.nodeSize.height}px`,
-            boxSizing: 'border-box',
-            border: '1px solid #455a64',
-            borderRadius: '4px',
-            background: index === 0 ? '#90caf9' : '#cfd8dc',
-          }}
-        />
-      ))}
-    </div>
-  )
-}
-
-function commit(): void {
-  flushSync(() => root.render(<ProbeCanvas />))
+function context(): RenderContext {
+  if (root === null) throw new Error('尚未挂载规模场景')
+  return { root, viewport, selection: [], callbacks: NOOP_RENDERER_CALLBACKS }
 }
 
 function nextFrame(): Promise<number> {
   return new Promise((resolve) => requestAnimationFrame(resolve))
 }
 
-async function mountScenario(value: DomScaleProbeScenario): Promise<FirstScreenSample> {
-  const start = performance.now()
-  scenario = value
-  positions = makePositions(value.nodeCount)
-  edges = makeEdges(value)
-  scale = workload.zoom.startScale
-  commit()
-  await nextFrame()
-
-  const nodes = Array.from(view.querySelectorAll<HTMLElement>('[data-probe-node]'))
-  const connections = view.querySelectorAll('[data-probe-connection]')
-  if (nodes.length !== value.nodeCount || connections.length !== value.connectionCount) {
-    throw new Error(`首屏挂载计数不符：nodes=${nodes.length}, connections=${connections.length}`)
+async function waitForMountedNodes(): Promise<void> {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    await nextFrame()
+    if (view.querySelector('[data-fw-id]') !== null) return
   }
-  const viewRect = view.getBoundingClientRect()
-  const visibleNodeCount = nodes.filter((node) => {
-    const rect = node.getBoundingClientRect()
-    return rect.right > viewRect.left && rect.left < viewRect.right && rect.bottom > viewRect.top && rect.top < viewRect.bottom
-  }).length
-  if (visibleNodeCount === 0) throw new Error('首屏完成时没有节点进入可见区')
+  throw new Error('首屏 60 帧内没有挂载任何节点')
+}
+
+async function mountScenario(scenario: DomScaleProbeScenario): Promise<FirstScreenSample> {
+  renderer?.destroy()
+  renderer = null
+  view.replaceChildren()
+  const fixtureStart = performance.now()
+  root = buildScaleFixture(scenario)
+  const fixtureBuildMs = performance.now() - fixtureStart
+  viewport = {
+    scale: workload.zoom.startScale,
+    offsetX: 0,
+    offsetY: 0,
+  }
+
+  const start = performance.now()
+  renderer = createDomRenderer()
+  renderer.mount(view, context())
+  await waitForMountedNodes()
+  const elapsedMs = performance.now() - start
+
+  const mountedNodes = view.querySelectorAll('[data-fw-id]:not([data-fw-type="frame"])').length
+  const mountedConnections = view.querySelectorAll('[data-fw-connections] path').length
+  if (mountedNodes === 0) throw new Error('裁剪后没有实际挂载素材节点')
+  if (mountedNodes >= scenario.nodeCount) {
+    throw new Error(`视口裁剪未生效：mounted=${mountedNodes}, total=${scenario.nodeCount}`)
+  }
+
   return {
-    elapsedMs: performance.now() - start,
-    mountedNodeCount: nodes.length,
-    mountedConnectionCount: connections.length,
-    visibleNodeCount,
+    elapsedMs,
+    fixtureBuildMs,
+    totalNodeCount: scenario.nodeCount,
+    totalConnectionCount: countFixtureConnections(root),
+    mountedLogicalNodeCount: mountedNodes,
+    mountedConnectionCount: mountedConnections,
+    mountedDomElementCount: view.querySelectorAll('*').length,
+    mountedToTotalRatio: mountedNodes / scenario.nodeCount,
   }
 }
 
@@ -171,55 +108,101 @@ function sampleAnimation(
   ms: number,
   longFrameThresholdMs: number,
   update: (progress: number) => void,
-): Promise<FpsSample> {
+): Promise<FrameStats> {
+  if (renderer === null) throw new Error('尚未挂载规模场景')
   return new Promise((resolve) => {
-    let frames = 0
-    let longFrames = 0
-    let last = performance.now()
-    const start = last
+    const frameDurations: number[] = []
+    let last = 0
+    let start = 0
     const tick = (now: number): void => {
-      frames += 1
-      if (now - last > longFrameThresholdMs) longFrames += 1
+      frameDurations.push(now - last)
       last = now
       const progress = Math.min(1, (now - start) / ms)
       update(progress)
-      commit()
+      renderer?.update(context())
       if (progress < 1) requestAnimationFrame(tick)
-      else resolve({ frames, elapsedMs: now - start, fps: (frames / (now - start)) * 1000, longFrames })
+      else resolve(buildFrameStats(frameDurations, longFrameThresholdMs))
     }
-    requestAnimationFrame(tick)
+    requestAnimationFrame((now) => {
+      start = now
+      last = now
+      requestAnimationFrame(tick)
+    })
   })
 }
 
-async function sampleDrag(ms: number, threshold: number): Promise<FpsSample> {
-  const start = positions[0]
-  if (start === undefined) throw new Error('没有可拖拽节点')
-  const origin = { ...start }
+async function sampleDrag(ms: number, threshold: number): Promise<FrameStats> {
+  if (root === null) throw new Error('尚未挂载规模场景')
+  viewport = { scale: workload.zoom.startScale, offsetX: 0, offsetY: 0 }
+  const node = root.children[0]
+  if (node === undefined) throw new Error('没有可拖拽节点')
+  const origin = { x: node.x, y: node.y }
   return sampleAnimation(ms, threshold, (progress) => {
-    positions[0] = {
+    if (root === null) return
+    root = applyNodeMoves(root, [{
+      fwId: node.fwId,
+      parentFwId: root.fwId,
       x: origin.x + workload.dragDelta.x * progress,
       y: origin.y + workload.dragDelta.y * progress,
+    }])
+  })
+}
+
+async function sampleZoom(ms: number, threshold: number): Promise<FrameStats> {
+  viewport = { scale: workload.zoom.startScale, offsetX: 0, offsetY: 0 }
+  renderer?.update(context())
+  return sampleAnimation(ms, threshold, (progress) => {
+    viewport = {
+      ...viewport,
+      scale: workload.zoom.startScale +
+        (workload.zoom.endScale - workload.zoom.startScale) * progress,
     }
   })
 }
 
-async function sampleZoom(ms: number, threshold: number): Promise<FpsSample> {
-  scale = workload.zoom.startScale
-  commit()
+async function samplePan(ms: number, threshold: number): Promise<FrameStats> {
+  viewport = {
+    scale: workload.zoom.startScale,
+    offsetX: 0,
+    offsetY: 0,
+  }
+  renderer?.update(context())
   return sampleAnimation(ms, threshold, (progress) => {
-    scale = workload.zoom.startScale +
-      (workload.zoom.endScale - workload.zoom.startScale) * progress
+    viewport = {
+      scale: workload.zoom.startScale,
+      offsetX: workload.panDelta.x * progress,
+      offsetY: workload.panDelta.y * progress,
+    }
   })
 }
 
 function dragSnapshot(): DragSnapshot {
-  const position = positions[0]
-  if (position === undefined) throw new Error('没有可记录的拖拽节点')
-  return { fwId: 'box-0', x: position.x, y: position.y }
+  const node = root?.children[0]
+  if (node === undefined) throw new Error('没有可记录的拖拽节点')
+  return { fwId: node.fwId, x: node.x, y: node.y }
 }
 
 function zoomSnapshot(): ZoomSnapshot {
-  return { scale }
+  return { scale: viewport.scale }
 }
 
-window.__scaleProbe = { mountScenario, sampleDrag, sampleZoom, dragSnapshot, zoomSnapshot }
+function panSnapshot(): PanSnapshot {
+  return { offsetX: viewport.offsetX, offsetY: viewport.offsetY }
+}
+
+function destroy(): void {
+  renderer?.destroy()
+  renderer = null
+  root = null
+}
+
+window.__scaleProbe = {
+  mountScenario,
+  sampleDrag,
+  sampleZoom,
+  samplePan,
+  dragSnapshot,
+  zoomSnapshot,
+  panSnapshot,
+  destroy,
+}

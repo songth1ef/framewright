@@ -16,21 +16,20 @@ export interface DomVideoProbeWorkload {
 
 export const DOM_VIDEO_PROBE_WORKLOAD: DomVideoProbeWorkload
 
-export type ScaleConnectionPattern = 'none' | 'fanin' | 'distributed'
+export type ScaleConnectionPattern = 'none' | 'many-to-many'
 
 export interface DomScaleProbeScenario {
   readonly id: string
   readonly label: string
   readonly nodeCount: number
-  readonly connectionCount: number
   readonly connectionPattern: ScaleConnectionPattern
 }
 
 export interface DomScaleProbeWorkload {
   readonly renderer: string
   readonly scenarios: readonly DomScaleProbeScenario[]
+  readonly seed: 7
   readonly sampleWindowMs: number
-  readonly nodeSize: Readonly<{ width: number; height: number }>
   readonly viewport: Readonly<{
     width: number
     height: number
@@ -38,15 +37,9 @@ export interface DomScaleProbeWorkload {
     viewHeight: number
   }>
   readonly viewportRole: string
-  readonly layout: Readonly<{
-    columns: number
-    originX: number
-    originY: number
-    gapX: number
-    gapY: number
-  }>
   readonly dragDelta: Readonly<{ x: number; y: number }>
   readonly zoom: Readonly<{ startScale: number; endScale: number }>
+  readonly panDelta: Readonly<{ x: number; y: number }>
   readonly longFrameThresholdMs: number
 }
 

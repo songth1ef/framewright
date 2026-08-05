@@ -9,7 +9,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { DOM_SCALE_PROBE_WORKLOAD } from './probe-config.mjs'
-import { buildDragEvidence, buildZoomEvidence } from './browser/scale-sampling.mjs'
+import { buildDragEvidence, buildPanEvidence, buildZoomEvidence } from './browser/scale-sampling.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(here, '../../..')
@@ -39,13 +39,11 @@ await build({
 
 const bundle = await readFile(path.join(distDir, 'scale-probe.iife.js'), 'utf8')
 const results = {
-  probe: 'renderer-dom-scale',
+  probe: 'renderer-dom-scale-s3',
   startedAt: new Date().toISOString(),
   workload,
-  memory: {
-    value: null,
-    reason: '页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。',
-  },
+  memory: null,
+  memoryReason: '页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。',
   browser: null,
   scenarios: [],
 }
@@ -80,6 +78,7 @@ try {
       scenarioWorkload,
     )
 
+    await page.evaluate((value) => window.__scaleProbe.mountScenario(value), scenarioWorkload)
     const dragStart = await page.evaluate(() => window.__scaleProbe.dragSnapshot())
     const dragSample = await page.evaluate(
       ({ ms, threshold }) => window.__scaleProbe.sampleDrag(ms, threshold),
@@ -88,6 +87,7 @@ try {
     const dragEnd = await page.evaluate(() => window.__scaleProbe.dragSnapshot())
     const dragEvidence = buildDragEvidence(dragStart, dragEnd)
 
+    await page.evaluate((value) => window.__scaleProbe.mountScenario(value), scenarioWorkload)
     const zoomStart = await page.evaluate(() => window.__scaleProbe.zoomSnapshot())
     const zoomSample = await page.evaluate(
       ({ ms, threshold }) => window.__scaleProbe.sampleZoom(ms, threshold),
@@ -96,11 +96,23 @@ try {
     const zoomEnd = await page.evaluate(() => window.__scaleProbe.zoomSnapshot())
     const zoomEvidence = buildZoomEvidence(zoomStart, zoomEnd)
 
+    await page.evaluate((value) => window.__scaleProbe.mountScenario(value), scenarioWorkload)
+    const panStart = await page.evaluate(() => window.__scaleProbe.panSnapshot())
+    const panSample = await page.evaluate(
+      ({ ms, threshold }) => window.__scaleProbe.samplePan(ms, threshold),
+      { ms: workload.sampleWindowMs, threshold: workload.longFrameThresholdMs },
+    )
+    const panEnd = await page.evaluate(() => window.__scaleProbe.panSnapshot())
+    const panEvidence = buildPanEvidence(panStart, panEnd)
+
     const scenarioResult = {
       ...scenarioWorkload,
       firstScreen: { ...firstScreen, memory: null },
       drag: { ...dragSample, workEvidence: dragEvidence, memory: null },
       zoom: { ...zoomSample, workEvidence: zoomEvidence, memory: null },
+      pan: { ...panSample, workEvidence: panEvidence, memory: null },
+      memory: null,
+      memoryReason: results.memoryReason,
     }
     results.scenarios.push(scenarioResult)
     console.log(`[${scenarioWorkload.id}]`, JSON.stringify(scenarioResult))
@@ -111,6 +123,6 @@ try {
 
 results.finishedAt = new Date().toISOString()
 await mkdir(resultsDir, { recursive: true })
-const outFile = path.join(resultsDir, `scale-probe-${Date.now()}.json`)
+const outFile = path.join(resultsDir, `scale-s3-probe-${Date.now()}.json`)
 await writeFile(outFile, JSON.stringify(results, null, 2))
 console.log('结果已写入', outFile)
