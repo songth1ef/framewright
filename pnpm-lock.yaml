@@ -72,6 +72,8 @@ importers:
 
   packages/core: {}
 
+  packages/provider: {}
+
   packages/renderer-dom:
     dependencies:
       '@framewright/core':
