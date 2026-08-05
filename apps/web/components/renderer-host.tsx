@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  DEFAULT_VIEWPORT_SIZE,
   DEFAULT_VIEWPORT,
   applyOp,
   applySelection,
@@ -54,6 +55,7 @@ import {
 } from './interaction-mode-storage'
 import { loadServerHistory } from './server-history'
 import type { ServerHistory } from './server-history'
+import { observeViewportSize } from './renderer-host-viewport-size'
 import {
   centerContentAtActualSize,
   fitContent,
@@ -149,6 +151,7 @@ export function RendererHost({
   const [activeIndex, setActiveIndex] = useState(0)
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [minimapVisible, setMinimapVisible] = useState(() => readStoredMinimapVisibility())
+  const [viewportSize, setViewportSize] = useState<ViewportSize | null>(null)
   const getViewportSize = (): ViewportSize => ({
     width: containerRef.current?.clientWidth || 800,
     height: containerRef.current?.clientHeight || 450,
@@ -188,6 +191,12 @@ export function RendererHost({
   rootRef.current = root
   documentIdRef.current = documentId
   viewportRef.current = viewport
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (container === null) return
+    return observeViewportSize(container, setViewportSize)
+  }, [])
 
   const commitViewport = useCallback((next: Viewport): void => {
     viewportRef.current = next
@@ -516,15 +525,17 @@ export function RendererHost({
     root,
     selection,
     viewport,
+    viewportSize: viewportSize ?? DEFAULT_VIEWPORT_SIZE,
     interactionMode,
     connectionVisibility,
     callbacks,
   }
   const ctxRef = useRef(ctx)
   ctxRef.current = ctx
+  const viewportSizeReady = viewportSize !== null
 
   useEffect(() => {
-    if (!historyReady) return
+    if (!historyReady || !viewportSizeReady) return
     const container = containerRef.current
     if (container === null) return
     const entry = RENDERERS[activeIndex]
@@ -551,7 +562,7 @@ export function RendererHost({
       delete (window as unknown as Record<string, unknown>)['__fwGetBounds']
       delete (window as unknown as Record<string, unknown>)['__fwGetVisible']
     }
-  }, [activeIndex, historyReady])
+  }, [activeIndex, historyReady, viewportSizeReady])
 
   useEffect(() => {
     queueMicrotask(() => adapterRef.current?.update(ctx))
