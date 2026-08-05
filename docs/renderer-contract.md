@@ -382,3 +382,39 @@ host 从容器测量并在 resize 时触发 update。两侧渲染器一律用它
 `architecture.md` 记过：此前两侧都放弃了原生命中测试，
 **对照成立但两侧都没跑在自己的天花板上**。有了这个开关，
 「用原生能力」不再是作弊 —— 可以分别测出各自的上限，对照也仍然可比。
+
+---
+
+## 附录 · 交互模式的两条裁定（2026-08-05 夜）
+
+执行方在实现 Leafer native 分支时主动上报两条，均已裁定。
+
+### ① `interactionMode` 缺省必须落到 `unified`
+
+**现状**：两侧都写 `interactionMode === 'unified'` 做裁比较，
+所以 `undefined` 会落进 **native** 分支 —— 而 `core` 的
+`resolveInteractionMode` 注释写的是「未提供时按 `DEFAULT_INTERACTION_MODE`（`unified`）处理」。
+
+**裁定：改成 `resolveInteractionMode(...) === 'unified'`，两侧同一个 commit。**
+
+理由：「host 目前永远显式传值，所以不可达」**不是辩护**。
+默认值存在的意义就是**在没人传的时候是对的**；
+文档写着 `unified` 而代码走 `native`，是一个等着被踩的陷阱。
+
+⚠️ 两侧必须同一个 commit 改 —— 一边先行就会出现「同一份数据两种拾取」的窗口期。
+
+### ② `locked` 节点对命中测试是穿透的
+
+**行为微变**：删掉 Leafer 侧的探针捷径后，
+「点在 locked 节点上、其几何下方有可选节点」时，`unified` 会选中**下方**的节点
+（`hitTestPoint` 对 locked 穿透），而旧捷径按**空白**处理。
+
+**裁定：接受新行为。**
+
+依据：`locked` 的语义是「**不能被操作**」，不是「**挡住点击**」。
+且这与 DOM 侧 `unified` 的既有行为一致（DOM 从来不 consult `event.target`），
+所以这是**向 parity 靠拢，不是偏离**。
+
+⚠️ demo 文档里 locked 节点下方只有 root，故现有测试全绿 ——
+**这意味着这条行为没有被测试覆盖**。补一条专门的用例：
+locked 节点下方放一个可选节点，断言点击选中下方那个。
