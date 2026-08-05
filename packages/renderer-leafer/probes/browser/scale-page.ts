@@ -6,11 +6,13 @@ import {
 } from '@framewright/core'
 import { Leafer, type IUI } from 'leafer-ui'
 import { LeaferViewportScene } from '../../src/viewport-culling'
+import { setVideoElementFactoryForTest } from '../../src/video/video-paint'
 import {
   LEAFER_SCALE_PROBE_WORKLOAD,
   type LeaferScaleProbeScenario,
 } from '../probe-config.mjs'
 import { buildScaleFixture, countFixtureConnections } from './scale-fixture'
+import { createAnonymousProbeVideoElement } from './probe-media'
 import {
   buildFrameStats,
   selectMountedLeafId,
@@ -58,6 +60,8 @@ function requireView(): HTMLElement {
 }
 
 const workload = LEAFER_SCALE_PROBE_WORKLOAD
+// 仅探针启用：应用完整素材集包含不能用 anonymous CORS 加载的长视频。
+setVideoElementFactoryForTest(createAnonymousProbeVideoElement)
 const view = requireView()
 const screen = { width: workload.viewport.viewWidth, height: workload.viewport.viewHeight }
 const leafer = new Leafer({ view, ...screen })

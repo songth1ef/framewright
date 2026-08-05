@@ -1,4 +1,5 @@
 import {
+  CORS_SAFE_PROBE_MEDIA_ASSETS,
   createScaleFixture,
   isAiImageNode,
   isAiVideoNode,
@@ -12,6 +13,7 @@ export function buildScaleFixture(scenario: LeaferScaleProbeScenario): FrameNode
     nodeCount: scenario.nodeCount,
     connectionPattern: scenario.connectionPattern,
     seed: LEAFER_SCALE_PROBE_WORKLOAD.seed,
+    mediaAssets: CORS_SAFE_PROBE_MEDIA_ASSETS,
   })
 }
 

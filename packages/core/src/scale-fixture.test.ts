@@ -1,7 +1,11 @@
 import { performance } from 'node:perf_hooks'
 import { describe, expect, it } from 'vitest'
 import { PUBLIC_IMAGE_ASSETS, PUBLIC_VIDEO_ASSETS } from './demo-media'
-import { createScaleFixture, type ScaleFixtureNodeType } from './scale-fixture'
+import {
+  CORS_SAFE_PROBE_MEDIA_ASSETS,
+  createScaleFixture,
+  type ScaleFixtureNodeType,
+} from './scale-fixture'
 import type { AiImageNode, AiVideoNode, CanvasNode } from './node-schema'
 
 type GeneratedNode = AiImageNode | AiVideoNode
@@ -51,6 +55,31 @@ describe('createScaleFixture', () => {
 
     expect(second).toEqual(first)
     expect(different).not.toEqual(first)
+  })
+
+  it('CORS 安全探针素材只含 picsum、MDN 与 samplelib，且图片保留八种宽高比', () => {
+    expect(CORS_SAFE_PROBE_MEDIA_ASSETS.images.every((asset) =>
+      new URL(asset.url).hostname === 'picsum.photos')).toBe(true)
+    expect(new Set(CORS_SAFE_PROBE_MEDIA_ASSETS.images.map((asset) => asset.aspectRatio)).size)
+      .toBeGreaterThanOrEqual(8)
+    expect(CORS_SAFE_PROBE_MEDIA_ASSETS.videos.every((asset) =>
+      new URL(asset.url).hostname === 'mdn.github.io')).toBe(true)
+    expect(CORS_SAFE_PROBE_MEDIA_ASSETS.audios.every((asset) =>
+      ['mdn.github.io', 'samplelib.com'].includes(new URL(asset.url).hostname))).toBe(true)
+  })
+
+  it('注入探针素材集后不再分配应用完整清单里的非 CORS 长视频', () => {
+    const root = createScaleFixture({
+      nodeCount: 300,
+      connectionPattern: 'none',
+      seed: 83,
+      typeRatios: { video: 1 },
+      mediaAssets: CORS_SAFE_PROBE_MEDIA_ASSETS,
+    })
+
+    expect(root.children.every((node) => node.fwType === 'video')).toBe(true)
+    expect(mediaUrls(root.children).every((url) =>
+      new URL(url).hostname === 'mdn.github.io')).toBe(true)
   })
 
   it('真实图片分配铺开至少八种宽高比与五档源分辨率', () => {

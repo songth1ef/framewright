@@ -82,6 +82,13 @@ describe('Leafer S3 规模 probe', () => {
     expect(countFixtureConnections(many)).toBe(1776)
     expect(none.children).toHaveLength(10000)
     expect(countFixtureConnections(none)).toBe(0)
+    const mediaUrls = many.children.flatMap((node) => {
+      if (node.fwType === 'img' || node.fwType === 'video' || node.fwType === 'audio') return [node.src]
+      if (node.fwType === 'ai-image' || node.fwType === 'ai-video') return node.src ? [node.src] : []
+      return []
+    })
+    expect(mediaUrls.every((url) =>
+      ['picsum.photos', 'mdn.github.io', 'samplelib.com'].includes(new URL(url).hostname))).toBe(true)
   })
 
   it('拖拽、缩放和平移证据都拒绝空转', () => {

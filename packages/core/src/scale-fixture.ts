@@ -12,6 +12,7 @@ import {
   PUBLIC_AUDIO_ASSETS,
   PUBLIC_IMAGE_ASSETS,
   PUBLIC_VIDEO_ASSETS,
+  type PublicAudioAsset,
   type PublicImageAsset,
   type PublicVideoAsset,
 } from './demo-media'
@@ -21,6 +22,32 @@ export type ScaleFixtureNodeType = (typeof SCALE_FIXTURE_NODE_TYPES)[number]
 export type ScaleFixtureConnectionPattern = 'none' | 'fanin' | 'distributed' | 'many-to-many'
 export type ScaleFixtureSeed = number | string
 
+export interface ScaleFixtureMediaAssets {
+  images: readonly PublicImageAsset[]
+  videos: readonly PublicVideoAsset[]
+  audios: readonly PublicAudioAsset[]
+}
+
+const DEFAULT_SCALE_FIXTURE_MEDIA_ASSETS: ScaleFixtureMediaAssets = {
+  images: PUBLIC_IMAGE_ASSETS,
+  videos: PUBLIC_VIDEO_ASSETS,
+  audios: PUBLIC_AUDIO_ASSETS,
+}
+
+/**
+ * 只供会读取 canvas 像素的浏览器探针使用。
+ *
+ * 探针只覆盖 CORS 可用的素材子集：picsum 图片、mdn.github.io 视频、
+ * mdn.github.io / samplelib 音频。应用侧仍默认使用上面的完整素材集；
+ * test-videos.co.uk、media.w3.org、nps.gov 等非 CORS 长视频未进入探针。
+ */
+export const CORS_SAFE_PROBE_MEDIA_ASSETS: ScaleFixtureMediaAssets = {
+  images: PUBLIC_IMAGE_ASSETS.filter((asset) => new URL(asset.url).hostname === 'picsum.photos'),
+  videos: PUBLIC_VIDEO_ASSETS.filter((asset) => new URL(asset.url).hostname === 'mdn.github.io'),
+  audios: PUBLIC_AUDIO_ASSETS.filter((asset) =>
+    ['mdn.github.io', 'samplelib.com'].includes(new URL(asset.url).hostname)),
+}
+
 export interface ScaleFixtureOptions {
   /** 画布内素材节点数；返回值的 root frame 不计入。 */
   nodeCount: number
@@ -28,6 +55,8 @@ export interface ScaleFixtureOptions {
   seed: ScaleFixtureSeed
   /** 五种素材的相对权重。传入时未列出的类型权重视为 0。 */
   typeRatios?: Partial<Record<ScaleFixtureNodeType, number>>
+  /** 缺省使用应用完整素材集；像素探针可注入 CORS 安全子集。 */
+  mediaAssets?: ScaleFixtureMediaAssets
   /** many-to-many 的每组结构：M 个素材 → K 个 v1 → K 个 v2。 */
   manyToMany?: {
     sourceCount?: number
@@ -244,9 +273,10 @@ function createMaterialNode(
   seed: ScaleFixtureSeed,
   sourceFwIds: string[],
   random: () => number,
+  mediaAssets: ScaleFixtureMediaAssets,
 ): CanvasNode {
   if (type === 'audio') {
-    const audioAsset = pickAsset(PUBLIC_AUDIO_ASSETS, random)
+    const audioAsset = pickAsset(mediaAssets.audios, random)
     return createAudioNode({
       fwId: nodeId(index),
       name: `规模夹具 ${index + 1} · ${audioAsset.id}`,
@@ -258,9 +288,9 @@ function createMaterialNode(
     })
   }
   const imageAsset: PublicImageAsset | undefined =
-    type === 'img' || type === 'ai-image' ? pickAsset(PUBLIC_IMAGE_ASSETS, random) : undefined
+    type === 'img' || type === 'ai-image' ? pickAsset(mediaAssets.images, random) : undefined
   const videoAsset: PublicVideoAsset | undefined =
-    type === 'video' || type === 'ai-video' ? pickAsset(PUBLIC_VIDEO_ASSETS, random) : undefined
+    type === 'video' || type === 'ai-video' ? pickAsset(mediaAssets.videos, random) : undefined
   const primaryAsset = imageAsset ?? videoAsset
   if (!primaryAsset) throw new Error(`规模夹具不支持素材类型 ${type}`)
   const size = fitNodeSize(primaryAsset.width, primaryAsset.height)
@@ -274,7 +304,7 @@ function createMaterialNode(
   }
   if (type === 'img') return createImgNode({ ...base, src: imageAsset!.url, fit: 'cover' })
   if (type === 'video') {
-    const poster = pickAsset(PUBLIC_IMAGE_ASSETS, random)
+    const poster = pickAsset(mediaAssets.images, random)
     return createVideoNode({ ...base, src: videoAsset!.url, poster: poster.url, fit: 'cover' })
   }
   const generated = {
@@ -295,7 +325,7 @@ function createMaterialNode(
     sourceFwIds,
   }
   if (type === 'ai-image') return createAiImageNode(generated)
-  const poster = pickAsset(PUBLIC_IMAGE_ASSETS, random)
+  const poster = pickAsset(mediaAssets.images, random)
   return createAiVideoNode({ ...generated, poster: poster.url })
 }
 
@@ -305,6 +335,7 @@ function createMaterialNode(
  */
 export function createScaleFixture(options: ScaleFixtureOptions): FrameNode {
   assertNonNegativeInteger(options.nodeCount, 'nodeCount')
+  const mediaAssets = options.mediaAssets ?? DEFAULT_SCALE_FIXTURE_MEDIA_ASSETS
   const random = createSeededRandom(options.seed)
   const topology = createTopology(options)
   const counts = allocateTypeCounts(options.nodeCount, options.typeRatios)
@@ -324,6 +355,7 @@ export function createScaleFixture(options: ScaleFixtureOptions): FrameNode {
       options.seed,
       topology.sourcesByIndex[index] ?? [],
       random,
+      mediaAssets,
     )
   }
 
