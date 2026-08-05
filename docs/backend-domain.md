@@ -213,3 +213,46 @@ interface GenerationPlan {
 - 对话的分支（编辑历史消息重新生成）
 - 全文搜索
 - 素材的版本管理
+
+---
+
+## 附录 · composition root 归属（2026-08-05 裁定）
+
+### 问题
+
+执行方补生成 Route Handler 时被卡住，上报的诊断很准：
+
+> 「实际缺的是 **composition root**，而不只是一个普通 re-export」
+
+`server-core` 只导出工厂 `createGenerationService(deps)`，没有组装好的实例；
+而 `apps/web` 不依赖 `provider`。于是 Route Handler 无路可走 ——
+要么在路由里自己拼装 provider/store/storage/Prisma（违反「路由里不写业务、不碰 Prisma」），
+要么放弃。它选择停下上报，**这是对的**。
+
+### 裁定：composition root 归 `server-core`
+
+**理由**：其它 store（document / session / asset）都已经是这个形态 ——
+模块内建默认单例，对外导出组装好的函数（`getDocument` 而不是 `createDocumentStore(prisma)`）。
+生成服务没有跟上，只是因为它多一个 provider 依赖。
+
+**做法**：
+
+1. `packages/server-core` 增加对 `@framewright/provider` 的 workspace 依赖
+2. 在 `server-core` 内组装默认生成服务，导出 `submitGeneration` / `pollGeneration`
+3. `createGenerationService(deps)` **保留**，供测试与将来替换 provider 用
+
+**这不违反「provider 必须可替换」**（`AGENTS.md` §2）：可替换指的是**接口可换实现**，
+而不是「不许有默认实现」。默认走 mock，换真实厂商时只动这一个组装点 ——
+反而比让每个调用方各自组装更容易换。
+
+### 连带裁定：`server-core` 的错误要机器可判定
+
+执行方还报了一条：`pollGeneration` 对不存在的记录只抛普通 `Error`，
+路由**没有稳定错误码可映射成 404**，只能一律 500。
+
+**这是真缺陷**：HTTP 层无法区分「查不到」和「炸了」，
+对调用方来说这两种情况的处置完全不同。
+
+**要求**：`server-core` 抛的错要带机器可判定的 `code`。
+口径参照 `provider` 已经做对的那个 —— `ProviderError` 带 `code: 'unknown-task'`。
+路由据此把「查不到」映射成 404。
