@@ -1,9 +1,21 @@
-import { isFrameNode, type CanvasNode, type FrameNode, type Rect, type Viewport } from '@framewright/core'
+import {
+  isAiImageNode,
+  isFrameNode,
+  isImgNode,
+  type CanvasNode,
+  type FrameNode,
+  type ObjectFit,
+  type Rect,
+  type Viewport,
+} from '@framewright/core'
 import type { ViewportSize } from './viewport-actions'
 
 export const MINIMAP_WIDTH = 200
 export const MINIMAP_HEIGHT = 150
 export const MINIMAP_PADDING = 8
+/** Chromium 多规模 5 次中位数实测的最高合格档，见 minimap-performance-results.json。 */
+export const MINIMAP_THUMBNAIL_DRAW_LIMIT = 2_500
+export const MINIMAP_THUMBNAIL_MIN_SIZE = 4
 
 export interface MinimapProjection {
   scale: number
@@ -19,6 +31,10 @@ export interface MinimapDrawItem {
   width: number
   height: number
   opacity: number
+  thumbnail?: {
+    src: string
+    fit: ObjectFit
+  }
 }
 
 export type MinimapIcon = 'image' | 'video' | 'audio' | null
@@ -44,6 +60,66 @@ export function getMinimapVisual(type: CanvasNode['fwType']): MinimapVisual {
 
 export function shouldDrawMinimapIcon(width: number, height: number): boolean {
   return width >= 12 && height >= 12
+}
+
+export function hasRenderableMinimapThumbnail(width: number, height: number): boolean {
+  return width >= MINIMAP_THUMBNAIL_MIN_SIZE && height >= MINIMAP_THUMBNAIL_MIN_SIZE
+}
+
+export function shouldDrawMinimapThumbnail(thumbnailIndex: number): boolean {
+  return thumbnailIndex >= 0 && thumbnailIndex < MINIMAP_THUMBNAIL_DRAW_LIMIT
+}
+
+type BitmapLoader = (src: string) => Promise<ImageBitmap>
+
+interface BitmapCacheEntry {
+  bitmap: ImageBitmap | null
+  pending: Promise<ImageBitmap | null>
+}
+
+async function loadDownsampledBitmap(src: string): Promise<ImageBitmap> {
+  const response = await fetch(src)
+  if (!response.ok) throw new Error(`缩略图加载失败：${response.status}`)
+  const blob = await response.blob()
+  return createImageBitmap(blob, {
+    resizeWidth: 64,
+    resizeHeight: 64,
+    resizeQuality: 'low',
+  })
+}
+
+/** 由 Minimap host 持有；同源去重，节点移除或组件卸载时 close ImageBitmap。 */
+export class MinimapBitmapCache {
+  readonly #entries = new Map<string, BitmapCacheEntry>()
+
+  constructor(private readonly loader: BitmapLoader = loadDownsampledBitmap) {}
+
+  get(src: string): Promise<ImageBitmap | null> {
+    const existing = this.#entries.get(src)
+    if (existing !== undefined) return existing.pending
+    const entry: BitmapCacheEntry = { bitmap: null, pending: Promise.resolve(null) }
+    entry.pending = this.loader(src)
+      .then((bitmap) => {
+        if (this.#entries.get(src) === entry) entry.bitmap = bitmap
+        return bitmap
+      })
+      .catch(() => null)
+    this.#entries.set(src, entry)
+    return entry.pending
+  }
+
+  retainOnly(sources: ReadonlySet<string>): void {
+    for (const [src, entry] of this.#entries) {
+      if (sources.has(src)) continue
+      this.#entries.delete(src)
+      if (entry.bitmap !== null) entry.bitmap.close()
+      else void entry.pending.then((bitmap) => bitmap?.close())
+    }
+  }
+
+  dispose(): void {
+    this.retainOnly(new Set())
+  }
 }
 
 export interface MinimapViewportFrame {
@@ -129,6 +205,9 @@ export function createMinimapDrawItems(root: FrameNode): MinimapDrawItem[] {
         width: node.width,
         height: node.height,
         opacity: node.opacity,
+        ...((isImgNode(node) || isAiImageNode(node)) && node.src !== null && node.src !== ''
+          ? { thumbnail: { src: node.src, fit: node.fit } }
+          : {}),
       })
       if (isFrameNode(node)) visitChildren(node, x, y)
     }

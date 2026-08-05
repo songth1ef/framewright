@@ -14,17 +14,62 @@ import {
   MINIMAP_HEIGHT,
   MINIMAP_PADDING,
   MINIMAP_WIDTH,
+  MinimapBitmapCache,
   createMinimapDrawItems,
   createMinimapProjection,
   getMinimapVisual,
+  hasRenderableMinimapThumbnail,
   mapMinimapPointToCanvas,
   projectViewportFrame,
   shouldDrawMinimapIcon,
+  shouldDrawMinimapThumbnail,
   viewportCenteredAt,
   type MinimapDrawItem,
   type MinimapIcon,
 } from './minimap'
 import type { ViewportSize } from './viewport-actions'
+
+function drawThumbnail(
+  context: CanvasRenderingContext2D,
+  bitmap: ImageBitmap,
+  fit: NonNullable<MinimapDrawItem['thumbnail']>['fit'],
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+): void {
+  if (fit === 'fill') {
+    context.drawImage(bitmap, left, top, width, height)
+    return
+  }
+  const sourceAspect = bitmap.width / bitmap.height
+  const targetAspect = width / height
+  if (fit === 'contain') {
+    const drawWidth = sourceAspect > targetAspect ? width : height * sourceAspect
+    const drawHeight = sourceAspect > targetAspect ? width / sourceAspect : height
+    context.drawImage(
+      bitmap,
+      left + (width - drawWidth) / 2,
+      top + (height - drawHeight) / 2,
+      drawWidth,
+      drawHeight,
+    )
+    return
+  }
+  const sourceWidth = sourceAspect > targetAspect ? bitmap.height * targetAspect : bitmap.width
+  const sourceHeight = sourceAspect > targetAspect ? bitmap.height : bitmap.width / targetAspect
+  context.drawImage(
+    bitmap,
+    (bitmap.width - sourceWidth) / 2,
+    (bitmap.height - sourceHeight) / 2,
+    sourceWidth,
+    sourceHeight,
+    left,
+    top,
+    width,
+    height,
+  )
+}
 
 function drawIcon(
   context: CanvasRenderingContext2D,
@@ -80,12 +125,14 @@ function drawItems(
   canvas: HTMLCanvasElement,
   items: readonly MinimapDrawItem[],
   projection: ReturnType<typeof createMinimapProjection>,
+  bitmaps: ReadonlyMap<string, ImageBitmap> = new Map(),
 ): void {
   canvas.width = MINIMAP_WIDTH
   canvas.height = MINIMAP_HEIGHT
   const context = canvas.getContext('2d')
   if (context === null) return
   context.clearRect(0, 0, MINIMAP_WIDTH, MINIMAP_HEIGHT)
+  let thumbnailIndex = 0
   for (const item of items) {
     const visual = getMinimapVisual(item.fwType)
     const left = item.x * projection.scale + projection.offsetX
@@ -95,7 +142,14 @@ function drawItems(
     context.globalAlpha = item.opacity
     context.fillStyle = visual.color
     context.fillRect(left, top, width, height)
-    if (visual.icon !== null && shouldDrawMinimapIcon(width, height)) {
+    const thumbnail = item.thumbnail
+    const bitmap = thumbnail === undefined ? undefined : bitmaps.get(thumbnail.src)
+    const thumbnailEligible = thumbnail !== undefined && hasRenderableMinimapThumbnail(width, height)
+    const drawThumbnailAtIndex = thumbnailEligible && shouldDrawMinimapThumbnail(thumbnailIndex)
+    if (thumbnailEligible) thumbnailIndex += 1
+    if (drawThumbnailAtIndex && bitmap !== undefined && thumbnail !== undefined) {
+      drawThumbnail(context, bitmap, thumbnail.fit, left, top, width, height)
+    } else if (visual.icon !== null && shouldDrawMinimapIcon(width, height)) {
       if (visual.icon === 'image') drawIcon(context, 'image', left, top, width, height)
       if (visual.icon === 'video') drawIcon(context, 'video', left, top, width, height)
       if (visual.icon === 'audio') drawIcon(context, 'audio', left, top, width, height)
@@ -142,6 +196,9 @@ export function Minimap({
   onClose(): void
 }): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const bitmapCacheRef = useRef<MinimapBitmapCache | null>(null)
+  if (bitmapCacheRef.current === null) bitmapCacheRef.current = new MinimapBitmapCache()
+  const bitmapCache = bitmapCacheRef.current
   const panelRef = useRef<HTMLElement>(null)
   const pointerIdRef = useRef<number | null>(null)
   const [viewportSize, setViewportSize] = useState<ViewportSize>({ width: 800, height: 450 })
@@ -154,8 +211,38 @@ export function Minimap({
 
   useEffect(() => {
     const canvas = canvasRef.current
-    if (canvas !== null) drawItems(canvas, items, projection)
-  }, [items, projection])
+    if (canvas === null) return
+    let cancelled = false
+    drawItems(canvas, items, projection)
+    const sources = new Set<string>()
+    let thumbnailIndex = 0
+    for (const item of items) {
+      const thumbnail = item.thumbnail
+      if (thumbnail === undefined) continue
+      const width = item.width * projection.scale
+      const height = item.height * projection.scale
+      if (!hasRenderableMinimapThumbnail(width, height)) continue
+      if (shouldDrawMinimapThumbnail(thumbnailIndex)) sources.add(thumbnail.src)
+      thumbnailIndex += 1
+    }
+    bitmapCache.retainOnly(sources)
+    void Promise.all([...sources].map(async (src) => [src, await bitmapCache.get(src)] as const))
+      .then((loaded) => {
+        if (cancelled) return
+        const bitmaps = new Map<string, ImageBitmap>()
+        for (const [src, bitmap] of loaded) {
+          if (bitmap !== null) bitmaps.set(src, bitmap)
+        }
+        drawItems(canvas, items, projection, bitmaps)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [bitmapCache, items, projection])
+
+  useEffect(() => () => {
+    bitmapCache.dispose()
+  }, [bitmapCache])
 
   useEffect(() => {
     const viewportElement = panelRef.current?.parentElement

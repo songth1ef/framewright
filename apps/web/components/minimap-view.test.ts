@@ -24,6 +24,13 @@ describe('minimap view 结构', () => {
     expect(source).toContain("visual.icon === 'audio'")
   })
 
+  it('图片缩略使用 host 持有的 ImageBitmap 缓存，不创建逐节点 img', () => {
+    expect(source).toContain('new MinimapBitmapCache()')
+    expect(source).toContain('bitmapCache.dispose()')
+    expect(source).toContain('context.drawImage(')
+    expect(source).not.toMatch(/<img\b/)
+  })
+
   it('定位在画布左下角且不是 fixed，不会覆盖画布上方工具栏', () => {
     expect(source).toMatch(/position: 'absolute', left: 12, bottom: 12/)
     expect(source).not.toContain("position: 'fixed'")

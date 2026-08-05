@@ -1,0 +1,1618 @@
+{
+  "generatedAt": "2026-08-05T14:56:53.969Z",
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+  "methodology": {
+    "nodeCounts": [
+      100,
+      1000,
+      10000
+    ],
+    "thumbnailLimits": [
+      100,
+      500,
+      1000,
+      2500,
+      5000,
+      10000
+    ],
+    "repetitions": 5,
+    "frameCount": 89,
+    "longFrameMs": 50
+  },
+  "selectedThumbnailDrawLimit": 2500,
+  "scenarios": [
+    {
+      "nodeCount": 100,
+      "mode": "legacy",
+      "thumbnailLimit": 0,
+      "medianFps": 59.44429601970921,
+      "medianMaxFrameMs": 31.799999982118607,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          2333007801,
+          1213496856
+        ],
+        [
+          2333007801,
+          1213496856
+        ],
+        [
+          2333007801,
+          1213496856
+        ],
+        [
+          2333007801,
+          1213496856
+        ],
+        [
+          2333007801,
+          1213496856
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        },
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        },
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        },
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        },
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        }
+      ]
+    },
+    {
+      "nodeCount": 100,
+      "mode": "shape",
+      "thumbnailLimit": 0,
+      "medianFps": 59.448266647907715,
+      "medianMaxFrameMs": 19.700000017881393,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          1536540170,
+          1044975405
+        ],
+        [
+          1536540170,
+          1044975405
+        ],
+        [
+          1536540170,
+          1044975405
+        ],
+        [
+          1536540170,
+          1044975405
+        ],
+        [
+          1536540170,
+          1044975405
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 9090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 0,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 100,
+      "mode": "type",
+      "thumbnailLimit": 0,
+      "medianFps": 59.44032592069917,
+      "medianMaxFrameMs": 30.30000001192093,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          2390852557,
+          1159891166
+        ],
+        [
+          2390852557,
+          1159891166
+        ],
+        [
+          2390852557,
+          1159891166
+        ],
+        [
+          2390852557,
+          1159891166
+        ],
+        [
+          2390852557,
+          1159891166
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 9090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 0,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 100,
+      "mode": "thumbnail",
+      "thumbnailLimit": 100,
+      "medianFps": 59.416516456135824,
+      "medianMaxFrameMs": 18.69999998807907,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 100,
+      "mode": "thumbnail",
+      "thumbnailLimit": 500,
+      "medianFps": 59.424450823888236,
+      "medianMaxFrameMs": 27.19999998807907,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 100,
+      "mode": "thumbnail",
+      "thumbnailLimit": 1000,
+      "medianFps": 59.45223780895124,
+      "medianMaxFrameMs": 18.5,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 100,
+      "mode": "thumbnail",
+      "thumbnailLimit": 2500,
+      "medianFps": 59.436356350771824,
+      "medianMaxFrameMs": 18.200000017881393,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 100,
+      "mode": "thumbnail",
+      "thumbnailLimit": 5000,
+      "medianFps": 59.432387312186975,
+      "medianMaxFrameMs": 18.5,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 100,
+      "mode": "thumbnail",
+      "thumbnailLimit": 10000,
+      "medianFps": 59.45223780895124,
+      "medianMaxFrameMs": 26.900000005960464,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ],
+        [
+          205734247,
+          3459656744
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 9090,
+          "drawImage": 6300,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 1000,
+      "mode": "legacy",
+      "thumbnailLimit": 0,
+      "medianFps": 59.436356350771824,
+      "medianMaxFrameMs": 18.400000005960464,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          1578048733,
+          358071196
+        ],
+        [
+          1578048733,
+          358071196
+        ],
+        [
+          1578048733,
+          358071196
+        ],
+        [
+          1578048733,
+          358071196
+        ],
+        [
+          1578048733,
+          358071196
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        },
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        },
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        },
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        },
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        }
+      ]
+    },
+    {
+      "nodeCount": 1000,
+      "mode": "shape",
+      "thumbnailLimit": 0,
+      "medianFps": 59.4760759152937,
+      "medianMaxFrameMs": 25,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          1653709030,
+          1338397441
+        ],
+        [
+          1653709030,
+          1338397441
+        ],
+        [
+          1653709030,
+          1338397441
+        ],
+        [
+          1653709030,
+          1338397441
+        ],
+        [
+          1653709030,
+          1338397441
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 90090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 0,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 1000,
+      "mode": "type",
+      "thumbnailLimit": 0,
+      "medianFps": 59.428418803655326,
+      "medianMaxFrameMs": 18.5,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          4189521415,
+          1261126472
+        ],
+        [
+          4189521415,
+          1261126472
+        ],
+        [
+          4189521415,
+          1261126472
+        ],
+        [
+          4189521415,
+          1261126472
+        ],
+        [
+          4189521415,
+          1261126472
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 90090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 0,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 1000,
+      "mode": "thumbnail",
+      "thumbnailLimit": 100,
+      "medianFps": 59.468127755300124,
+      "medianMaxFrameMs": 21.30000001192093,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          2328825919,
+          1037722464
+        ],
+        [
+          2328825919,
+          1037722464
+        ],
+        [
+          2328825919,
+          1037722464
+        ],
+        [
+          2328825919,
+          1037722464
+        ],
+        [
+          2328825919,
+          1037722464
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 90090,
+          "drawImage": 9000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 9000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 9000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 9000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 9000,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 1000,
+      "mode": "thumbnail",
+      "thumbnailLimit": 500,
+      "medianFps": 59.53575489975593,
+      "medianMaxFrameMs": 18.5,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          3626231554,
+          4010576917
+        ],
+        [
+          3626231554,
+          4010576917
+        ],
+        [
+          3626231554,
+          4010576917
+        ],
+        [
+          3626231554,
+          4010576917
+        ],
+        [
+          3626231554,
+          4010576917
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 90090,
+          "drawImage": 45000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 45000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 45000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 45000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 45000,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 1000,
+      "mode": "thumbnail",
+      "thumbnailLimit": 1000,
+      "medianFps": 59.54770507182854,
+      "medianMaxFrameMs": 18.5,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 1000,
+      "mode": "thumbnail",
+      "thumbnailLimit": 2500,
+      "medianFps": 59.511868940153796,
+      "medianMaxFrameMs": 29.30000001192093,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 1000,
+      "mode": "thumbnail",
+      "thumbnailLimit": 5000,
+      "medianFps": 59.50788981034681,
+      "medianMaxFrameMs": 22.099999994039536,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 1000,
+      "mode": "thumbnail",
+      "thumbnailLimit": 10000,
+      "medianFps": 59.543721148531354,
+      "medianMaxFrameMs": 28.299999982118607,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ],
+        [
+          52773782,
+          663869185
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 90090,
+          "drawImage": 63000,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 10000,
+      "mode": "legacy",
+      "thumbnailLimit": 0,
+      "medianFps": 59.45223780895124,
+      "medianMaxFrameMs": 18.5,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          3940946477,
+          3148713684
+        ],
+        [
+          3940946477,
+          3148713684
+        ],
+        [
+          3940946477,
+          3148713684
+        ],
+        [
+          3940946477,
+          3148713684
+        ],
+        [
+          3940946477,
+          3148713684
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        },
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        },
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        },
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        },
+        {
+          "fillRect": 0,
+          "drawImage": 0,
+          "putImageData": 90
+        }
+      ]
+    },
+    {
+      "nodeCount": 10000,
+      "mode": "shape",
+      "thumbnailLimit": 0,
+      "medianFps": 59.61152042866711,
+      "medianMaxFrameMs": 26.80000001192093,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          2870060139,
+          1532761160
+        ],
+        [
+          2870060139,
+          1532761160
+        ],
+        [
+          2870060139,
+          1532761160
+        ],
+        [
+          2870060139,
+          1532761160
+        ],
+        [
+          2870060139,
+          1532761160
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 900090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 0,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 10000,
+      "mode": "type",
+      "thumbnailLimit": 0,
+      "medianFps": 59.663471207824124,
+      "medianMaxFrameMs": 18.599999994039536,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 900090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 0,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 0,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 10000,
+      "mode": "thumbnail",
+      "thumbnailLimit": 100,
+      "medianFps": 59.63948267846039,
+      "medianMaxFrameMs": 27.5,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 900090,
+          "drawImage": 9000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 9000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 9000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 9000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 9000,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 10000,
+      "mode": "thumbnail",
+      "thumbnailLimit": 500,
+      "medianFps": 59.68747904255635,
+      "medianMaxFrameMs": 20.099999994039536,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 900090,
+          "drawImage": 45000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 45000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 45000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 45000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 45000,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 10000,
+      "mode": "thumbnail",
+      "thumbnailLimit": 1000,
+      "medianFps": 59.75159449479691,
+      "medianMaxFrameMs": 25.200000017881393,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 900090,
+          "drawImage": 90000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 90000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 90000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 90000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 90000,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 10000,
+      "mode": "thumbnail",
+      "thumbnailLimit": 2500,
+      "medianFps": 59.92862433530214,
+      "medianMaxFrameMs": 19.30000001192093,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ],
+        [
+          1791832667,
+          3538251832
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 900090,
+          "drawImage": 225000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 225000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 225000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 225000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 225000,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 10000,
+      "mode": "thumbnail",
+      "thumbnailLimit": 5000,
+      "medianFps": 53.72449595479845,
+      "medianMaxFrameMs": 26.599999994039536,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          597019656,
+          663884451
+        ],
+        [
+          597019656,
+          663884451
+        ],
+        [
+          597019656,
+          663884451
+        ],
+        [
+          597019656,
+          663884451
+        ],
+        [
+          597019656,
+          663884451
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 900090,
+          "drawImage": 450000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 450000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 450000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 450000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 450000,
+          "putImageData": 0
+        }
+      ]
+    },
+    {
+      "nodeCount": 10000,
+      "mode": "thumbnail",
+      "thumbnailLimit": 10000,
+      "medianFps": 42.67357115409598,
+      "medianMaxFrameMs": 33.70000001788139,
+      "medianLongFrames": 0,
+      "medianLongTasks": 0,
+      "fingerprintChanged": true,
+      "fingerprints": [
+        [
+          2566835274,
+          996532877
+        ],
+        [
+          2566835274,
+          996532877
+        ],
+        [
+          2566835274,
+          996532877
+        ],
+        [
+          2566835274,
+          996532877
+        ],
+        [
+          2566835274,
+          996532877
+        ]
+      ],
+      "actualDrawCalls": [
+        {
+          "fillRect": 900090,
+          "drawImage": 630000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 630000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 630000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 630000,
+          "putImageData": 0
+        },
+        {
+          "fillRect": 900090,
+          "drawImage": 630000,
+          "putImageData": 0
+        }
+      ]
+    }
+  ]
+}

@@ -12,7 +12,11 @@ import {
   createMinimapDrawItems,
   createMinimapProjection,
   getMinimapVisual,
+  hasRenderableMinimapThumbnail,
+  MINIMAP_THUMBNAIL_DRAW_LIMIT,
+  MinimapBitmapCache,
   shouldDrawMinimapIcon,
+  shouldDrawMinimapThumbnail,
   mapMinimapPointToCanvas,
   projectViewportFrame,
   viewportCenteredAt,
@@ -143,5 +147,57 @@ describe('minimap type visuals', () => {
     expect(shouldDrawMinimapIcon(12, 12)).toBe(true)
     expect(shouldDrawMinimapIcon(11.99, 12)).toBe(false)
     expect(shouldDrawMinimapIcon(12, 11.99)).toBe(false)
+  })
+})
+
+describe('minimap image thumbnails', () => {
+  it('只为 img 与 ai-image 显式映射缩略来源，不把视频 poster 混进来', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      children: [
+        createImgNode({ fwId: 'image', src: '/image.png', fit: 'cover' }),
+        createAiImageNode({ fwId: 'ai-image', src: '/generated.png', fit: 'contain' }),
+        createVideoNode({ fwId: 'video', poster: '/poster.png' }),
+      ],
+    })
+
+    expect(createMinimapDrawItems(root).map((item) => item.thumbnail)).toEqual([
+      { src: '/image.png', fit: 'cover' },
+      { src: '/generated.png', fit: 'contain' },
+      undefined,
+    ])
+  })
+
+  it('缩略绘制阈值包含最后一个合法下标并排除紧邻的下一项', () => {
+    expect(shouldDrawMinimapThumbnail(MINIMAP_THUMBNAIL_DRAW_LIMIT - 1)).toBe(true)
+    expect(shouldDrawMinimapThumbnail(MINIMAP_THUMBNAIL_DRAW_LIMIT)).toBe(false)
+  })
+
+  it('缩略内容至少投影为 4×4px 才有辨识价值', () => {
+    expect(hasRenderableMinimapThumbnail(4, 4)).toBe(true)
+    expect(hasRenderableMinimapThumbnail(3.99, 4)).toBe(false)
+    expect(hasRenderableMinimapThumbnail(4, 3.99)).toBe(false)
+  })
+
+  it('ImageBitmap 缓存按 src 去重，并在裁剪与销毁时释放', async () => {
+    const closed: string[] = []
+    const loader = async (src: string): Promise<ImageBitmap> => ({
+      width: 32,
+      height: 20,
+      close: () => closed.push(src),
+    }) as ImageBitmap
+    const cache = new MinimapBitmapCache(loader)
+
+    const first = cache.get('/a.png')
+    const duplicate = cache.get('/a.png')
+    await cache.get('/b.png')
+    expect(first).toBe(duplicate)
+
+    cache.retainOnly(new Set(['/b.png']))
+    await first
+    expect(closed).toEqual(['/a.png'])
+
+    cache.dispose()
+    expect(closed).toEqual(['/a.png', '/b.png'])
   })
 })
