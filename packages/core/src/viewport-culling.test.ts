@@ -18,6 +18,28 @@ const viewport = { scale: 1, offsetX: 0, offsetY: 0 }
 const screen = { width: 100, height: 100 }
 
 describe('getNodesInViewport', () => {
+  it('连线显隐不改变 node 树的裁剪结果', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      children: [
+        createBoxNode({ fwId: 'source' }),
+        createAiImageNode({ fwId: 'target', sourceFwIds: ['source'] }),
+      ],
+    })
+
+    const visible = getNodesInViewport(root, viewport, {
+      ...screen,
+      connectionVisibility: 'visible',
+    })
+    const hidden = getNodesInViewport(root, viewport, {
+      ...screen,
+      connectionVisibility: 'hidden',
+    })
+
+    expect(hidden).toEqual(visible)
+    expect(root.children[1]).toMatchObject({ fwId: 'target', sourceFwIds: ['source'] })
+  })
+
   it('默认挂载区域是向外扩一个视口尺寸的 3x3 区域，并可配置', () => {
     const root = createFrameNode({
       fwId: 'root',
@@ -280,6 +302,21 @@ describe('getNodesInViewport', () => {
 })
 
 describe('getConnectionsInViewport', () => {
+  it('隐藏连线时在读取 node 树前短路，不进入几何与曲线求解', () => {
+    const unreadableRoot = new Proxy({} as ReturnType<typeof createFrameNode>, {
+      get: () => {
+        throw new Error('隐藏连线时不应读取 node 树')
+      },
+    })
+
+    expect(
+      getConnectionsInViewport(unreadableRoot, viewport, {
+        ...screen,
+        connectionVisibility: 'hidden',
+      }),
+    ).toEqual([])
+  })
+
   it('按连线自身包围盒裁剪：两端都在视口外但横穿视口时仍保留', () => {
     const root = createFrameNode({
       fwId: 'root',

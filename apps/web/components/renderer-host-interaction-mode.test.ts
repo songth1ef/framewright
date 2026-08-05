@@ -8,7 +8,7 @@ describe('RendererHost 交互模式', () => {
     expect(source).toContain('useState<InteractionMode>(')
     expect(source).toContain('() => readStoredInteractionMode()')
     expect(source).toContain('writeStoredInteractionMode(next)')
-    expect(source).toContain('interactionMode, callbacks')
+    expect(source).toMatch(/const ctx: RenderContext = \{[\s\S]*interactionMode,[\s\S]*callbacks,[\s\S]*\}/)
     expect(source).toContain('interactionMode={interactionMode}')
     expect(source).toContain('onInteractionModeChange={commitInteractionMode}')
   })

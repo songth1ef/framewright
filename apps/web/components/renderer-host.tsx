@@ -17,6 +17,7 @@ import {
   type CanvasOp,
   type AiImageNode,
   type AiVideoNode,
+  type ConnectionVisibility,
   type FrameNode,
   type InboundRef,
   type InteractionMode,
@@ -33,6 +34,10 @@ import { DevPanelController, type DevPanelHandle } from './dev-panel'
 import { EmptyCanvasGuide, ShortcutHelpDialog } from './canvas-overlays'
 import { useCanvasDocumentFileActions } from './canvas-document-file-actions'
 import { CanvasDocumentStatus } from './canvas-document-status'
+import {
+  readStoredConnectionVisibility,
+  writeStoredConnectionVisibility,
+} from './connection-visibility-storage'
 import { createDerivedGenerationSubmitter } from './derived-actions'
 import { createDocumentAutosave, type DocumentAutosave } from './document-autosave'
 import { createGenerationController, type GenerationController, type GenerationNodePatch } from './generation-actions'
@@ -148,6 +153,11 @@ export function RendererHost({
   const [interactionMode, setInteractionMode] = useState<InteractionMode>(
     () => readStoredInteractionMode(),
   )
+  // 连线显隐和 viewport 一样是每个用户各自的观看状态：只存本机偏好，
+  // 不构造 CanvasOp、不进入撤销栈，也不改变 root，因此不会触发文档自动保存。
+  const [connectionVisibility, setConnectionVisibility] = useState<ConnectionVisibility>(
+    () => readStoredConnectionVisibility(),
+  )
   const [viewport, setViewport] = useState(() =>
     documentId === undefined ? DEFAULT_VIEWPORT : readStoredViewport(documentId),
   )
@@ -180,6 +190,11 @@ export function RendererHost({
   const commitInteractionMode = useCallback((next: InteractionMode): void => {
     setInteractionMode(next)
     writeStoredInteractionMode(next)
+  }, [])
+
+  const commitConnectionVisibility = useCallback((next: ConnectionVisibility): void => {
+    setConnectionVisibility(next)
+    writeStoredConnectionVisibility(next)
   }, [])
 
   useEffect(() => {
@@ -478,7 +493,14 @@ export function RendererHost({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  const ctx: RenderContext = { root, selection, viewport, interactionMode, callbacks }
+  const ctx: RenderContext = {
+    root,
+    selection,
+    viewport,
+    interactionMode,
+    connectionVisibility,
+    callbacks,
+  }
   const ctxRef = useRef(ctx)
   ctxRef.current = ctx
 
@@ -531,6 +553,7 @@ export function RendererHost({
         activeRendererId={active?.id ?? ''}
         renderers={RENDERERS}
         interactionMode={interactionMode}
+        connectionVisibility={connectionVisibility}
         scale={viewport.scale}
         disabled={!historyReady}
         onRendererChange={(id) => {
@@ -538,6 +561,7 @@ export function RendererHost({
           if (index >= 0) setActiveIndex(index)
         }}
         onInteractionModeChange={commitInteractionMode}
+        onConnectionVisibilityChange={commitConnectionVisibility}
         onZoomIn={() => commitViewport(zoomViewport(viewportRef.current, getViewportSize(), 1.1))}
         onZoomOut={() => commitViewport(zoomViewport(viewportRef.current, getViewportSize(), 1 / 1.1))}
         onFitCanvas={() =>

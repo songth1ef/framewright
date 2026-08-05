@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { SHAPE_TYPES, isAiImageNode, isAiVideoNode } from './node-schema'
 import {
+  DEFAULT_CONNECTION_VISIBILITY,
   DEFAULT_INTERACTION_MODE,
   DEFAULT_VIEWPORT,
   assertShapeCoverage,
+  resolveConnectionVisibility,
   resolveInteractionMode,
   type RendererCallbacks,
 } from './renderer-adapter'
@@ -15,6 +17,14 @@ describe('DEFAULT_INTERACTION_MODE', () => {
     expect(DEFAULT_INTERACTION_MODE).toBe('unified')
     expect(resolveInteractionMode(undefined)).toBe('unified')
     expect(resolveInteractionMode('native')).toBe('native')
+  })
+})
+
+describe('DEFAULT_CONNECTION_VISIBILITY', () => {
+  it('默认显示连线，显式隐藏时保持隐藏', () => {
+    expect(DEFAULT_CONNECTION_VISIBILITY).toBe('visible')
+    expect(resolveConnectionVisibility(undefined)).toBe('visible')
+    expect(resolveConnectionVisibility('hidden')).toBe('hidden')
   })
 })
 

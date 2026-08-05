@@ -3,6 +3,7 @@ import type { SelectionMode } from './selection'
 
 export type RendererId = 'dom' | 'leafer'
 export type InteractionMode = 'unified' | 'native'
+export type ConnectionVisibility = 'visible' | 'hidden'
 
 /** 原生拾取尚未显式启用时，始终走两侧共享的统一交互路径。 */
 export const DEFAULT_INTERACTION_MODE: InteractionMode = 'unified'
@@ -11,6 +12,15 @@ export function resolveInteractionMode(
   interactionMode: InteractionMode | undefined,
 ): InteractionMode {
   return interactionMode ?? DEFAULT_INTERACTION_MODE
+}
+
+/** 连线默认参与渲染；隐藏必须由用户显式选择。 */
+export const DEFAULT_CONNECTION_VISIBILITY: ConnectionVisibility = 'visible'
+
+export function resolveConnectionVisibility(
+  connectionVisibility: ConnectionVisibility | undefined,
+): ConnectionVisibility {
+  return connectionVisibility ?? DEFAULT_CONNECTION_VISIBILITY
 }
 
 /** 视口属于会话状态：不持久化，但切换渲染器时必须保留。 */
@@ -71,6 +81,11 @@ export interface RenderContext {
   viewport: Viewport
   /** 未提供时按 DEFAULT_INTERACTION_MODE 处理，兼容尚未显式选择模式的调用方。 */
   interactionMode?: InteractionMode
+  /**
+   * 用户各自的观看状态，而非文档数据：不进入 CanvasOp、撤销栈或文档保存。
+   * 未提供时按 DEFAULT_CONNECTION_VISIBILITY 处理，兼容既有调用方并默认显示连线。
+   */
+  connectionVisibility?: ConnectionVisibility
   callbacks: RendererCallbacks
 }
 

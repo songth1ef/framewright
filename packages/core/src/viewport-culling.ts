@@ -8,7 +8,12 @@ import {
   type FrameNode,
 } from './node-schema'
 import { walkTreePruned, type Point } from './node-tree'
-import type { Rect, Viewport } from './renderer-adapter'
+import {
+  resolveConnectionVisibility,
+  type ConnectionVisibility,
+  type Rect,
+  type Viewport,
+} from './renderer-adapter'
 import { screenToCanvas } from './viewport'
 
 export interface ViewportCullingOptions {
@@ -25,6 +30,11 @@ export interface ViewportCullingOptions {
   maxNodes?: number
   /** 最多返回多少条连线。默认 1000。 */
   maxConnections?: number
+  /**
+   * 连线是否参与当前视图。隐藏是用户观看状态，不改变 node 树或溯源数据。
+   * getConnectionsInViewport 会在任何树遍历与曲线求解前短路。
+   */
+  connectionVisibility?: ConnectionVisibility
 }
 
 /** 2535 个节点时 DOM 已降至 24fps；1500 为该实测拐点留出约 40% 余量。 */
@@ -121,12 +131,10 @@ export function getViewportCullingResult(
     y: currentBounds.y + currentBounds.height / 2,
   }
   const maxNodes = getLimit(options.maxNodes, DEFAULT_MAX_NODES, 'maxNodes', false)
-  const maxConnections = getLimit(
-    options.maxConnections,
-    DEFAULT_MAX_CONNECTIONS,
-    'maxConnections',
-    true,
-  )
+  const connectionsVisible = resolveConnectionVisibility(options.connectionVisibility) === 'visible'
+  const maxConnections = connectionsVisible
+    ? getLimit(options.maxConnections, DEFAULT_MAX_CONNECTIONS, 'maxConnections', true)
+    : 0
   const candidates: NodeCandidate[] = []
   const visibleNodeIds = new Set<string>()
   const connectionSources: Array<readonly string[]> = []
@@ -140,7 +148,9 @@ export function getViewportCullingResult(
     if (!node.visible) return
     const absolute = { x: parentX + node.x, y: parentY + node.y }
     visibleNodeIds.add(node.fwId)
-    if (isAiImageNode(node) || isAiVideoNode(node)) connectionSources.push(node.sourceFwIds)
+    if (connectionsVisible && (isAiImageNode(node) || isAiVideoNode(node))) {
+      connectionSources.push(node.sourceFwIds)
+    }
     const nodeBounds = {
       x: absolute.x,
       y: absolute.y,
@@ -323,6 +333,8 @@ export function getConnectionsInViewport(
   options: ViewportCullingOptions,
   boundsCache?: ConnectionBoundsCache,
 ): ConnectionItem[] {
+  if (resolveConnectionVisibility(options.connectionVisibility) === 'hidden') return []
+
   const bounds = getCullingBounds(viewport, options)
   const currentBounds = getViewportBounds(viewport, options, 0)
   const viewportCenter = {

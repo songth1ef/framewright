@@ -1,4 +1,4 @@
-import type { InteractionMode } from '@framewright/core'
+import type { ConnectionVisibility, InteractionMode } from '@framewright/core'
 import { useRef, type CSSProperties } from 'react'
 
 interface RendererOption {
@@ -10,10 +10,12 @@ interface ViewportToolbarProps {
   activeRendererId: string
   renderers: readonly RendererOption[]
   interactionMode: InteractionMode
+  connectionVisibility: ConnectionVisibility
   scale: number
   disabled: boolean
   onRendererChange(id: string): void
   onInteractionModeChange(mode: InteractionMode): void
+  onConnectionVisibilityChange(visibility: ConnectionVisibility): void
   onZoomIn(): void
   onZoomOut(): void
   onFitCanvas(): void
@@ -66,10 +68,12 @@ export function ViewportToolbar({
   activeRendererId,
   renderers,
   interactionMode,
+  connectionVisibility,
   scale,
   disabled,
   onRendererChange,
   onInteractionModeChange,
+  onConnectionVisibilityChange,
   onZoomIn,
   onZoomOut,
   onFitCanvas,
@@ -85,6 +89,10 @@ export function ViewportToolbar({
   const nextInteractionMode: InteractionMode = interactionMode === 'unified' ? 'native' : 'unified'
   const interactionModeLabel = interactionMode === 'unified' ? '统一' : '原生'
   const nextInteractionModeLabel = nextInteractionMode === 'unified' ? '统一' : '原生'
+  const nextConnectionVisibility: ConnectionVisibility =
+    connectionVisibility === 'visible' ? 'hidden' : 'visible'
+  const connectionVisibilityLabel = connectionVisibility === 'visible' ? '显示' : '隐藏'
+  const nextConnectionVisibilityLabel = nextConnectionVisibility === 'visible' ? '显示' : '隐藏'
 
   return (
     <div role="toolbar" aria-label="画布工具栏" data-testid="toolbar" style={toolbarStyle}>
@@ -192,6 +200,27 @@ export function ViewportToolbar({
           title={`切换到${nextInteractionModeLabel}交互`}
           disabled={disabled}
           onClick={() => onInteractionModeChange(nextInteractionMode)}
+          style={{ ...buttonStyle, borderColor: '#d0d5dd', background: '#f9fafb' }}
+        >
+          切换
+        </button>
+      </div>
+
+      <div role="group" aria-label="连线显示" style={groupStyle}>
+        <span style={{ color: '#667085', fontSize: 12 }}>连线</span>
+        <span
+          data-testid="active-connection-visibility"
+          style={{ color: '#101828', fontSize: 13, fontWeight: 600 }}
+        >
+          {connectionVisibilityLabel}
+        </span>
+        <button
+          type="button"
+          data-testid="connection-visibility-switch"
+          aria-label={`切换连线显示，当前${connectionVisibilityLabel}`}
+          title={`${nextConnectionVisibilityLabel}连线`}
+          disabled={disabled}
+          onClick={() => onConnectionVisibilityChange(nextConnectionVisibility)}
           style={{ ...buttonStyle, borderColor: '#d0d5dd', background: '#f9fafb' }}
         >
           切换
