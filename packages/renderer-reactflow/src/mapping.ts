@@ -65,6 +65,7 @@ function mapNode(node: CanvasNode, absolute: Point, selected: boolean): ProbeNod
     draggable: !node.locked,
     selectable: !node.locked,
     connectable: false,
+    deletable: false,
     data: mapData(node),
     style: mapStyle(node),
   }

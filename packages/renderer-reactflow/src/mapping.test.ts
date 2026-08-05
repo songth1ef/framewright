@@ -55,6 +55,7 @@ describe('core node → React Flow 映射', () => {
       expect.objectContaining({ id: 'source->result:0', source: 'source', target: 'result' }),
     ])
     expect(mapped.nodes.every((node) => node.connectable === false)).toBe(true)
+    expect(mapped.nodes.every((node) => node.deletable === false)).toBe(true)
   })
 
   it('不把 core node 整体泄漏到 React Flow node/data/style', () => {

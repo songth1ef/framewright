@@ -101,6 +101,7 @@ function ProbeFlow({ ctx, options }: { ctx: RenderContext; options: ReactFlowPro
       nodesConnectable={false}
       edgesReconnectable={false}
       connectOnClick={false}
+      deleteKeyCode={null}
       onNodesChange={onNodesChange}
       onNodeDragStop={onNodeDragStop}
       onSelectionChange={onSelectionChange}
