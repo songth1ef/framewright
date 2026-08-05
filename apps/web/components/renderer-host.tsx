@@ -23,10 +23,11 @@ import {
   type RenderContext,
   type RendererAdapter,
   type RendererCallbacks,
+  type Viewport,
 } from '@framewright/core'
 import { createDomRenderer } from '@framewright/renderer-dom'
 import { createLeaferRenderer } from '@framewright/renderer-leafer'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DevPanelController, type DevPanelHandle } from './dev-panel'
 import { EmptyCanvasGuide, ShortcutHelpDialog } from './canvas-overlays'
 import { useCanvasDocumentFileActions } from './canvas-document-file-actions'
@@ -47,6 +48,11 @@ import {
 } from './viewport-actions'
 import { ViewportToolbar } from './viewport-toolbar'
 import { getViewportShortcut, isEditableTarget } from './viewport-shortcuts'
+import {
+  createViewportStorageWriter,
+  readStoredViewport,
+  type ViewportStorageWriter,
+} from './viewport-storage'
 
 type Factory = () => RendererAdapter
 
@@ -131,9 +137,12 @@ export function RendererHost({
     height: containerRef.current?.clientHeight || 450,
   })
 
-  // 会话状态住在这里，不在渲染器内部——切换时原样传给新渲染器
+  // 会话状态住在这里，不在渲染器内部——切换时原样传给新渲染器。
+  // viewport 只额外落用户本机的独立轻量记录，绝不进入 Document 自动保存。
   const [selection, setSelection] = useState<readonly string[]>(['box-front'])
-  const [viewport, setViewport] = useState(DEFAULT_VIEWPORT)
+  const [viewport, setViewport] = useState(() =>
+    documentId === undefined ? DEFAULT_VIEWPORT : readStoredViewport(documentId),
+  )
   const [root, setRoot] = useState(() => initialRoot ?? createDemoDocument())
   const [lastAction, setLastAction] = useState('')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -148,8 +157,35 @@ export function RendererHost({
   const mountedRef = useRef(true)
   const generationControllerRef = useRef<GenerationController | null>(null)
   const documentIdRef = useRef(documentId)
+  const viewportRef = useRef(viewport)
+  const viewportStorageWriterRef = useRef<ViewportStorageWriter | null>(null)
   rootRef.current = root
   documentIdRef.current = documentId
+  viewportRef.current = viewport
+
+  const commitViewport = useCallback((next: Viewport): void => {
+    viewportRef.current = next
+    setViewport(next)
+    viewportStorageWriterRef.current?.queue(next)
+  }, [])
+
+  useEffect(() => {
+    const restored = documentId === undefined ? DEFAULT_VIEWPORT : readStoredViewport(documentId)
+    viewportRef.current = restored
+    setViewport(restored)
+
+    if (documentId === undefined) {
+      viewportStorageWriterRef.current = null
+      return
+    }
+
+    const writer = createViewportStorageWriter(documentId)
+    viewportStorageWriterRef.current = writer
+    return () => {
+      if (viewportStorageWriterRef.current === writer) viewportStorageWriterRef.current = null
+      writer.dispose()
+    }
+  }, [documentId])
 
   // U2：给了 documentId 就把操作栈换成写后端的版本，刷新后仍能撤销；加载失败退回内存栈
   useEffect(() => {
@@ -385,7 +421,7 @@ export function RendererHost({
         const remaining = new Set(collectNodeIds(rootRef.current))
         setSelection((current) => current.filter((fwId) => remaining.has(fwId)))
       },
-      onViewportChange: setViewport,
+      onViewportChange: commitViewport,
       onNodeActivate: (fwId) => setLastAction(`${fwId}:activate`),
       onNodeAction: (fwId: string, action: string) => {
         setLastAction(`${fwId}:${action}`)
@@ -405,7 +441,7 @@ export function RendererHost({
       if (viewportShortcut !== null) {
         event.preventDefault()
         const bounds = getContentBounds(rootRef.current)
-        setViewport(
+        commitViewport(
           viewportShortcut === 'fit-content'
             ? fitContent(bounds, getViewportSize())
             : centerContentAtActualSize(bounds, getViewportSize()),
@@ -487,12 +523,12 @@ export function RendererHost({
           const index = RENDERERS.findIndex((renderer) => renderer.id === id)
           if (index >= 0) setActiveIndex(index)
         }}
-        onZoomIn={() => setViewport((current) => zoomViewport(current, getViewportSize(), 1.1))}
-        onZoomOut={() => setViewport((current) => zoomViewport(current, getViewportSize(), 1 / 1.1))}
+        onZoomIn={() => commitViewport(zoomViewport(viewportRef.current, getViewportSize(), 1.1))}
+        onZoomOut={() => commitViewport(zoomViewport(viewportRef.current, getViewportSize(), 1 / 1.1))}
         onFitCanvas={() =>
-          setViewport(centerContentAtActualSize(getContentBounds(rootRef.current), getViewportSize()))
+          commitViewport(centerContentAtActualSize(getContentBounds(rootRef.current), getViewportSize()))
         }
-        onActualSize={() => setViewport((current) => setActualSize(current, getViewportSize()))}
+        onActualSize={() => commitViewport(setActualSize(viewportRef.current, getViewportSize()))}
         onShowShortcuts={() => setShowShortcuts(true)}
         onImportFile={importCanvasFile}
         onExport={exportCanvas}

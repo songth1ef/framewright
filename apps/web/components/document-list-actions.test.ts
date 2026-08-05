@@ -6,6 +6,7 @@ import {
   loadDocumentSummaries,
   renameCanvasDocument,
 } from './document-list-actions'
+import { readStoredViewport, writeStoredViewport } from './viewport-storage'
 
 function response(body: unknown, status = 200): Response {
   return new Response(body === null ? null : JSON.stringify(body), {
@@ -14,7 +15,10 @@ function response(body: unknown, status = 200): Response {
   })
 }
 
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
 
 describe('document list actions', () => {
   it('加载列表并格式化更新时间', async () => {
@@ -50,12 +54,21 @@ describe('document list actions', () => {
   })
 
   it('删除调用 DELETE，并把非成功状态转成错误', async () => {
+    const values = new Map<string, string>()
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      removeItem: (key: string) => values.delete(key),
+      setItem: (key: string, value: string) => values.set(key, value),
+    } as Storage
+    vi.stubGlobal('window', { localStorage: storage })
+    writeStoredViewport('doc/a', { scale: 2, offsetX: 10, offsetY: 20 }, storage)
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(response(null, 204))
       .mockResolvedValueOnce(response({ error: 'document_not_found' }, 404))
 
     await expect(deleteCanvasDocument('doc/a')).resolves.toBeUndefined()
     expect(globalThis.fetch).toHaveBeenNthCalledWith(1, '/api/documents/doc%2Fa', { method: 'DELETE' })
+    expect(readStoredViewport('doc/a', storage).scale).toBe(1)
     await expect(deleteCanvasDocument('missing')).rejects.toThrow('HTTP 404')
   })
 })

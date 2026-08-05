@@ -1,3 +1,5 @@
+import { clearStoredViewport } from './viewport-storage'
+
 export interface DocumentSummary {
   id: string
   name: string
@@ -37,6 +39,7 @@ export async function deleteCanvasDocument(documentId: string): Promise<void> {
   await requireOk(await fetch(`/api/documents/${encodeURIComponent(documentId)}`, {
     method: 'DELETE',
   }))
+  clearStoredViewport(documentId)
 }
 
 export function formatUpdatedAt(updatedAt: string | undefined): string {
