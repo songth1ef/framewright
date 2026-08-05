@@ -26,6 +26,13 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'provider',
+          environment: 'node',
+          include: ['packages/provider/src/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
           name: 'server-core',
           environment: 'node',
           include: ['packages/server-core/src/**/*.test.ts'],

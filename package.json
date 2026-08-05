@@ -9,10 +9,11 @@
   "scripts": {
     "typecheck": "tsc --build --force",
     "test": "vitest run",
+    "test:discovery": "node tools/check-test-discovery.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
-    "verify": "pnpm typecheck && pnpm test && pnpm e2e",
+    "verify": "pnpm typecheck && pnpm test:discovery && pnpm test && pnpm e2e",
     "db:generate": "prisma generate --schema prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
     "dev": "pnpm --filter @framewright/web dev"
