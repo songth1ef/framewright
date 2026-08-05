@@ -39,10 +39,24 @@ export const GEN_UNIT_STYLE = {
   badgeFontSize: 11,
 } as const
 
-/** 内部动作按钮上报给 `onNodeAction` 的取值。 */
+/**
+ * 内部动作按钮上报给 `onNodeAction` 的取值。
+ *
+ * 三个「生成」语义是分开的，不要合并：
+ * - `generate`   —— 从空态首次生成
+ * - `retry`      —— 失败后重试同一份参数
+ * - `regenerate` —— 已成功，再来一次（可能换参数）
+ *
+ * 🔴 **删除不在这里**。删除走既有的 `onNodesDelete`，不许经 `onNodeAction`。
+ * 理由：撤销所需的 `inboundRefs` 对称持有逻辑挂在 `onNodesDelete` 那条路径上
+ * （见 `domain.md` §4.5）。开第二条删除路径必然导致「从工具条删」和「按 Delete 删」
+ * 的撤销行为不一致 —— 而这类分叉最难被测试发现。
+ */
 export const NODE_ACTIONS = {
   generate: 'generate',
   retry: 'retry',
+  regenerate: 'regenerate',
+  download: 'download',
 } as const
 
 export type NodeActionName = (typeof NODE_ACTIONS)[keyof typeof NODE_ACTIONS]
