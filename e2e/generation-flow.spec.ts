@@ -3,6 +3,7 @@ import {
   MockGenerationProvider,
   type GenerationTask,
 } from '../packages/provider/src/index'
+import { selectRenderer } from './renderer'
 
 type ProviderOptions = ConstructorParameters<typeof MockGenerationProvider>[0]
 
@@ -106,6 +107,7 @@ async function openDocument(page: Page): Promise<void> {
   await page.getByTestId('create-document').click()
   await expect(page).toHaveURL(/\/canvas\/[^/]+$/)
   await expect(page.getByTestId('canvas-host')).toHaveAttribute('data-history-ready', 'true')
+  await selectRenderer(page, 'HTML / DOM')
   await expect(page.getByTestId('active-renderer')).toHaveText('HTML / DOM')
 }
 

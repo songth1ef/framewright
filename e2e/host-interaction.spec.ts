@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { selectRenderer } from './renderer'
 
 type Bounds = Record<string, { x: number; y: number; width: number; height: number }>
 
@@ -10,6 +11,7 @@ async function readBounds(page: Page): Promise<Bounds> {
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
+  await selectRenderer(page, 'HTML / DOM')
   await expect(page.getByTestId('active-renderer')).toHaveText('HTML / DOM')
 })
 
@@ -24,8 +26,8 @@ test('拖动节点松手后 host 写回 node 树，位置保持不弹回', async
   await page.mouse.up()
 
   await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 70, y: 65 })
-  await page.getByTestId('renderer-switch').click()
-  await page.getByTestId('renderer-switch').click()
+  await selectRenderer(page, 'LeaferJS')
+  await selectRenderer(page, 'HTML / DOM')
   await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 70, y: 65 })
 })
 

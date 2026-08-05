@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { selectRenderer } from './renderer'
 
 test('切换渲染器后选中态保留', async ({ page }) => {
   await page.goto('/')
+  await selectRenderer(page, 'HTML / DOM')
   await page.getByTestId('select-box-back').click()
   await expect(page.getByTestId('selection')).toHaveText('box-back')
 
@@ -14,6 +16,7 @@ test('切换渲染器后选中态保留', async ({ page }) => {
 
 test('切换后旧渲染器的 DOM 被清干净，容器里只剩新渲染器的产物', async ({ page }) => {
   await page.goto('/')
+  await selectRenderer(page, 'HTML / DOM')
   const container = page.getByTestId('canvas-container')
 
   // DOM 渲染器：有带 data-fw-id 的元素，无 canvas
@@ -30,9 +33,9 @@ test('切换后旧渲染器的 DOM 被清干净，容器里只剩新渲染器的
 
 test('切回 DOM 渲染器后 canvas 被清干净', async ({ page }) => {
   await page.goto('/')
+  await selectRenderer(page, 'LeaferJS')
   const container = page.getByTestId('canvas-container')
 
-  await page.getByTestId('renderer-switch').click()
   await expect(container.locator('canvas')).toHaveCount(1)
 
   await page.getByTestId('renderer-switch').click()

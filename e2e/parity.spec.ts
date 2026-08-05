@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { selectRenderer } from './renderer'
 
 type Bounds = Record<string, { x: number; y: number; width: number; height: number }>
 
@@ -10,10 +11,11 @@ async function readBounds(page: import('@playwright/test').Page): Promise<Bounds
 
 test('两个渲染器对同一份 node 树报告完全相同的几何', async ({ page }) => {
   await page.goto('/')
+  await selectRenderer(page, 'HTML / DOM')
   await expect(page.getByTestId('active-renderer')).toHaveText('HTML / DOM')
   const domBounds = await readBounds(page)
 
-  await page.getByTestId('renderer-switch').click()
+  await selectRenderer(page, 'LeaferJS')
   await expect(page.getByTestId('active-renderer')).toHaveText('LeaferJS')
   const leaferBounds = await readBounds(page)
 

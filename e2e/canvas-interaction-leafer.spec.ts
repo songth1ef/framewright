@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test'
+import { selectRenderer } from './renderer'
 
 // D2-leafer 验收：点选与框选在真实浏览器里走 Leafer 命中探针（selector.getByPoint），
 // 单测的桩环境覆盖不了真实 hit canvas。行为口径与 DOM 侧一致（host-interaction.spec.ts）。
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
-  await page.getByTestId('renderer-switch').click()
+  await selectRenderer(page, 'LeaferJS')
   await expect(page.getByTestId('active-renderer')).toHaveText('LeaferJS')
 })
 
@@ -75,8 +76,8 @@ test('Leafer 侧拖拽移动：松手才提交，位置写回且切换渲染器�
   await page.mouse.up()
 
   await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 70, y: 65 })
-  await page.getByTestId('renderer-switch').click()
-  await page.getByTestId('renderer-switch').click()
+  await selectRenderer(page, 'HTML / DOM')
+  await selectRenderer(page, 'LeaferJS')
   await expect.poll(async () => (await readBounds(page))['box-back']).toMatchObject({ x: 70, y: 65 })
 })
 

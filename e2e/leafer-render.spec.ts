@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { selectRenderer } from './renderer'
 
 test('Leafer 渲染器能在真实浏览器里挂载并报告全部节点的 bounds', async ({ page }) => {
   await page.goto('/')
-  await page.getByTestId('renderer-switch').click()
+  await selectRenderer(page, 'LeaferJS')
   await expect(page.getByTestId('active-renderer')).toHaveText('LeaferJS')
 
   const bounds = await page.evaluate(() =>
@@ -28,6 +29,6 @@ test('Leafer 渲染器能在真实浏览器里挂载并报告全部节点的 bou
 
 test('Leafer 挂载后容器里出现 canvas 元素', async ({ page }) => {
   await page.goto('/')
-  await page.getByTestId('renderer-switch').click()
+  await selectRenderer(page, 'LeaferJS')
   await expect(page.getByTestId('canvas-container').locator('canvas')).toHaveCount(1)
 })
