@@ -11,6 +11,7 @@ import {
   computeMoves,
   rectFromPoints,
   resizeProportional,
+  resolveInteractionMode,
   screenToCanvas,
   walkTree,
   type CanvasNode,
@@ -118,7 +119,15 @@ export function resolveSelectableHit({
   canvasPoint,
   development,
 }: ResolveSelectableHitOptions): string | null {
-  if (interactionMode === 'unified') {
+  // 🔴 必须走 resolveInteractionMode，不能直接 `interactionMode === 'unified'`。
+  //
+  // 直接裁比较时 `undefined` 会落进 **native** 分支，而契约文档写的缺省是 `unified`
+  // （`renderer-contract.md` 附录「交互模式的两条裁定」）。
+  //
+  // 「host 目前永远显式传值所以不可达」不是辩护 ——
+  // 默认值存在的意义就是**在没人传的时候是对的**；
+  // 文档写着一个值而代码走另一个，是一个等着被踩的陷阱。
+  if (resolveInteractionMode(interactionMode) === 'unified') {
     return filterSelectableHitCandidate(root, hitTestPoint(root, canvasPoint))
   }
 
