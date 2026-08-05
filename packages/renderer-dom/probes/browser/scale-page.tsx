@@ -46,6 +46,7 @@ interface DomScaleProbe {
   dragSnapshot(): DragSnapshot
   zoomSnapshot(): ZoomSnapshot
   panSnapshot(): PanSnapshot
+  mountedConnectionCount(): number
   destroy(): void
 }
 
@@ -217,6 +218,10 @@ function panSnapshot(): PanSnapshot {
   return { offsetX: viewport.offsetX, offsetY: viewport.offsetY }
 }
 
+function mountedConnectionCount(): number {
+  return measureConnectionLayer(view.querySelector('[data-fw-connections]')).mountedConnectionCount
+}
+
 function destroy(): void {
   renderer?.destroy()
   renderer = null
@@ -232,5 +237,6 @@ window.__scaleProbe = {
   dragSnapshot,
   zoomSnapshot,
   panSnapshot,
+  mountedConnectionCount,
   destroy,
 }

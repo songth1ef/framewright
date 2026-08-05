@@ -5,6 +5,7 @@
 
 import { chromium } from '@playwright/test'
 import { spawn } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { readdirSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -23,6 +24,23 @@ const workload = DOM_ZOOM_OUT_PROBE_WORKLOAD
 const memoryReason =
   '页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。'
 const caseId = process.argv.find((arg) => arg.startsWith('--case='))?.slice('--case='.length)
+const requestedConnectionPattern = process.argv
+  .find((arg) => arg.startsWith('--connection-pattern='))
+  ?.slice('--connection-pattern='.length)
+const supportedConnectionPatterns = new Set(['none', 'fanin', 'distributed', 'many-to-many'])
+if (
+  requestedConnectionPattern !== undefined &&
+  !supportedConnectionPatterns.has(requestedConnectionPattern)
+) {
+  throw new Error(`--connection-pattern 不支持：${requestedConnectionPattern}`)
+}
+const scenarios = workload.scenarios.map((scenario) => requestedConnectionPattern === undefined
+  ? scenario
+  : { ...scenario, connectionPattern: requestedConnectionPattern })
+
+function screenshotFingerprint(buffer) {
+  return createHash('sha256').update(buffer).digest('hex')
+}
 
 function positiveIntegerOption(name, fallback) {
   const raw = process.argv.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3)
@@ -69,7 +87,7 @@ async function buildBundle() {
 }
 
 async function runCase(id) {
-  const scenario = workload.scenarios.find((candidate) => candidate.id === id)
+  const scenario = scenarios.find((candidate) => candidate.id === id)
   if (scenario === undefined) throw new Error(`未知 S4 档位：${id}`)
   const bundle = await readFile(bundleFile, 'utf8')
   const browser = await chromium.launch()
@@ -113,6 +131,10 @@ async function runCase(id) {
     console.log('S4_PHASE:pan')
     await page.evaluate((value) => window.__scaleProbe.mountScenario(value), scenario)
     const panStart = await page.evaluate(() => window.__scaleProbe.panSnapshot())
+    const panStartConnectionCount = await page.evaluate(
+      () => window.__scaleProbe.mountedConnectionCount(),
+    )
+    const panStartFingerprint = screenshotFingerprint(await page.screenshot())
     const panSample = await page.evaluate(
       ({ ms, threshold, panDelta }) => window.__scaleProbe.samplePan(ms, threshold, panDelta),
       {
@@ -122,7 +144,21 @@ async function runCase(id) {
       },
     )
     const panEnd = await page.evaluate(() => window.__scaleProbe.panSnapshot())
-    const panEvidence = buildPanEvidence(panStart, panEnd)
+    const panEndConnectionCount = await page.evaluate(
+      () => window.__scaleProbe.mountedConnectionCount(),
+    )
+    const panEndFingerprint = screenshotFingerprint(await page.screenshot())
+    const panEvidence = {
+      ...buildPanEvidence(panStart, panEnd),
+      visual: {
+        startFingerprint: panStartFingerprint,
+        endFingerprint: panEndFingerprint,
+        fingerprintChanged: panStartFingerprint !== panEndFingerprint,
+        mountedConnectionCountStart: panStartConnectionCount,
+        mountedConnectionCountEnd: panEndConnectionCount,
+        connectionCountChanged: panStartConnectionCount !== panEndConnectionCount,
+      },
+    }
 
     const result = {
       ...scenario,
@@ -142,7 +178,11 @@ async function runCase(id) {
 
 function runIsolatedCase(scenario) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [fileURLToPath(import.meta.url), `--case=${scenario.id}`], {
+    const childArgs = [fileURLToPath(import.meta.url), `--case=${scenario.id}`]
+    if (requestedConnectionPattern !== undefined) {
+      childArgs.push(`--connection-pattern=${requestedConnectionPattern}`)
+    }
+    const child = spawn(process.execPath, childArgs, {
       cwd: repoRoot,
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -198,7 +238,7 @@ if (caseId !== undefined) {
   const results = {
     probe: 'renderer-dom-scale-s4-zoom-out',
     startedAt: new Date().toISOString(),
-    workload,
+    workload: { ...workload, scenarios },
     sampling: {
       repeatCount,
       repeatCooldownMs,
@@ -208,7 +248,7 @@ if (caseId !== undefined) {
     memoryReason,
     scenarios: [],
   }
-  for (const scenario of workload.scenarios) {
+  for (const scenario of scenarios) {
     const samples = []
     for (let sampleIndex = 1; sampleIndex <= repeatCount; sampleIndex += 1) {
       if (sampleIndex > 1 && repeatCooldownMs > 0) await coolDown(repeatCooldownMs)

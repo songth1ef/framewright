@@ -44,6 +44,7 @@ interface LeaferScaleProbe {
   dragSnapshot(): DragSnapshot
   zoomSnapshot(): ZoomSnapshot
   panSnapshot(): PanSnapshot
+  mountedConnectionCount(): number
 }
 
 declare global {
@@ -267,4 +268,5 @@ window.__scaleProbe = {
   dragSnapshot,
   zoomSnapshot,
   panSnapshot,
+  mountedConnectionCount: countMountedConnections,
 }
