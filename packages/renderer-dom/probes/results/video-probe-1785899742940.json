@@ -1,0 +1,251 @@
+{
+  "probe": "renderer-dom-video",
+  "startedAt": "2026-08-05T03:15:33.106Z",
+  "workload": {
+    "renderer": "DOM 原生 <video controls>",
+    "concurrency": [
+      1,
+      4,
+      8
+    ],
+    "sampleWindowMs": 3000,
+    "nodeSize": {
+      "width": 460,
+      "height": 260
+    },
+    "viewport": {
+      "width": 1024,
+      "height": 700,
+      "viewWidth": 960,
+      "viewHeight": 600
+    },
+    "audio": "全部 muted；避免多路音频混流混入视频渲染对比",
+    "longFrameThresholdMs": 50
+  },
+  "memory": {
+    "value": null,
+    "reason": "Chromium 页面 API 无法覆盖视频解码缓冲与 GPU 显存；performance.memory 仅是 JS heap，故不采集。"
+  },
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+  "scenarios": [
+    {
+      "concurrency": 1,
+      "fps": 60.13488820214677,
+      "frames": 181,
+      "elapsedMs": 3009.9000000059605,
+      "longFrames": 0,
+      "workEvidence": [
+        {
+          "fwId": "probe-video-0",
+          "progressStartSeconds": 0.039383,
+          "progressEndSeconds": 3.054379,
+          "progressDeltaSeconds": 3.014996,
+          "progressNonZero": true,
+          "decodedFramesStart": 5,
+          "decodedFramesEnd": 81,
+          "decodedFramesDelta": 76,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        }
+      ],
+      "allProgressNonZero": true,
+      "allDecodedFramesIncreased": true,
+      "memory": null
+    },
+    {
+      "concurrency": 4,
+      "fps": 31.203319502012945,
+      "frames": 94,
+      "elapsedMs": 3012.500000005961,
+      "longFrames": 0,
+      "workEvidence": [
+        {
+          "fwId": "probe-video-0",
+          "progressStartSeconds": 3.094645,
+          "progressEndSeconds": 6.112094,
+          "progressDeltaSeconds": 3.017449,
+          "progressNonZero": true,
+          "decodedFramesStart": 82,
+          "decodedFramesEnd": 158,
+          "decodedFramesDelta": 76,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-1",
+          "progressStartSeconds": 0.038782,
+          "progressEndSeconds": 3.05624,
+          "progressDeltaSeconds": 3.017458,
+          "progressNonZero": true,
+          "decodedFramesStart": 5,
+          "decodedFramesEnd": 80,
+          "decodedFramesDelta": 75,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-2",
+          "progressStartSeconds": 0.038754,
+          "progressEndSeconds": 3.056216,
+          "progressDeltaSeconds": 3.017462,
+          "progressNonZero": true,
+          "decodedFramesStart": 5,
+          "decodedFramesEnd": 80,
+          "decodedFramesDelta": 75,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-3",
+          "progressStartSeconds": 0.03873,
+          "progressEndSeconds": 3.056193,
+          "progressDeltaSeconds": 3.017463,
+          "progressNonZero": true,
+          "decodedFramesStart": 5,
+          "decodedFramesEnd": 80,
+          "decodedFramesDelta": 75,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        }
+      ],
+      "allProgressNonZero": true,
+      "allDecodedFramesIncreased": true,
+      "memory": null
+    },
+    {
+      "concurrency": 8,
+      "fps": 30.083639128566237,
+      "frames": 91,
+      "elapsedMs": 3024.8999999999996,
+      "longFrames": 0,
+      "workEvidence": [
+        {
+          "fwId": "probe-video-0",
+          "progressStartSeconds": 6.39905,
+          "progressEndSeconds": 9.429259,
+          "progressDeltaSeconds": 3.030209,
+          "progressNonZero": true,
+          "decodedFramesStart": 164,
+          "decodedFramesEnd": 240,
+          "decodedFramesDelta": 76,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-1",
+          "progressStartSeconds": 3.343122,
+          "progressEndSeconds": 6.373335,
+          "progressDeltaSeconds": 3.030213,
+          "progressNonZero": true,
+          "decodedFramesStart": 88,
+          "decodedFramesEnd": 164,
+          "decodedFramesDelta": 76,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-2",
+          "progressStartSeconds": 3.341371,
+          "progressEndSeconds": 6.371586,
+          "progressDeltaSeconds": 3.0302149999999997,
+          "progressNonZero": true,
+          "decodedFramesStart": 88,
+          "decodedFramesEnd": 164,
+          "decodedFramesDelta": 76,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 1,
+          "droppedFramesEnd": 1,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-3",
+          "progressStartSeconds": 3.341323,
+          "progressEndSeconds": 6.371539,
+          "progressDeltaSeconds": 3.0302160000000002,
+          "progressNonZero": true,
+          "decodedFramesStart": 88,
+          "decodedFramesEnd": 164,
+          "decodedFramesDelta": 76,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 1,
+          "droppedFramesEnd": 1,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-4",
+          "progressStartSeconds": 0.27837,
+          "progressEndSeconds": 3.308587,
+          "progressDeltaSeconds": 3.0302170000000004,
+          "progressNonZero": true,
+          "decodedFramesStart": 9,
+          "decodedFramesEnd": 85,
+          "decodedFramesDelta": 76,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-5",
+          "progressStartSeconds": 0.27837,
+          "progressEndSeconds": 3.308589,
+          "progressDeltaSeconds": 3.0302189999999998,
+          "progressNonZero": true,
+          "decodedFramesStart": 9,
+          "decodedFramesEnd": 85,
+          "decodedFramesDelta": 76,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-6",
+          "progressStartSeconds": 0.278369,
+          "progressEndSeconds": 3.30859,
+          "progressDeltaSeconds": 3.030221,
+          "progressNonZero": true,
+          "decodedFramesStart": 9,
+          "decodedFramesEnd": 85,
+          "decodedFramesDelta": 76,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        },
+        {
+          "fwId": "probe-video-7",
+          "progressStartSeconds": 0.278369,
+          "progressEndSeconds": 3.308591,
+          "progressDeltaSeconds": 3.0302219999999997,
+          "progressNonZero": true,
+          "decodedFramesStart": 9,
+          "decodedFramesEnd": 85,
+          "decodedFramesDelta": 76,
+          "decodedFramesIncreased": true,
+          "droppedFramesStart": 0,
+          "droppedFramesEnd": 0,
+          "droppedFramesDelta": 0
+        }
+      ],
+      "allProgressNonZero": true,
+      "allDecodedFramesIncreased": true,
+      "memory": null
+    }
+  ],
+  "finishedAt": "2026-08-05T03:15:42.940Z"
+}
