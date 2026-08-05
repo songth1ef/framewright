@@ -1,0 +1,362 @@
+{
+  "probe": "renderer-leafer-scale-s3",
+  "startedAt": "2026-08-05T07:29:10.575Z",
+  "workload": {
+    "renderer": "Leafer Canvas（生产 LeaferViewportScene + core createScaleFixture）",
+    "seed": 7,
+    "scenarios": [
+      {
+        "id": "many-to-many-1000",
+        "label": "1000 节点、many-to-many",
+        "nodeCount": 1000,
+        "connectionPattern": "many-to-many"
+      },
+      {
+        "id": "many-to-many-10000",
+        "label": "10000 节点、many-to-many",
+        "nodeCount": 10000,
+        "connectionPattern": "many-to-many"
+      },
+      {
+        "id": "none-10000",
+        "label": "10000 节点、无连线",
+        "nodeCount": 10000,
+        "connectionPattern": "none"
+      }
+    ],
+    "sampleWindowMs": 3000,
+    "viewport": {
+      "width": 1024,
+      "height": 1400,
+      "viewWidth": 960,
+      "viewHeight": 1300
+    },
+    "viewportRole": "browser viewport 1024×1400；#view 960×1300；与 DOM 侧严格同口径。",
+    "dragDelta": {
+      "x": 240,
+      "y": 120
+    },
+    "zoom": {
+      "startScale": 1,
+      "endScale": 1.25
+    },
+    "pan": {
+      "startOffsetX": 0,
+      "startOffsetY": 0,
+      "endOffsetX": -480,
+      "endOffsetY": -650
+    },
+    "longFrameThresholdMs": 50
+  },
+  "memory": {
+    "value": null,
+    "reason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲与 GPU 资源；前几轮 1/4/8 路均给出 9.5MB，已证明不能作为本基准的 memory 指标。"
+  },
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+  "scenarios": [
+    {
+      "id": "many-to-many-1000",
+      "label": "1000 节点、many-to-many",
+      "nodeCount": 1000,
+      "connectionPattern": "many-to-many",
+      "firstScreen": {
+        "elapsedMs": 104.09999999403954,
+        "fixtureBuildMs": 3.7000000178813934,
+        "totalNodeCount": 1000,
+        "totalConnectionCount": 1776,
+        "mountedLogicalNodeCount": 170,
+        "mountedConnectionCount": 360,
+        "mountedLeaferInstanceCount": 2001,
+        "mountedToTotalRatio": 0.17,
+        "paintedPixel": [
+          148,
+          163,
+          184,
+          255
+        ],
+        "paintedAfterFrames": 3,
+        "memory": null,
+        "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲与 GPU 资源；前几轮 1/4/8 路均给出 9.5MB，已证明不能作为本基准的 memory 指标。"
+      },
+      "drag": {
+        "frames": 177,
+        "elapsedMs": 3014.800000011921,
+        "fps": 58.71036221284998,
+        "frameTimeMs": {
+          "median": 16.599999994039536,
+          "p95": 23.19999998807907,
+          "max": 26.400000005960464
+        },
+        "longFrames": 0,
+        "workEvidence": {
+          "fwId": "scale-node-0",
+          "start": {
+            "x": 40,
+            "y": 40
+          },
+          "end": {
+            "x": 280,
+            "y": 160
+          },
+          "delta": {
+            "x": 240,
+            "y": 120
+          },
+          "positionChanged": true
+        },
+        "memory": null,
+        "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲与 GPU 资源；前几轮 1/4/8 路均给出 9.5MB，已证明不能作为本基准的 memory 指标。"
+      },
+      "zoom": {
+        "frames": 133,
+        "elapsedMs": 3008.5,
+        "fps": 44.20807711484128,
+        "frameTimeMs": {
+          "median": 20.30000001192093,
+          "p95": 35.099999994039536,
+          "max": 46.099999994039536
+        },
+        "longFrames": 0,
+        "workEvidence": {
+          "scaleStart": 1,
+          "scaleEnd": 1.25,
+          "scaleDelta": 0.25,
+          "scaleChanged": true
+        },
+        "memory": null,
+        "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲与 GPU 资源；前几轮 1/4/8 路均给出 9.5MB，已证明不能作为本基准的 memory 指标。"
+      },
+      "pan": {
+        "frames": 142,
+        "elapsedMs": 3006.0999999940395,
+        "fps": 47.23728418890973,
+        "frameTimeMs": {
+          "median": 20.00000001490116,
+          "p95": 29.799999982118607,
+          "max": 38.60000002384186
+        },
+        "longFrames": 0,
+        "workEvidence": {
+          "start": {
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "end": {
+            "offsetX": -480,
+            "offsetY": -650
+          },
+          "delta": {
+            "x": -480,
+            "y": -650
+          },
+          "offsetChanged": true
+        },
+        "memory": null,
+        "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲与 GPU 资源；前几轮 1/4/8 路均给出 9.5MB，已证明不能作为本基准的 memory 指标。"
+      }
+    },
+    {
+      "id": "many-to-many-10000",
+      "label": "10000 节点、many-to-many",
+      "nodeCount": 10000,
+      "connectionPattern": "many-to-many",
+      "firstScreen": {
+        "elapsedMs": 69.90000000596046,
+        "fixtureBuildMs": 8.599999994039536,
+        "totalNodeCount": 10000,
+        "totalConnectionCount": 17776,
+        "mountedLogicalNodeCount": 170,
+        "mountedConnectionCount": 367,
+        "mountedLeaferInstanceCount": 1947,
+        "mountedToTotalRatio": 0.017,
+        "paintedPixel": [
+          148,
+          163,
+          184,
+          255
+        ],
+        "paintedAfterFrames": 1,
+        "memory": null,
+        "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲与 GPU 资源；前几轮 1/4/8 路均给出 9.5MB，已证明不能作为本基准的 memory 指标。"
+      },
+      "drag": {
+        "frames": 170,
+        "elapsedMs": 3009.9000000059605,
+        "fps": 56.48028173682293,
+        "frameTimeMs": {
+          "median": 16.849999994039536,
+          "p95": 25.899999976158142,
+          "max": 31.299999982118607
+        },
+        "longFrames": 0,
+        "workEvidence": {
+          "fwId": "scale-node-0",
+          "start": {
+            "x": 40,
+            "y": 40
+          },
+          "end": {
+            "x": 280,
+            "y": 160
+          },
+          "delta": {
+            "x": 240,
+            "y": 120
+          },
+          "positionChanged": true
+        },
+        "memory": null,
+        "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲与 GPU 资源；前几轮 1/4/8 路均给出 9.5MB，已证明不能作为本基准的 memory 指标。"
+      },
+      "zoom": {
+        "frames": 104,
+        "elapsedMs": 3039.4000000059605,
+        "fps": 34.21727972619466,
+        "frameTimeMs": {
+          "median": 29.650000005960464,
+          "p95": 40.900000005960464,
+          "max": 51.80000001192093
+        },
+        "longFrames": 1,
+        "workEvidence": {
+          "scaleStart": 1,
+          "scaleEnd": 1.25,
+          "scaleDelta": 0.25,
+          "scaleChanged": true
+        },
+        "memory": null,
+        "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲与 GPU 资源；前几轮 1/4/8 路均给出 9.5MB，已证明不能作为本基准的 memory 指标。"
+      },
+      "pan": {
+        "frames": 121,
+        "elapsedMs": 3032.2000000178814,
+        "fps": 39.905019457584075,
+        "frameTimeMs": {
+          "median": 21,
+          "p95": 44.599999994039536,
+          "max": 54.69999998807907
+        },
+        "longFrames": 2,
+        "workEvidence": {
+          "start": {
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "end": {
+            "offsetX": -480,
+            "offsetY": -650
+          },
+          "delta": {
+            "x": -480,
+            "y": -650
+          },
+          "offsetChanged": true
+        },
+        "memory": null,
+        "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲与 GPU 资源；前几轮 1/4/8 路均给出 9.5MB，已证明不能作为本基准的 memory 指标。"
+      }
+    },
+    {
+      "id": "none-10000",
+      "label": "10000 节点、无连线",
+      "nodeCount": 10000,
+      "connectionPattern": "none",
+      "firstScreen": {
+        "elapsedMs": 38.5,
+        "fixtureBuildMs": 8.600000023841858,
+        "totalNodeCount": 10000,
+        "totalConnectionCount": 0,
+        "mountedLogicalNodeCount": 170,
+        "mountedConnectionCount": 0,
+        "mountedLeaferInstanceCount": 921,
+        "mountedToTotalRatio": 0.017,
+        "paintedPixel": [
+          148,
+          163,
+          184,
+          255
+        ],
+        "paintedAfterFrames": 1,
+        "memory": null,
+        "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲与 GPU 资源；前几轮 1/4/8 路均给出 9.5MB，已证明不能作为本基准的 memory 指标。"
+      },
+      "drag": {
+        "frames": 167,
+        "elapsedMs": 3015.5,
+        "fps": 55.38053390814127,
+        "frameTimeMs": {
+          "median": 17.799999982118607,
+          "p95": 21.900000005960464,
+          "max": 25.099999994039536
+        },
+        "longFrames": 0,
+        "workEvidence": {
+          "fwId": "scale-node-0",
+          "start": {
+            "x": 40,
+            "y": 40
+          },
+          "end": {
+            "x": 280,
+            "y": 160
+          },
+          "delta": {
+            "x": 240,
+            "y": 120
+          },
+          "positionChanged": true
+        },
+        "memory": null,
+        "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲与 GPU 资源；前几轮 1/4/8 路均给出 9.5MB，已证明不能作为本基准的 memory 指标。"
+      },
+      "zoom": {
+        "frames": 126,
+        "elapsedMs": 3015.9000000059605,
+        "fps": 41.778573560048734,
+        "frameTimeMs": {
+          "median": 24,
+          "p95": 26.30000001192093,
+          "max": 33
+        },
+        "longFrames": 0,
+        "workEvidence": {
+          "scaleStart": 1,
+          "scaleEnd": 1.25,
+          "scaleDelta": 0.25,
+          "scaleChanged": true
+        },
+        "memory": null,
+        "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲与 GPU 资源；前几轮 1/4/8 路均给出 9.5MB，已证明不能作为本基准的 memory 指标。"
+      },
+      "pan": {
+        "frames": 167,
+        "elapsedMs": 3002,
+        "fps": 55.62958027981346,
+        "frameTimeMs": {
+          "median": 17.099999994039536,
+          "p95": 24.900000005960464,
+          "max": 27.599999994039536
+        },
+        "longFrames": 0,
+        "workEvidence": {
+          "start": {
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "end": {
+            "offsetX": -480,
+            "offsetY": -650
+          },
+          "delta": {
+            "x": -480,
+            "y": -650
+          },
+          "offsetChanged": true
+        },
+        "memory": null,
+        "memoryReason": "performance.memory 仅覆盖 JS heap，无法表示 Canvas 后备缓冲与 GPU 资源；前几轮 1/4/8 路均给出 9.5MB，已证明不能作为本基准的 memory 指标。"
+      }
+    }
+  ],
+  "finishedAt": "2026-08-05T07:29:38.749Z"
+}

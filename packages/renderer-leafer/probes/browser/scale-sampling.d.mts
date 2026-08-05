@@ -1,27 +1,19 @@
-export interface DragSnapshot {
-  fwId: string
-  x: number
-  y: number
+export interface DragSnapshot { fwId: string; x: number; y: number }
+export interface ZoomSnapshot { scale: number }
+export interface PanSnapshot { offsetX: number; offsetY: number }
+
+export interface FrameSample {
+  frames: number
+  elapsedMs: number
+  fps: number
+  frameTimeMs: { median: number; p95: number; max: number }
+  longFrames: number
 }
 
-export interface ZoomSnapshot {
-  scale: number
-}
-
-export interface DragEvidence {
-  fwId: string
-  start: { x: number; y: number }
-  end: { x: number; y: number }
-  delta: { x: number; y: number }
-  positionChanged: true
-}
-
-export interface ZoomEvidence {
-  scaleStart: number
-  scaleEnd: number
-  scaleDelta: number
-  scaleChanged: true
-}
-
-export function buildDragEvidence(start: DragSnapshot, end: DragSnapshot): DragEvidence
-export function buildZoomEvidence(start: ZoomSnapshot, end: ZoomSnapshot): ZoomEvidence
+export function buildFrameStats(
+  frameDurationsMs: readonly number[],
+  longFrameThresholdMs: number,
+): FrameSample
+export function buildDragEvidence(start: DragSnapshot, end: DragSnapshot): unknown
+export function buildZoomEvidence(start: ZoomSnapshot, end: ZoomSnapshot): unknown
+export function buildPanEvidence(start: PanSnapshot, end: PanSnapshot): unknown
