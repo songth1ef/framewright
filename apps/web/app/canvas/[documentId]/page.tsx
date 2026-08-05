@@ -22,7 +22,11 @@ export default async function CanvasPage({
           {document.name}
         </h1>
       </header>
-      <CanvasClient documentId={document.id} initialRoot={document.root} />
+      <CanvasClient
+        documentId={document.id}
+        documentName={document.name}
+        initialRoot={document.root}
+      />
     </>
   )
 }

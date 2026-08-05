@@ -11,10 +11,14 @@ const RendererHost = dynamic(
 
 export function CanvasClient({
   documentId,
+  documentName,
   initialRoot,
 }: {
   documentId?: string
+  documentName?: string
   initialRoot?: FrameNode
 }) {
-  return <RendererHost documentId={documentId} initialRoot={initialRoot} />
+  return (
+    <RendererHost documentId={documentId} documentName={documentName} initialRoot={initialRoot} />
+  )
 }

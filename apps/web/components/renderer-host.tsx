@@ -25,6 +25,7 @@ import { createDomRenderer } from '@framewright/renderer-dom'
 import { createLeaferRenderer } from '@framewright/renderer-leafer'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { loadServerHistory } from './server-history'
+import type { ServerHistory } from './server-history'
 
 type Factory = () => RendererAdapter
 
@@ -79,9 +80,11 @@ function groupOps(ops: readonly CanvasOp[]): CanvasOp | null {
 
 export function RendererHost({
   documentId,
+  documentName,
   initialRoot,
 }: {
   documentId?: string
+  documentName?: string
   initialRoot?: FrameNode
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -93,8 +96,17 @@ export function RendererHost({
   const [viewport, setViewport] = useState(DEFAULT_VIEWPORT)
   const [root, setRoot] = useState(() => initialRoot ?? createDemoDocument())
   const [lastAction, setLastAction] = useState('')
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [historyReady, setHistoryReady] = useState(documentId === undefined)
   const rootRef = useRef(root)
-  const historyRef = useRef(createMemoryHistory())
+  const historyRef = useRef<ReturnType<typeof createMemoryHistory> | ServerHistory>(
+    createMemoryHistory(),
+  )
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveRevisionRef = useRef(0)
+  const savedRootRef = useRef(root)
+  const dirtyRef = useRef(false)
+  const mountedRef = useRef(true)
   rootRef.current = root
 
   // U2：给了 documentId 就把操作栈换成写后端的版本，刷新后仍能撤销；加载失败退回内存栈
@@ -106,15 +118,87 @@ export function RendererHost({
       onError: (error) => console.error('[framewright] 操作日志写后端失败', error),
     })
       .then((history) => {
-        if (!cancelled) historyRef.current = history
+        if (!cancelled) {
+          historyRef.current = history
+          setHistoryReady(true)
+        }
       })
       .catch((error: unknown) => {
         console.error('[framewright] 撤销历史加载失败，退回内存操作栈', error)
+        if (!cancelled) setHistoryReady(true)
       })
     return () => {
       cancelled = true
     }
   }, [documentId])
+
+  const getHistorySeq = (): number => {
+    const history = historyRef.current
+    return 'getHistorySeq' in history ? history.getHistorySeq() : 0
+  }
+
+  const saveDocument = async (snapshot: FrameNode, revision: number): Promise<void> => {
+    if (documentId === undefined || documentName === undefined) return
+    const history = historyRef.current
+    if ('flush' in history) await history.flush()
+    const response = await fetch(`/api/documents/${encodeURIComponent(documentId)}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: documentName, root: snapshot, historySeq: getHistorySeq() }),
+    })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    if (revision !== saveRevisionRef.current) return
+    dirtyRef.current = false
+    savedRootRef.current = snapshot
+    if (mountedRef.current) setSaveStatus('saved')
+  }
+
+  useEffect(() => {
+    if (documentId === undefined || documentName === undefined || root === savedRootRef.current) return
+    dirtyRef.current = true
+    const revision = saveRevisionRef.current + 1
+    saveRevisionRef.current = revision
+    setSaveStatus('saving')
+    if (saveTimerRef.current !== null) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null
+      void saveDocument(root, revision).catch((error: unknown) => {
+        console.error('[framewright] 自动保存失败', error)
+        if (revision === saveRevisionRef.current && mountedRef.current) setSaveStatus('error')
+      })
+    }, 800)
+  }, [documentId, documentName, root])
+
+  useEffect(() => {
+    mountedRef.current = true
+    const flushPendingSave = (): void => {
+      if (!dirtyRef.current || documentId === undefined || documentName === undefined) return
+      dirtyRef.current = false
+      if (saveTimerRef.current !== null) {
+        clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = null
+      }
+      const history = historyRef.current
+      if ('flush' in history) void history.flush()
+      void fetch(`/api/documents/${encodeURIComponent(documentId)}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          name: documentName,
+          root: rootRef.current,
+          historySeq: getHistorySeq(),
+        }),
+        keepalive: true,
+      }).catch((error: unknown) => console.error('[framewright] 离开页面前保存失败', error))
+    }
+
+    window.addEventListener('pagehide', flushPendingSave)
+    return () => {
+      mountedRef.current = false
+      window.removeEventListener('pagehide', flushPendingSave)
+      flushPendingSave()
+    }
+  }, [documentId, documentName])
 
   const commitOps = (ops: readonly CanvasOp[]): void => {
     const op = groupOps(ops)
@@ -220,6 +304,7 @@ export function RendererHost({
   ctxRef.current = ctx
 
   useEffect(() => {
+    if (!historyReady) return
     const container = containerRef.current
     if (container === null) return
     const entry = RENDERERS[activeIndex]
@@ -246,7 +331,7 @@ export function RendererHost({
       delete (window as unknown as Record<string, unknown>)['__fwGetBounds']
       delete (window as unknown as Record<string, unknown>)['__fwGetVisible']
     }
-  }, [activeIndex])
+  }, [activeIndex, historyReady])
 
   useEffect(() => {
     queueMicrotask(() => adapterRef.current?.update(ctx))
@@ -255,7 +340,11 @@ export function RendererHost({
   const active = RENDERERS[activeIndex]
 
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: 16 }}>
+    <main
+      data-testid="canvas-host"
+      data-history-ready={String(historyReady)}
+      style={{ fontFamily: 'system-ui, sans-serif', padding: 16 }}
+    >
       <div
         data-testid="toolbar"
         style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}
@@ -263,15 +352,31 @@ export function RendererHost({
         <button
           type="button"
           data-testid="renderer-switch"
+          disabled={!historyReady}
           onClick={() => setActiveIndex((i) => (i + 1) % RENDERERS.length)}
           style={{ padding: '6px 14px', cursor: 'pointer' }}
         >
           切换渲染器
         </button>
         <span data-testid="active-renderer">{active?.label ?? ''}</span>
+        {!historyReady ? <span role="status">正在加载撤销历史…</span> : null}
+        {documentId === undefined || saveStatus === 'idle' ? null : (
+          <span
+            data-testid="save-status"
+            role={saveStatus === 'error' ? 'alert' : 'status'}
+            style={{ color: saveStatus === 'error' ? '#b42318' : '#475467' }}
+          >
+            {saveStatus === 'saving'
+              ? '保存中…'
+              : saveStatus === 'error'
+                ? '保存失败，请重试'
+                : '已保存'}
+          </span>
+        )}
         <button
           type="button"
           data-testid="select-box-back"
+          disabled={!historyReady}
           onClick={() => setSelection(['box-back'])}
           style={{ padding: '6px 14px', cursor: 'pointer' }}
         >
@@ -288,6 +393,7 @@ export function RendererHost({
         <button
           type="button"
           data-testid="toggle-inner-frame"
+          disabled={!historyReady}
           onClick={() =>
             setRoot((current) => ({
               ...current,
