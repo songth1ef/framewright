@@ -1,5 +1,6 @@
 import type { CanvasOp } from '@framewright/core'
-import { isCanvasNode, isRecord, parseDocumentId } from '../route-handler'
+import { isCanvasNode, isRecord } from '../../../../../components/canvas-document-file'
+import { parseDocumentId } from '../route-handler'
 
 interface HistoryEntryDto {
   id: string

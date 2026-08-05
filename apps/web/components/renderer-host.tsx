@@ -29,6 +29,8 @@ import { createLeaferRenderer } from '@framewright/renderer-leafer'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DevPanelController, type DevPanelHandle } from './dev-panel'
 import { EmptyCanvasGuide, ShortcutHelpDialog } from './canvas-overlays'
+import { useCanvasDocumentFileActions } from './canvas-document-file-actions'
+import { CanvasDocumentStatus } from './canvas-document-status'
 import { createDerivedGenerationSubmitter } from './derived-actions'
 import { createGenerationController, type GenerationController, type GenerationNodePatch } from './generation-actions'
 import { createHttpGenerationBackend } from './generation-client'
@@ -240,6 +242,11 @@ export function RendererHost({
     rootRef.current = next
     setRoot(next)
   }
+
+  const { importMessage, importCanvasFile, exportCanvas } = useCanvasDocumentFileActions({
+    documentName, getRoot: () => rootRef.current,
+    commitOps, clearSelection: () => setSelection([]),
+  })
 
   // 服务端驱动的状态同步（生成四态流转）不是用户的画布编辑，
   // 应用但不进撤销历史；仍会触发自动保存
@@ -472,22 +479,15 @@ export function RendererHost({
         }
         onActualSize={() => setViewport((current) => setActualSize(current, getViewportSize()))}
         onShowShortcuts={() => setShowShortcuts(true)}
+        onImportFile={importCanvasFile}
+        onExport={exportCanvas}
       />
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-        {!historyReady ? <span role="status">正在加载撤销历史…</span> : null}
-        {documentId === undefined || saveStatus === 'idle' ? null : (
-          <span
-            data-testid="save-status"
-            role={saveStatus === 'error' ? 'alert' : 'status'}
-            style={{ color: saveStatus === 'error' ? '#b42318' : '#475467' }}
-          >
-            {saveStatus === 'saving'
-              ? '保存中…'
-              : saveStatus === 'error'
-                ? '保存失败，请重试'
-                : '已保存'}
-          </span>
-        )}
+        <CanvasDocumentStatus
+          historyReady={historyReady} hasPersistentDocument={documentId !== undefined}
+          saveStatus={saveStatus}
+          importMessage={importMessage}
+        />
         <button
           type="button"
           data-testid="select-box-back"

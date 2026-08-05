@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useRef, type CSSProperties } from 'react'
 
 interface RendererOption {
   id: string
@@ -16,6 +16,8 @@ interface ViewportToolbarProps {
   onFitCanvas(): void
   onActualSize(): void
   onShowShortcuts(): void
+  onImportFile(file: File): void | Promise<void>
+  onExport(): void
 }
 
 const toolbarStyle: CSSProperties = {
@@ -23,6 +25,7 @@ const toolbarStyle: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: 16,
+  flexWrap: 'wrap',
   minHeight: 44,
   marginBottom: 12,
   padding: '6px 8px',
@@ -67,7 +70,10 @@ export function ViewportToolbar({
   onFitCanvas,
   onActualSize,
   onShowShortcuts,
+  onImportFile,
+  onExport,
 }: ViewportToolbarProps) {
+  const importInputRef = useRef<HTMLInputElement>(null)
   const activeIndex = renderers.findIndex((renderer) => renderer.id === activeRendererId)
   const active = renderers[activeIndex]
   const next = renderers[(activeIndex + 1) % renderers.length]
@@ -108,6 +114,40 @@ export function ViewportToolbar({
         </button>
         <button type="button" disabled={disabled} onClick={onActualSize} style={buttonStyle}>
           100%
+        </button>
+      </div>
+
+      <div role="group" aria-label="画布文件" style={groupStyle}>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="application/json,.json"
+          disabled={disabled}
+          aria-label="选择画布 JSON 文件"
+          style={{ display: 'none' }}
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0]
+            event.currentTarget.value = ''
+            if (file !== undefined) void onImportFile(file)
+          }}
+        />
+        <button
+          type="button"
+          data-testid="canvas-import"
+          disabled={disabled}
+          onClick={() => importInputRef.current?.click()}
+          style={{ ...buttonStyle, borderColor: '#d0d5dd' }}
+        >
+          导入 JSON
+        </button>
+        <button
+          type="button"
+          data-testid="canvas-export"
+          disabled={disabled}
+          onClick={onExport}
+          style={{ ...buttonStyle, borderColor: '#d0d5dd' }}
+        >
+          导出 JSON
         </button>
       </div>
 
