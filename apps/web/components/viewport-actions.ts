@@ -1,4 +1,4 @@
-import { zoomAtPoint, type Rect, type Viewport } from '@framewright/core'
+import { clampScale, zoomAtPoint, type Rect, type Viewport } from '@framewright/core'
 
 export interface ViewportSize {
   width: number
@@ -28,5 +28,16 @@ export function centerContentAtActualSize(bounds: Rect, size: ViewportSize): Vie
     scale: 1,
     offsetX: (size.width - bounds.width) / 2 - bounds.x,
     offsetY: (size.height - bounds.height) / 2 - bounds.y,
+  }
+}
+
+export function fitContent(bounds: Rect, size: ViewportSize): Viewport {
+  const widthScale = bounds.width > 0 ? (size.width * 0.9) / bounds.width : SCALE_LIMITS.max
+  const heightScale = bounds.height > 0 ? (size.height * 0.9) / bounds.height : SCALE_LIMITS.max
+  const scale = clampScale(Math.min(widthScale, heightScale), SCALE_LIMITS.min, SCALE_LIMITS.max)
+  return {
+    scale,
+    offsetX: (size.width - bounds.width * scale) / 2 - bounds.x * scale,
+    offsetY: (size.height - bounds.height * scale) / 2 - bounds.y * scale,
   }
 }

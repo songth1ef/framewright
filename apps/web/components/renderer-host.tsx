@@ -30,11 +30,13 @@ import { loadServerHistory } from './server-history'
 import type { ServerHistory } from './server-history'
 import {
   centerContentAtActualSize,
+  fitContent,
   setActualSize,
   zoomViewport,
   type ViewportSize,
 } from './viewport-actions'
 import { ViewportToolbar } from './viewport-toolbar'
+import { getViewportShortcut, isEditableTarget } from './viewport-shortcuts'
 
 type Factory = () => RendererAdapter
 
@@ -102,6 +104,10 @@ export function RendererHost({
   const adapterRef = useRef<RendererAdapter | null>(null)
   const devPanelRef = useRef<DevPanelHandle | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
+  const getViewportSize = (): ViewportSize => ({
+    width: containerRef.current?.clientWidth || 800,
+    height: containerRef.current?.clientHeight || 450,
+  })
 
   // 会话状态住在这里，不在渲染器内部——切换时原样传给新渲染器
   const [selection, setSelection] = useState<readonly string[]>(['box-front'])
@@ -286,13 +292,21 @@ export function RendererHost({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
+      if (isEditableTarget(event.target)) return
+
+      const viewportShortcut = getViewportShortcut(event)
+      if (viewportShortcut !== null) {
+        event.preventDefault()
+        const bounds = getContentBounds(rootRef.current)
+        setViewport(
+          viewportShortcut === 'fit-content'
+            ? fitContent(bounds, getViewportSize())
+            : centerContentAtActualSize(bounds, getViewportSize()),
+        )
+        return
+      }
+
       if (!event.ctrlKey || event.key.toLowerCase() !== 'z') return
-      const target = event.target
-      if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        (target instanceof HTMLElement && target.isContentEditable)
-      ) return
 
       const op = event.shiftKey ? historyRef.current.redo() : historyRef.current.undo()
       if (op === null) return
@@ -351,11 +365,6 @@ export function RendererHost({
     const node = findNodeById(root, fwId)
     return node === null ? [] : [node]
   })
-  const getViewportSize = (): ViewportSize => ({
-    width: containerRef.current?.clientWidth || 800,
-    height: containerRef.current?.clientHeight || 450,
-  })
-
   return (
     <main
       data-testid="canvas-host"
