@@ -95,6 +95,35 @@ describe('getNodesInViewport', () => {
     ]).toEqual(['root', 'nearest', 'second-nearest'])
   })
 
+  it('最近节点位于嵌套 frame 时，祖先链计入上限并一并保留', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      width: 100,
+      height: 100,
+      children: [
+        createBoxNode({ fwId: 'direct-near', x: 55, y: 45, width: 10, height: 10 }),
+        createFrameNode({
+          fwId: 'parent',
+          x: 40,
+          y: 40,
+          width: 80,
+          height: 80,
+          children: [
+            createBoxNode({ fwId: 'nested-nearest', x: 5, y: 5, width: 10, height: 10 }),
+          ],
+        }),
+      ],
+    })
+
+    expect([
+      ...getNodesInViewport(root, viewport, {
+        ...screen,
+        overscan: 0,
+        maxNodes: 3,
+      }),
+    ]).toEqual(['root', 'parent', 'nested-nearest'])
+  })
+
   it.each([2, 1, 0.5, 0.25, 0.1, 0.01])('scale=%s 时挂载数不超过默认上限', (scale) => {
     const root = createScaleFixture({
       nodeCount: 10_000,

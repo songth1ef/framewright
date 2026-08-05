@@ -3,6 +3,7 @@ import type { ConnectionItem } from './connections'
 import {
   isAiImageNode,
   isAiVideoNode,
+  isFrameNode,
   type CanvasNode,
   type FrameNode,
 } from './node-schema'
@@ -101,6 +102,7 @@ export interface ViewportCullingResult {
 
 interface NodeCandidate {
   fwId: string
+  parentFwId: string | null
   distance: number
   order: number
   isRoot: boolean
@@ -129,8 +131,14 @@ export function getViewportCullingResult(
   const visibleNodeIds = new Set<string>()
   const connectionSources: Array<readonly string[]> = []
 
-  walkTreePruned(root, (node, absolute) => {
-    if (!node.visible) return false
+  const collect = (
+    node: CanvasNode,
+    parentX: number,
+    parentY: number,
+    parentFwId: string | null,
+  ): void => {
+    if (!node.visible) return
+    const absolute = { x: parentX + node.x, y: parentY + node.y }
     visibleNodeIds.add(node.fwId)
     if (isAiImageNode(node) || isAiVideoNode(node)) connectionSources.push(node.sourceFwIds)
     const nodeBounds = {
@@ -142,12 +150,17 @@ export function getViewportCullingResult(
     if (intersects(bounds, nodeBounds)) {
       candidates.push({
         fwId: node.fwId,
+        parentFwId,
         distance: squaredDistanceToRectCenter(nodeBounds, viewportCenter),
         order: candidates.length,
         isRoot: node === root,
       })
     }
-  })
+    if (isFrameNode(node)) {
+      for (const child of node.children) collect(child, absolute.x, absolute.y, node.fwId)
+    }
+  }
+  collect(root, 0, 0, null)
 
   let validConnectionCount = 0
   for (const sourceFwIds of connectionSources) {
@@ -171,8 +184,26 @@ export function getViewportCullingResult(
       left.distance - right.distance ||
       left.order - right.order,
   )
+  const candidateById = new Map(candidates.map((candidate) => [candidate.fwId, candidate]))
+  const selected = new Set<string>()
+  for (const candidate of candidates) {
+    if (selected.has(candidate.fwId)) continue
+    const missingChain: NodeCandidate[] = []
+    let current: NodeCandidate | undefined = candidate
+    while (current !== undefined && !selected.has(current.fwId)) {
+      missingChain.push(current)
+      current =
+        current.parentFwId === null ? undefined : candidateById.get(current.parentFwId)
+    }
+    if (current === undefined && missingChain.at(-1)?.parentFwId !== null) continue
+    if (selected.size + missingChain.length > maxNodes) continue
+    for (let index = missingChain.length - 1; index >= 0; index -= 1) {
+      selected.add(missingChain[index]!.fwId)
+    }
+    if (selected.size === maxNodes) break
+  }
   return {
-    nodeIds: new Set(candidates.slice(0, maxNodes).map(({ fwId }) => fwId)),
+    nodeIds: selected,
     // 排名依赖真实视口中心；截断后只允许相同视口复用，平移必须重新排名。
     validViewportBounds: currentBounds,
   }
