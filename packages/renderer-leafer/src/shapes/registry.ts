@@ -10,6 +10,7 @@ import { Box, Rect, type IUI } from 'leafer-ui'
 import { toLeaferProps } from '../node-props'
 import { createVideoShape } from '../video/video-node'
 import { createGenerationUnitShape } from './generation-unit'
+import { createImageShape } from './image'
 
 export interface ShapeContext {
   node: CanvasNode
@@ -42,26 +43,10 @@ const createBox: ShapeFactory = ({ node, position, size }) => {
   })
 }
 
-/**
- * P0 尚未实现的 shape 的显式占位——与 renderer-dom 的 unsupported 占位对应。
- * 留空会让 assertShapeCoverage 报错，这是刻意的。
- */
-function makeUnsupportedShape(): ShapeFactory {
-  return ({ node, position, size }) => {
-    return new Rect({
-      ...toLeaferProps(node, position, size),
-      fill: '#DDDDDD',
-      stroke: '#999999',
-      strokeWidth: 1,
-      dashPattern: [4, 4],
-    })
-  }
-}
-
 export const LEAFER_SHAPES: Record<ShapeType, ShapeFactory> = {
   frame: createFrame,
   box: createBox,
-  img: makeUnsupportedShape(),
+  img: createImageShape(),
   video: createVideoShape(),
   'ai-image': createGenerationUnitShape(),
   'ai-video': createGenerationUnitShape(),

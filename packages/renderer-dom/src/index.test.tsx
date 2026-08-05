@@ -9,6 +9,7 @@ import {
   createAiVideoNode,
   createDemoDocument,
   createFrameNode,
+  createImgNode,
   createVideoNode,
   type RenderContext,
   type RendererCallbacks,
@@ -113,6 +114,34 @@ function makeVideoContext(): RenderContext {
           locked: true,
           src: '/fixtures/preview.mp4',
           poster: '/fixtures/poster.jpg',
+          fit: 'cover',
+        }),
+      ],
+    }),
+    selection: [],
+    viewport: DEFAULT_VIEWPORT,
+    callbacks: NOOP_RENDERER_CALLBACKS,
+  }
+}
+
+function makeImgContext(src = '/fixtures/reference.png'): RenderContext {
+  return {
+    root: createFrameNode({
+      fwId: 'root',
+      width: 800,
+      height: 600,
+      children: [
+        createImgNode({
+          fwId: 'img-1',
+          name: '参考图片',
+          x: 12,
+          y: 34,
+          width: 320,
+          height: 180,
+          rotation: 5,
+          opacity: 0.75,
+          locked: true,
+          src,
           fit: 'cover',
         }),
       ],
@@ -229,11 +258,43 @@ describe('createDomRenderer', () => {
     await act(async () => renderer.destroy())
   })
 
-  it('img/video 渲染为显式的 unsupported 占位', async () => {
-    const renderer = await mountRenderer(makeContext())
-    expect(
-      container!.querySelector('[data-fw-id="img-1"][data-fw-unsupported="true"]'),
-    ).not.toBeNull()
+  it('img 有 src 时渲染原生图片并逐字段映射媒体与几何属性', async () => {
+    const renderer = await mountRenderer(makeImgContext())
+    const image = container!.querySelector('[data-fw-id="img-1"]') as HTMLImageElement
+
+    expect(image).toBeInstanceOf(HTMLImageElement)
+    expect(image.getAttribute('src')).toBe('/fixtures/reference.png')
+    expect(image.style.objectFit).toBe('cover')
+    expect(image.style.left).toBe('12px')
+    expect(image.style.top).toBe('34px')
+    expect(image.style.width).toBe('320px')
+    expect(image.style.height).toBe('180px')
+    expect(image.style.opacity).toBe('0.75')
+    expect(image.style.transform).toBe('rotate(5deg)')
+    expect(image.dataset.fwUnsupported).toBeUndefined()
+    await act(async () => renderer.destroy())
+  })
+
+  it('img 无 src 时渲染稳定占位而不创建空图片请求', async () => {
+    const renderer = await mountRenderer(makeImgContext(''))
+    const placeholder = container!.querySelector('[data-fw-id="img-1"]') as HTMLElement
+
+    expect(placeholder).toBeInstanceOf(HTMLDivElement)
+    expect(placeholder.dataset.fwImagePlaceholder).toBe('true')
+    expect(placeholder.dataset.fwUnsupported).toBeUndefined()
+    expect(placeholder.querySelector('img')).toBeNull()
+    await act(async () => renderer.destroy())
+  })
+
+  it('img 映射不向原生元素泄漏 node 业务字段', async () => {
+    const renderer = await mountRenderer(makeImgContext())
+    const image = container!.querySelector('[data-fw-id="img-1"]') as HTMLImageElement
+
+    expect(image.getAttribute('fwId')).toBeNull()
+    expect(image.getAttribute('fwType')).toBeNull()
+    expect(image.getAttribute('locked')).toBeNull()
+    expect(image.getAttribute('children')).toBeNull()
+    expect(image.getAttribute('name')).toBeNull()
     await act(async () => renderer.destroy())
   })
 

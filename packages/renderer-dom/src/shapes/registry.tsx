@@ -13,6 +13,7 @@ import {
 import type { CSSProperties, ReactNode } from 'react'
 import { toNodeStyle } from '../node-style'
 import { GenerationUnit } from './generation-unit'
+import { ImageShape } from './image'
 import { VideoShape } from './video'
 
 export interface ShapeProps {
@@ -81,33 +82,10 @@ function GenerationUnitShape({
   )
 }
 
-/**
- * P0 尚未实现的 shape 的显式占位。
- * 不留空——留空会让 assertShapeCoverage 报错，而「暂不支持」是一种被记录的状态，
- * 正好喂给 docs/architecture.md §8.2 的实现成本对照表。
- */
-function makeUnsupportedShape(type: ShapeType): ShapeComponent {
-  return function UnsupportedShape({ node, position, size }: ShapeProps): ReactNode {
-    const style: CSSProperties = {
-      ...toNodeStyle(node, position, size),
-      background: 'repeating-linear-gradient(45deg,#EEE,#EEE 8px,#DDD 8px,#DDD 16px)',
-      border: '1px dashed #999',
-    }
-    return (
-      <div
-        data-fw-id={node.fwId}
-        data-fw-type={type}
-        data-fw-unsupported="true"
-        style={style}
-      />
-    )
-  }
-}
-
 export const DOM_SHAPES: Record<ShapeType, ShapeComponent> = {
   frame: FrameShape,
   box: BoxShape,
-  img: makeUnsupportedShape('img'),
+  img: ImageShape,
   video: VideoShape,
   'ai-image': GenerationUnitShape,
   'ai-video': GenerationUnitShape,
