@@ -119,15 +119,28 @@ describe('provider MockGenerationProvider', () => {
     await expect(provider.poll('no-such-task')).rejects.toMatchObject({ code: 'unknown-task' })
   })
 
-  it('ai-video 类任务产出 kind 为 video 的占位素材', async () => {
-    const provider = createFastProvider()
-    const taskId = await provider.submit({ kind: 'image-to-video', prompt: '让这张海报动起来', inputAssetUrls: ['https://example.com/ref.png'] })
-    await provider.poll(taskId)
-    await provider.poll(taskId)
-    const done = await provider.poll(taskId)
+  it.each(['text-to-video', 'image-to-video'] as const)(
+    '%s 任务产出可播放的 WebM 视频，而非占位图',
+    async (kind) => {
+      const provider = createFastProvider()
+      const taskId = await provider.submit({
+        kind,
+        prompt: '让画面缓慢动起来',
+        inputAssetUrls: kind === 'image-to-video' ? ['https://example.com/ref.png'] : undefined,
+      })
+      await provider.poll(taskId)
+      await provider.poll(taskId)
+      const done = await provider.poll(taskId)
 
-    expect(done.status).toBe('succeeded')
-    expect(done.result?.[0]?.kind).toBe('video')
-    expect(done.params.inputAssetUrls).toEqual(['https://example.com/ref.png'])
-  })
+      expect(done.status).toBe('succeeded')
+      expect(done.result?.[0]?.kind).toBe('video')
+      const url = done.result?.[0]?.url
+      expect(url).toMatch(/^data:video\/webm;base64,/)
+
+      const encoded = url?.split(',')[1]
+      expect(encoded).toBeTruthy()
+      const header = Uint8Array.from(atob(encoded ?? ''), (char) => char.charCodeAt(0)).slice(0, 4)
+      expect([...header]).toEqual([0x1a, 0x45, 0xdf, 0xa3])
+    },
+  )
 })
