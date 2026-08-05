@@ -24,9 +24,15 @@ const workload = DOM_ZOOM_OUT_PROBE_WORKLOAD
 const memoryReason =
   '页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。'
 const caseId = process.argv.find((arg) => arg.startsWith('--case='))?.slice('--case='.length)
+const onlyCaseId = process.argv
+  .find((arg) => arg.startsWith('--only-case='))
+  ?.slice('--only-case='.length)
 const requestedConnectionPattern = process.argv
   .find((arg) => arg.startsWith('--connection-pattern='))
   ?.slice('--connection-pattern='.length)
+const requestedMaxConnections = process.argv
+  .find((arg) => arg.startsWith('--max-connections='))
+  ?.slice('--max-connections='.length)
 const supportedConnectionPatterns = new Set(['none', 'fanin', 'distributed', 'many-to-many'])
 if (
   requestedConnectionPattern !== undefined &&
@@ -34,9 +40,22 @@ if (
 ) {
   throw new Error(`--connection-pattern 不支持：${requestedConnectionPattern}`)
 }
+if (
+  requestedMaxConnections !== undefined &&
+  (!Number.isInteger(Number(requestedMaxConnections)) || Number(requestedMaxConnections) < 1)
+) {
+  throw new Error(`--max-connections 必须是正整数，收到：${requestedMaxConnections}`)
+}
 const scenarios = workload.scenarios.map((scenario) => requestedConnectionPattern === undefined
   ? scenario
   : { ...scenario, connectionPattern: requestedConnectionPattern })
+  .map((scenario) => requestedMaxConnections === undefined
+    ? scenario
+    : { ...scenario, maxConnections: Number(requestedMaxConnections) })
+  .filter((scenario) => onlyCaseId === undefined || scenario.id === onlyCaseId)
+if (onlyCaseId !== undefined && scenarios.length === 0) {
+  throw new Error(`--only-case 不支持：${onlyCaseId}`)
+}
 
 function screenshotFingerprint(buffer) {
   return createHash('sha256').update(buffer).digest('hex')
@@ -181,6 +200,9 @@ function runIsolatedCase(scenario) {
     const childArgs = [fileURLToPath(import.meta.url), `--case=${scenario.id}`]
     if (requestedConnectionPattern !== undefined) {
       childArgs.push(`--connection-pattern=${requestedConnectionPattern}`)
+    }
+    if (requestedMaxConnections !== undefined) {
+      childArgs.push(`--max-connections=${requestedMaxConnections}`)
     }
     const child = spawn(process.execPath, childArgs, {
       cwd: repoRoot,

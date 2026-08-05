@@ -1,4 +1,5 @@
 import { act } from 'react'
+import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   CONNECTION_STYLE,
@@ -10,7 +11,7 @@ import {
   createFrameNode,
   type RenderContext,
 } from '@framewright/core'
-import { collectConnectionItems } from './connections'
+import { ConnectionLayer, collectConnectionItems } from './connections'
 import { createDomRenderer } from './index'
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =
@@ -85,18 +86,45 @@ describe('C2-dom collectConnectionItems', () => {
 })
 
 describe('C2-dom ConnectionLayer', () => {
-  it('把同一样式的连线与端点分别合并为批量 path，并保留逻辑连线数', async () => {
+  it('低数量连线保留逐条可寻址元素', async () => {
     const renderer = await mountRenderer(demoContext())
     const layer = container!.querySelector('[data-fw-connections]')!
 
-    expect(layer.querySelectorAll('[data-fw-connection-strokes]')).toHaveLength(1)
-    expect(layer.querySelectorAll('[data-fw-connection-endpoints]')).toHaveLength(1)
+    expect(layer.querySelectorAll('[data-fw-connection-from="ai-image-1"]')).toHaveLength(2)
+    expect(layer.querySelectorAll('[data-fw-connection-strokes]')).toHaveLength(0)
+    await act(async () => renderer.destroy())
+  })
+
+  it('512 条仍逐条可寻址，513 条开始合并为批量 path', async () => {
+    const item = collectConnectionItems(createDemoDocument())[0]!
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    const renderCount = async (count: number): Promise<void> => {
+      await act(async () => root.render(
+        <ConnectionLayer
+          items={Array.from({ length: count }, () => item)}
+          selection={[]}
+          scale={1}
+          rootBounds={{ x: 0, y: 0, width: 1_000, height: 1_000 }}
+          detail="curve"
+        />,
+      ))
+    }
+
+    await renderCount(512)
+    expect(container.querySelectorAll('[data-fw-connection-from]')).toHaveLength(512)
+    expect(container.querySelectorAll('[data-fw-connection-strokes]')).toHaveLength(0)
+
+    await renderCount(513)
+    expect(container.querySelectorAll('[data-fw-connection-from]')).toHaveLength(0)
+    expect(container.querySelectorAll('[data-fw-connection-strokes]')).toHaveLength(1)
     expect(
-      layer.querySelector('[data-fw-connection-strokes]')?.getAttribute(
+      container.querySelector('[data-fw-connection-strokes]')?.getAttribute(
         'data-fw-connection-count',
       ),
-    ).toBe('2')
-    await act(async () => renderer.destroy())
+    ).toBe('513')
+    await act(async () => root.unmount())
   })
 
   it('SVG 是 root frame 的第一个孩子且画出两条曲线与四个端点', async () => {
@@ -107,9 +135,9 @@ describe('C2-dom ConnectionLayer', () => {
     expect(root.firstElementChild).toBe(layer)
     expect(layer.style.pointerEvents).toBe('none')
     expect(layer.querySelectorAll('path')).toHaveLength(2)
-    expect(layer.querySelectorAll('circle')).toHaveLength(0)
-    expect(layer.querySelector('[data-fw-connection-strokes]')?.getAttribute('d')).toBe(
-      'M 600 350 C 640 350, 580 350, 620 350 M 600 350 C 640 350, 590 110, 630 110',
+    expect(layer.querySelectorAll('circle')).toHaveLength(4)
+    expect(layer.querySelector('[data-fw-connection-to="ai-video-1"]')?.getAttribute('d')).toBe(
+      'M 600 350 C 640 350, 580 350, 620 350',
     )
     expect(renderer.getRenderedBounds().has('__connections__')).toBe(false)
     await act(async () => renderer.destroy())
@@ -117,17 +145,17 @@ describe('C2-dom ConnectionLayer', () => {
 
   it('选中源节点时两条线高亮，线宽与端点半径按缩放反向补偿', async () => {
     const renderer = await mountRenderer(demoContext(['ai-image-1'], 4))
-    const paths = container!.querySelectorAll('[data-fw-connection-strokes]')
-    const dots = container!.querySelectorAll('[data-fw-connection-endpoints]')
+    const paths = container!.querySelectorAll('[data-fw-connection-from]')
+    const dots = container!.querySelectorAll('[data-fw-connections] circle')
 
-    expect(paths).toHaveLength(1)
+    expect(paths).toHaveLength(2)
     for (const path of paths) {
       expect(path.getAttribute('stroke')).toBe(CONNECTION_STYLE.highlightColor)
       expect(path.getAttribute('stroke-width')).toBe(String(CONNECTION_STYLE.highlightWidth / 4))
     }
     for (const dot of dots) {
       expect(dot.getAttribute('fill')).toBe(CONNECTION_STYLE.highlightColor)
-      expect(dot.getAttribute('d')).toContain(`M ${600 - CONNECTION_STYLE.endpointRadius / 4} 350`)
+      expect(dot.getAttribute('r')).toBe(String(CONNECTION_STYLE.endpointRadius / 4))
     }
     await act(async () => renderer.destroy())
   })
@@ -135,30 +163,23 @@ describe('C2-dom ConnectionLayer', () => {
   it('simplified 档只用 p0 到 p3 的单个直线元素，不保留曲线与端点', async () => {
     const renderer = await mountRenderer(demoContext([], 0.25))
     const layer = container!.querySelector('[data-fw-connections]')!
-    const lineBatch = layer.querySelector('[data-fw-connection-strokes]')
+    const lines = layer.querySelectorAll('[data-fw-connection-from]')
 
-    expect(layer.querySelectorAll('[data-fw-connection-strokes]')).toHaveLength(1)
+    expect(lines).toHaveLength(2)
     expect(layer.querySelector('[data-fw-connection-endpoints]')).toBeNull()
-    expect(lineBatch?.getAttribute('d')).toBe(
-      'M 600 350 L 620 350 M 600 350 L 630 110',
-    )
+    expect(lines[0]?.getAttribute('x1')).toBe('600')
+    expect(lines[0]?.getAttribute('x2')).toBe('620')
 
     await act(async () => renderer.destroy())
   })
 
   it('只选中一个派生节点时仅高亮对应连线', async () => {
     const renderer = await mountRenderer(demoContext(['ai-video-1']))
-    const selected = container!.querySelector(
-      '[data-fw-connection-strokes="highlighted"]',
-    ) as SVGPathElement
-    const normal = container!.querySelector(
-      '[data-fw-connection-strokes="normal"]',
-    ) as SVGPathElement
+    const selected = container!.querySelector('[data-fw-connection-to="ai-video-1"]') as SVGPathElement
+    const normal = container!.querySelector('[data-fw-connection-to="ai-video-2"]') as SVGPathElement
 
     expect(selected.getAttribute('stroke')).toBe(CONNECTION_STYLE.highlightColor)
     expect(normal.getAttribute('stroke')).toBe(CONNECTION_STYLE.strokeColor)
-    expect(selected.getAttribute('data-fw-connection-count')).toBe('1')
-    expect(normal.getAttribute('data-fw-connection-count')).toBe('1')
     await act(async () => renderer.destroy())
   })
 })

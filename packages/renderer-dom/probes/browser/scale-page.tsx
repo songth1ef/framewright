@@ -62,11 +62,18 @@ let renderer: RendererAdapter | null = null
 let root: FrameNode | null = null
 let viewport: Viewport = { scale: workload.zoom.startScale, offsetX: 0, offsetY: 0 }
 let initialScale = workload.zoom.startScale
+let maxConnections: number | undefined
 let evidenceNodeFwId: string | null = null
 
 function context(): RenderContext {
   if (root === null) throw new Error('尚未挂载规模场景')
-  return { root, viewport, selection: [], callbacks: NOOP_RENDERER_CALLBACKS }
+  return {
+    root,
+    viewport,
+    selection: [],
+    callbacks: NOOP_RENDERER_CALLBACKS,
+    cullingLimits: maxConnections === undefined ? undefined : { maxConnections },
+  }
 }
 
 function nextFrame(): Promise<number> {
@@ -89,6 +96,9 @@ async function mountScenario(scenario: DomScaleProbeScenario): Promise<FirstScre
   root = buildScaleFixture(scenario)
   const fixtureBuildMs = performance.now() - fixtureStart
   initialScale = scenario.initialScale ?? workload.zoom.startScale
+  maxConnections = 'maxConnections' in scenario && typeof scenario.maxConnections === 'number'
+    ? scenario.maxConnections
+    : undefined
   viewport = {
     scale: initialScale,
     offsetX: 0,
@@ -227,6 +237,7 @@ function destroy(): void {
   renderer = null
   root = null
   evidenceNodeFwId = null
+  maxConnections = undefined
 }
 
 window.__scaleProbe = {

@@ -11,6 +11,9 @@ import {
 } from '@framewright/core'
 import type { ReactNode } from 'react'
 
+/** 10000 节点 fanin 实测：100% 档最多 316 条需逐条，50% 档从 610 条起才批量。 */
+const DOM_CONNECTION_BATCH_THRESHOLD = 512
+
 export interface ConnectionItem {
   fromFwId: string
   toFwId: string
@@ -86,6 +89,68 @@ export function ConnectionLayer({
 }: ConnectionLayerProps): ReactNode {
   const safeScale = scale > 0 ? scale : 1
   const radius = CONNECTION_STYLE.endpointRadius / safeScale
+  if (items.length <= DOM_CONNECTION_BATCH_THRESHOLD) {
+    const occurrences = new Map<string, number>()
+    return (
+      <svg
+        data-fw-connections="true"
+        viewBox={`${rootBounds.x} ${rootBounds.y} ${rootBounds.width} ${rootBounds.height}`}
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          overflow: 'visible',
+          pointerEvents: 'none',
+        }}
+      >
+        {items.map((item) => {
+          const pair = `${item.fromFwId}:${item.toFwId}`
+          const occurrence = occurrences.get(pair) ?? 0
+          occurrences.set(pair, occurrence + 1)
+          const highlighted = selection.includes(item.fromFwId) || selection.includes(item.toFwId)
+          const color = highlighted ? CONNECTION_STYLE.highlightColor : CONNECTION_STYLE.strokeColor
+          const width = (highlighted ? CONNECTION_STYLE.highlightWidth : CONNECTION_STYLE.strokeWidth) / safeScale
+          const key = `${pair}:${occurrence}`
+          if (detail === 'line') {
+            return (
+              <line
+                key={key}
+                data-fw-connection-from={item.fromFwId}
+                data-fw-connection-to={item.toFwId}
+                x1={item.curve.p0.x}
+                y1={item.curve.p0.y}
+                x2={item.curve.p3.x}
+                y2={item.curve.p3.y}
+                stroke={color}
+                strokeWidth={width}
+              />
+            )
+          }
+          return (
+            <g key={key}>
+              <path
+                data-fw-connection-from={item.fromFwId}
+                data-fw-connection-to={item.toFwId}
+                d={curvePath(item.curve)}
+                fill="none"
+                stroke={color}
+                strokeWidth={width}
+              />
+              {CONNECTION_STYLE.endpointRadius > 0 ? (
+                <>
+                  <circle cx={item.curve.p0.x} cy={item.curve.p0.y} r={radius} fill={highlighted ? CONNECTION_STYLE.highlightColor : CONNECTION_STYLE.endpointColor} />
+                  <circle cx={item.curve.p3.x} cy={item.curve.p3.y} r={radius} fill={highlighted ? CONNECTION_STYLE.highlightColor : CONNECTION_STYLE.endpointColor} />
+                </>
+              ) : null}
+            </g>
+          )
+        })}
+      </svg>
+    )
+  }
   const selected = new Set(selection)
   const normalItems: ConnectionItem[] = []
   const highlightedItems: ConnectionItem[] = []

@@ -24,6 +24,7 @@ export interface DomScaleProbeScenario {
   readonly nodeCount: number
   readonly connectionPattern: ScaleConnectionPattern
   readonly initialScale?: number
+  readonly maxConnections?: number
 }
 
 export interface DomScaleProbeWorkload {
