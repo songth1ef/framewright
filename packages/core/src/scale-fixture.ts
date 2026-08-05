@@ -7,6 +7,12 @@ import {
   type CanvasNode,
   type FrameNode,
 } from './node-schema'
+import {
+  PUBLIC_IMAGE_ASSETS,
+  PUBLIC_VIDEO_ASSETS,
+  type PublicImageAsset,
+  type PublicVideoAsset,
+} from './demo-media'
 
 export const SCALE_FIXTURE_NODE_TYPES = ['img', 'video', 'ai-image', 'ai-video'] as const
 export type ScaleFixtureNodeType = (typeof SCALE_FIXTURE_NODE_TYPES)[number]
@@ -34,13 +40,11 @@ const DEFAULT_TYPE_RATIOS: Record<ScaleFixtureNodeType, number> = {
   'ai-video': 2,
 }
 
-const NODE_WIDTH = 160
-const NODE_HEIGHT = 100
+const NODE_CELL_WIDTH = 160
+const NODE_CELL_HEIGHT = 100
 const COLUMN_GAP = 40
 const ROW_GAP = 60
 const CANVAS_PADDING = 40
-const PLACEHOLDER_IMAGE =
-  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="160" height="100"%3E%3Crect width="160" height="100" fill="%2394a3b8"/%3E%3C/svg%3E'
 
 interface Topology {
   forcedGenerated: Uint8Array
@@ -120,6 +124,20 @@ function allocateTypeCounts(
 
 function nodeId(index: number): string {
   return `scale-node-${index}`
+}
+
+function pickAsset<T>(assets: readonly T[], random: () => number): T {
+  const asset = assets[Math.floor(random() * assets.length)]
+  if (!asset) throw new Error('规模夹具素材列表不能为空')
+  return asset
+}
+
+function fitNodeSize(sourceWidth: number, sourceHeight: number): { width: number; height: number } {
+  const scale = Math.min(NODE_CELL_WIDTH / sourceWidth, NODE_CELL_HEIGHT / sourceHeight)
+  return {
+    width: Math.round(sourceWidth * scale * 1_000) / 1_000,
+    height: Math.round(sourceHeight * scale * 1_000) / 1_000,
+  }
 }
 
 function createTopology(options: ScaleFixtureOptions): Topology {
@@ -220,31 +238,48 @@ function createMaterialNode(
   y: number,
   seed: ScaleFixtureSeed,
   sourceFwIds: string[],
+  random: () => number,
 ): CanvasNode {
+  const imageAsset: PublicImageAsset | undefined =
+    type === 'img' || type === 'ai-image' ? pickAsset(PUBLIC_IMAGE_ASSETS, random) : undefined
+  const videoAsset: PublicVideoAsset | undefined =
+    type === 'video' || type === 'ai-video' ? pickAsset(PUBLIC_VIDEO_ASSETS, random) : undefined
+  const primaryAsset = imageAsset ?? videoAsset
+  if (!primaryAsset) throw new Error(`规模夹具不支持素材类型 ${type}`)
+  const size = fitNodeSize(primaryAsset.width, primaryAsset.height)
   const base = {
     fwId: nodeId(index),
     name: `规模夹具 ${index + 1}`,
     x,
     y,
-    width: NODE_WIDTH,
-    height: NODE_HEIGHT,
+    width: size.width,
+    height: size.height,
   }
-  if (type === 'img') return createImgNode({ ...base, src: PLACEHOLDER_IMAGE, fit: 'cover' })
+  if (type === 'img') return createImgNode({ ...base, src: imageAsset!.url, fit: 'cover' })
   if (type === 'video') {
-    return createVideoNode({ ...base, src: '', poster: PLACEHOLDER_IMAGE, fit: 'cover' })
+    const poster = pickAsset(PUBLIC_IMAGE_ASSETS, random)
+    return createVideoNode({ ...base, src: videoAsset!.url, poster: poster.url, fit: 'cover' })
   }
   const generated = {
     ...base,
     generationId: `scale-generation-${index}`,
     status: 'succeeded' as const,
     prompt: `中立规模测试素材 ${index + 1}`,
-    params: { fixtureSeed: seed, fixtureIndex: index },
-    src: PLACEHOLDER_IMAGE,
+    params: {
+      fixtureSeed: seed,
+      fixtureIndex: index,
+      fixtureAssetId: primaryAsset.id,
+      sourceWidth: primaryAsset.width,
+      sourceHeight: primaryAsset.height,
+      ...(videoAsset ? { durationSeconds: videoAsset.durationSeconds } : {}),
+    },
+    src: primaryAsset.url,
     fit: 'cover' as const,
     sourceFwIds,
   }
   if (type === 'ai-image') return createAiImageNode(generated)
-  return createAiVideoNode({ ...generated, src: '', poster: PLACEHOLDER_IMAGE })
+  const poster = pickAsset(PUBLIC_IMAGE_ASSETS, random)
+  return createAiVideoNode({ ...generated, poster: poster.url })
 }
 
 /**
@@ -267,10 +302,11 @@ export function createScaleFixture(options: ScaleFixtureOptions): FrameNode {
     children[index] = createMaterialNode(
       types[index]!,
       index,
-      CANVAS_PADDING + column * (NODE_WIDTH + COLUMN_GAP),
-      CANVAS_PADDING + row * (NODE_HEIGHT + ROW_GAP),
+      CANVAS_PADDING + column * (NODE_CELL_WIDTH + COLUMN_GAP),
+      CANVAS_PADDING + row * (NODE_CELL_HEIGHT + ROW_GAP),
       options.seed,
       topology.sourcesByIndex[index] ?? [],
+      random,
     )
   }
 
@@ -283,8 +319,10 @@ export function createScaleFixture(options: ScaleFixtureOptions): FrameNode {
     }
   }
 
-  const contentWidth = columns === 0 ? 0 : columns * NODE_WIDTH + (columns - 1) * COLUMN_GAP
-  const contentHeight = rows === 0 ? 0 : rows * NODE_HEIGHT + (rows - 1) * ROW_GAP
+  const contentWidth =
+    columns === 0 ? 0 : columns * NODE_CELL_WIDTH + (columns - 1) * COLUMN_GAP
+  const contentHeight =
+    rows === 0 ? 0 : rows * NODE_CELL_HEIGHT + (rows - 1) * ROW_GAP
   return createFrameNode({
     fwId: 'scale-fixture-root',
     name: `规模夹具（${options.nodeCount} 节点）`,

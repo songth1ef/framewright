@@ -1,5 +1,6 @@
 import { performance } from 'node:perf_hooks'
 import { describe, expect, it } from 'vitest'
+import { PUBLIC_IMAGE_ASSETS, PUBLIC_VIDEO_ASSETS } from './demo-media'
 import { createScaleFixture, type ScaleFixtureNodeType } from './scale-fixture'
 import type { AiImageNode, AiVideoNode, CanvasNode } from './node-schema'
 
@@ -15,6 +16,14 @@ function edgeCount(nodes: readonly CanvasNode[]): number {
   return generatedNodes(nodes).reduce((total, node) => total + node.sourceFwIds.length, 0)
 }
 
+function mediaUrls(nodes: readonly CanvasNode[]): string[] {
+  return nodes.map((node) => {
+    if (node.fwType === 'img' || node.fwType === 'video') return node.src
+    if (node.fwType === 'ai-image' || node.fwType === 'ai-video') return node.src ?? ''
+    return ''
+  })
+}
+
 describe('createScaleFixture', () => {
   it('同一组入参和 seed 生成深度相等的树，不依赖 Math.random', () => {
     const options = {
@@ -27,6 +36,61 @@ describe('createScaleFixture', () => {
 
     expect(second).toEqual(first)
     expect(createScaleFixture({ ...options, seed: 20260806 })).not.toEqual(first)
+  })
+
+  it('素材分配走同一个 seed：相同 seed URL 序列一致，不同 seed 会变化', () => {
+    const options = {
+      nodeCount: 500,
+      connectionPattern: 'none' as const,
+      seed: 'media-seed-a',
+      typeRatios: { img: 1 },
+    }
+    const first = mediaUrls(createScaleFixture(options).children)
+    const second = mediaUrls(createScaleFixture(options).children)
+    const different = mediaUrls(createScaleFixture({ ...options, seed: 'media-seed-b' }).children)
+
+    expect(second).toEqual(first)
+    expect(different).not.toEqual(first)
+  })
+
+  it('真实图片分配铺开至少八种宽高比与四档源分辨率', () => {
+    const root = createScaleFixture({
+      nodeCount: 900,
+      connectionPattern: 'none',
+      seed: 81,
+      typeRatios: { img: 1 },
+    })
+    const assetsByUrl = new Map<string, (typeof PUBLIC_IMAGE_ASSETS)[number]>(
+      PUBLIC_IMAGE_ASSETS.map((asset) => [asset.url, asset]),
+    )
+    const assigned = root.children.map((node) => assetsByUrl.get((node as { src: string }).src))
+
+    expect(assigned.every(Boolean)).toBe(true)
+    expect(new Set(assigned.map((asset) => asset?.aspectRatio)).size).toBeGreaterThanOrEqual(8)
+    expect(new Set(assigned.map((asset) => asset?.resolutionTier))).toEqual(
+      new Set(['720p', '1K', '2K', '4K']),
+    )
+    expect(new Set(root.children.map((node) => node.width / node.height)).size).toBeGreaterThanOrEqual(8)
+  })
+
+  it('真实视频分配铺开 5 秒、10 秒、30 秒和 1 分钟档位', () => {
+    const root = createScaleFixture({
+      nodeCount: 800,
+      connectionPattern: 'none',
+      seed: 82,
+      typeRatios: { video: 1 },
+    })
+    const assetsByUrl = new Map<string, (typeof PUBLIC_VIDEO_ASSETS)[number]>(
+      PUBLIC_VIDEO_ASSETS.map((asset) => [asset.url, asset]),
+    )
+    const assigned = root.children.map((node) => assetsByUrl.get((node as { src: string }).src))
+    const durations = assigned.map((asset) => asset?.durationSeconds ?? 0)
+
+    expect(assigned.every(Boolean)).toBe(true)
+    expect(durations.some((duration) => duration >= 5 && duration < 8)).toBe(true)
+    expect(durations.some((duration) => duration >= 9 && duration < 15)).toBe(true)
+    expect(durations.some((duration) => duration >= 30 && duration < 40)).toBe(true)
+    expect(durations.some((duration) => duration >= 55 && duration < 62)).toBe(true)
   })
 
   it('nodeCount 表示画布内素材节点数，root frame 是额外的容器节点', () => {
