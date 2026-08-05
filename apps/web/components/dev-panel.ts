@@ -19,15 +19,27 @@ interface DevPanelProps {
   selectedNodes: readonly CanvasNode[]
   entries: readonly DevLogEntry[]
   onClear(): void
+  /** 初始是否展开。默认 `false` —— 展开态会盖住画布，不能是默认状态。 */
+  defaultExpanded?: boolean
 }
 
+/**
+ * 🔴 定在**右下角**且**默认收起**，不是右上角。
+ *
+ * 它原先是 `top: 12; right: 12` 一整块常驻展开，把画布工具栏（含渲染器切换按钮）
+ * 整个盖住 —— 开发模式下按钮点不到，e2e 里表现为「元素找得到但点不动」。
+ * 面板自己的单测全绿，因为它测的是面板本身；**它破坏的是别处**。
+ *
+ * 规矩：调试面板不许遮挡应用自身的控件。画布类应用的工具栏惯例在顶部，
+ * 所以调试入口放底部，且默认只留一个小按钮。
+ */
 const panelStyle: CSSProperties = {
   position: 'fixed',
-  top: 12,
+  bottom: 12,
   right: 12,
   zIndex: 1000,
   width: 390,
-  maxHeight: 'calc(100vh - 24px)',
+  maxHeight: 'calc(100vh - 120px)',
   overflow: 'auto',
   padding: 12,
   border: '1px solid #344054',
@@ -51,8 +63,42 @@ function copyJson(node: CanvasNode): void {
   void navigator.clipboard.writeText(JSON.stringify(node, null, 2))
 }
 
-export function DevPanel({ selectedNodes, entries, onClear }: DevPanelProps): ReactElement {
+/** 收起时只留这一个小按钮，绝不覆盖画布控件。 */
+const collapsedToggleStyle: CSSProperties = {
+  position: 'fixed',
+  bottom: 12,
+  right: 12,
+  zIndex: 1000,
+  padding: '6px 10px',
+  border: '1px solid #344054',
+  borderRadius: 6,
+  background: 'rgba(16, 24, 40, 0.9)',
+  color: '#f2f4f7',
+  cursor: 'pointer',
+  font: '12px ui-monospace, SFMono-Regular, Consolas, monospace',
+}
+
+export function DevPanel({
+  selectedNodes,
+  entries,
+  onClear,
+  defaultExpanded = false,
+}: DevPanelProps): ReactElement {
+  const [expanded, setExpanded] = useState(defaultExpanded)
   const [fwIdFilter, setFwIdFilter] = useState('')
+
+  if (!expanded) {
+    return createElement(
+      'button',
+      {
+        type: 'button',
+        'data-testid': 'dev-panel-toggle',
+        style: collapsedToggleStyle,
+        onClick: () => setExpanded(true),
+      },
+      `调试面板（${entries.length}）`,
+    )
+  }
   const filteredEntries = fwIdFilter === ''
     ? entries
     : entries.filter((entry) => entry.fwId.includes(fwIdFilter))
@@ -109,7 +155,15 @@ export function DevPanel({ selectedNodes, entries, onClear }: DevPanelProps): Re
   return createElement(
     'aside',
     { 'data-testid': 'dev-panel', style: panelStyle },
-    createElement('h2', { style: { margin: '0 0 8px', font: '600 14px system-ui' } }, '开发调试面板'),
+    createElement('div', { style: { display: 'flex', alignItems: 'center', margin: '0 0 8px' } },
+      createElement('h2', { style: { flex: 1, margin: 0, font: '600 14px system-ui' } }, '开发调试面板'),
+      createElement('button', {
+        type: 'button',
+        'data-testid': 'dev-panel-collapse',
+        style: buttonStyle,
+        onClick: () => setExpanded(false),
+      }, '收起'),
+    ),
     createElement('section', null,
       createElement('h3', { style: { margin: '8px 0', font: '600 12px system-ui' } }, '选中节点 JSON'),
       nodeSections,

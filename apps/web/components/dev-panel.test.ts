@@ -5,9 +5,25 @@ import { describe, expect, it } from 'vitest'
 import { DevPanel } from './dev-panel'
 
 describe('DevPanel', () => {
+  it('🔴 默认收起，只渲染一个小按钮 —— 展开态会盖住画布工具栏', () => {
+    // 回归守卫：面板原先默认展开且钉在右上角，把渲染器切换按钮整个盖住，
+    // 开发模式下点不到，e2e 里表现为「元素找得到但点不动」。
+    // 面板自己的单测当时全绿，因为它只测面板本身 —— 它破坏的是别处。
+    const html = renderToStaticMarkup(createElement(DevPanel, {
+      selectedNodes: [createBoxNode({ fwId: 'box-1', name: '完整节点' })],
+      entries: [],
+      onClear: () => undefined,
+    }))
+
+    expect(html).toContain('data-testid="dev-panel-toggle"')
+    expect(html).not.toContain('data-testid="dev-panel"')
+    expect(html).not.toContain('<details')
+  })
+
   it('展示可折叠的完整节点 JSON，并提供复制、fwId 筛选和清空入口', () => {
     const node = createBoxNode({ fwId: 'box-1', name: '完整节点' })
     const html = renderToStaticMarkup(createElement(DevPanel, {
+      defaultExpanded: true,
       selectedNodes: [node],
       entries: [{
         id: 'entry-1',
