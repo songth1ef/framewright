@@ -1,0 +1,275 @@
+{
+  "steps": [
+    {
+      "step": "单路-加载",
+      "duration": 23.32,
+      "naturalSize": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "step": "诊断-加载后paint状态",
+      "inputFill": {
+        "type": "video",
+        "url": "http://probe.local/video.webm?i=1",
+        "mode": "fit",
+        "changeful": true
+      },
+      "leafPaints": [
+        {
+          "type": "video",
+          "imageReady": true,
+          "imageUrl": "http://probe.local/video.webm?i=1",
+          "imageSize": [
+            1440,
+            900
+          ],
+          "imageViewTag": "HTMLVideoElement",
+          "imageError": null,
+          "hasData": true,
+          "patternId": null
+        }
+      ],
+      "rendererIgnore": false
+    },
+    {
+      "step": "单路-播放1.2s",
+      "currentTime": 1.207387,
+      "playing": true,
+      "画面指纹变化": false,
+      "指纹": [
+        [
+          -1124751841
+        ],
+        [
+          -1124751841
+        ]
+      ],
+      "解码帧数": [
+        4,
+        34
+      ],
+      "解码帧数上升": true,
+      "合成调用": {
+        "drawImageCalls": 72,
+        "drawImageVideoCalls": 72
+      },
+      "paint状态": {
+        "inputFill": {
+          "type": "video",
+          "url": "http://probe.local/video.webm?i=1",
+          "mode": "fit",
+          "changeful": true
+        },
+        "leafPaints": [
+          {
+            "type": "video",
+            "imageReady": true,
+            "imageUrl": "http://probe.local/video.webm?i=1",
+            "imageSize": [
+              1440,
+              900
+            ],
+            "imageViewTag": "HTMLVideoElement",
+            "imageError": null,
+            "hasData": true,
+            "patternId": null
+          }
+        ],
+        "rendererIgnore": false
+      }
+    },
+    {
+      "step": "单路-暂停",
+      "暂停时进度": 1.218043,
+      "400ms后进度": 1.218043,
+      "进度停住": true
+    },
+    {
+      "step": "单路-点按seek到50%",
+      "期望": 11.66,
+      "实际": 11.66,
+      "瞬态序列": [
+        11.66,
+        11.66,
+        11.66
+      ],
+      "偏差秒": 0,
+      "指纹": [
+        [
+          -1124751841
+        ],
+        [
+          -1124751841
+        ],
+        [
+          -1124751841
+        ]
+      ],
+      "指纹在seek后变化": false
+    },
+    {
+      "step": "诊断-进度点击",
+      "layoutBar": {
+        "x": 0,
+        "y": 234,
+        "width": 480,
+        "height": 36
+      },
+      "layoutProgress": {
+        "x": 40,
+        "y": 250,
+        "width": 282,
+        "height": 4
+      },
+      "hitByContainerLocal": {
+        "type": "seek",
+        "fraction": 0.5
+      },
+      "hitByViewLocal": null,
+      "elementId": 1,
+      "source": {
+        "state": "ready",
+        "currentTime": 11.66,
+        "duration": 23.32,
+        "rawDuration": 23.32,
+        "playing": false
+      }
+    },
+    {
+      "0": {
+        "fwId": "probe-video-0",
+        "eventXY": [
+          40,
+          272
+        ],
+        "innerToContainer": {
+          "x": 20,
+          "y": 252
+        },
+        "target": "Rect"
+      },
+      "1": {
+        "fwId": "probe-video-0",
+        "eventXY": [
+          40,
+          272
+        ],
+        "innerToContainer": {
+          "x": 20,
+          "y": 252
+        },
+        "target": "Rect"
+      },
+      "2": {
+        "fwId": "probe-video-0",
+        "eventXY": [
+          201,
+          272
+        ],
+        "innerToContainer": {
+          "x": 181,
+          "y": 252
+        },
+        "target": "Rect"
+      },
+      "step": "诊断-TAP事件坐标"
+    },
+    {
+      "0": {
+        "kind": "create",
+        "seq": 1,
+        "url": "http://probe.local/video.webm?i=1"
+      },
+      "1": {
+        "kind": "emptied",
+        "seq": 1,
+        "currentTime": 0,
+        "src": "p://probe.local/video.webm?i=1"
+      },
+      "2": {
+        "kind": "loadeddata",
+        "seq": 1,
+        "currentTime": 0,
+        "src": "p://probe.local/video.webm?i=1"
+      },
+      "3": {
+        "kind": "play",
+        "seq": 1,
+        "currentTime": 0.004423,
+        "src": "p://probe.local/video.webm?i=1"
+      },
+      "4": {
+        "kind": "pause",
+        "seq": 1,
+        "currentTime": 1.218043,
+        "src": "p://probe.local/video.webm?i=1"
+      },
+      "5": {
+        "kind": "seeking",
+        "seq": 1,
+        "currentTime": 11.66,
+        "src": "p://probe.local/video.webm?i=1"
+      },
+      "6": {
+        "kind": "seeked",
+        "seq": 1,
+        "currentTime": 11.66,
+        "src": "p://probe.local/video.webm?i=1"
+      },
+      "step": "诊断-视频元素事件日志"
+    },
+    {
+      "step": "单路-点按音量25%",
+      "实际音量": 0.25
+    },
+    {
+      "step": "并发-1路播放-FPS",
+      "frames": 181,
+      "elapsedMs": 3002.6000000059603,
+      "fps": 60.28108972212107,
+      "longFrames": 0,
+      "内存MB": 9.5,
+      "解码帧数_采样区间": 0,
+      "视频帧合成调用_采样区间": 0,
+      "合成调用总数_采样区间": 0
+    },
+    {
+      "step": "并发-4路播放-FPS",
+      "frames": 136,
+      "elapsedMs": 3000.399999994039,
+      "fps": 45.32728969479743,
+      "longFrames": 2,
+      "内存MB": 9.5,
+      "解码帧数_采样区间": 305,
+      "视频帧合成调用_采样区间": 540,
+      "合成调用总数_采样区间": 540
+    },
+    {
+      "step": "并发-8路播放-FPS",
+      "frames": 35,
+      "elapsedMs": 3077.6999999821182,
+      "fps": 11.372128537610344,
+      "longFrames": 33,
+      "内存MB": 9.5,
+      "解码帧数_采样区间": 673,
+      "视频帧合成调用_采样区间": 304,
+      "合成调用总数_采样区间": 304
+    },
+    {
+      "step": "并发-8路-各路进度",
+      "progresses": [
+        19.536318,
+        7.90577,
+        7.936615,
+        7.93791,
+        4.152889,
+        4.137851,
+        4.126786,
+        4.123187
+      ]
+    }
+  ],
+  "startedAt": "2026-08-05T03:00:12.702Z"
+}
