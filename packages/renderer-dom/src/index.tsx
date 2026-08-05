@@ -1,4 +1,7 @@
 import {
+  findNodeById,
+  isAiImageNode,
+  isAiVideoNode,
   isFrameNode,
   assertShapeCoverage,
   type CanvasNode,
@@ -19,6 +22,8 @@ import {
   type NodeResize,
 } from './canvas-interaction'
 import { InteractionOverlay } from './interaction-overlay'
+import { RendererStyles } from './renderer-styles'
+import { GenerationUnitToolbar } from './shapes/generation-unit'
 import { DOM_SHAPES } from './shapes/registry'
 import { createViewportInteraction, type ViewportInteraction } from './viewport-interaction'
 
@@ -141,8 +146,53 @@ export function createDomRenderer(): RendererAdapter {
         rootBounds={rootBounds}
       />
     )
+    const canvasTree = renderNode(
+      ctx.root,
+      { x: 0, y: 0 },
+      true,
+      ctx.selection,
+      previewMoves,
+      previewResizes,
+      bounds,
+      visibleNodeIds,
+      ctx.callbacks.onNodeAction,
+      ctx.callbacks.onNodesDelete,
+      activeVideoFwId,
+      scale,
+      0,
+      connectionLayer,
+    )
+    const hoveredFwId = interactionPreview.hoveredFwId ?? null
+    const hoveredNode = hoveredFwId === null ? null : findNodeById(ctx.root, hoveredFwId)
+    const hoveredRect = hoveredFwId === null ? undefined : bounds.get(hoveredFwId)
+    const generationToolbar =
+      hoveredNode !== null &&
+      hoveredRect !== undefined &&
+      (isAiImageNode(hoveredNode) || isAiVideoNode(hoveredNode))
+        ? (
+            <div
+              data-fw-toolbar-anchor="true"
+              style={{
+                position: 'absolute',
+                left: `${hoveredRect.x + hoveredRect.width}px`,
+                top: `${hoveredRect.y}px`,
+                width: 0,
+                height: 0,
+                pointerEvents: 'none',
+              }}
+            >
+              <GenerationUnitToolbar
+                node={hoveredNode}
+                viewportScale={scale}
+                onNodeAction={ctx.callbacks.onNodeAction}
+                onNodesDelete={ctx.callbacks.onNodesDelete}
+              />
+            </div>
+          )
+        : null
     root.render(
       <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+        <RendererStyles />
         <div
           data-fw-viewport="true"
           style={{
@@ -153,22 +203,7 @@ export function createDomRenderer(): RendererAdapter {
             transformOrigin: 'top left',
           }}
         >
-          {renderNode(
-            ctx.root,
-            { x: 0, y: 0 },
-            true,
-            ctx.selection,
-            previewMoves,
-            previewResizes,
-            bounds,
-            visibleNodeIds,
-            ctx.callbacks.onNodeAction,
-            ctx.callbacks.onNodesDelete,
-            activeVideoFwId,
-            scale,
-            0,
-            connectionLayer,
-          )}
+          {canvasTree}
         </div>
         <InteractionOverlay
           preview={interactionPreview}
@@ -183,6 +218,7 @@ export function createDomRenderer(): RendererAdapter {
             const rect = bounds.get(fwId)
             return rect === undefined ? null : { fwId, rect }
           })()}
+          toolbar={generationToolbar}
         />
       </div>,
     )

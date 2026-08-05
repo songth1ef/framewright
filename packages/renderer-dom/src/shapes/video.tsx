@@ -49,7 +49,7 @@ export function VideoShape({ node, position, size, active }: ShapeProps): ReactN
       poster={node.poster ?? undefined}
       controls
       playsInline
-      preload="metadata"
+      preload="none"
       style={style}
     />
   )

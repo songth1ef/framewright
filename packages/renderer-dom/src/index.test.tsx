@@ -87,6 +87,15 @@ function makeGenerationContext(
           status: 'failed',
           errorMessage: null,
         }),
+        createAiVideoNode({
+          fwId: 'succeeded-video',
+          x: 530,
+          y: 190,
+          width: 240,
+          height: 160,
+          status: 'succeeded',
+          src: '/fixtures/generated-preview.mp4',
+        }),
       ],
     }),
     selection: [],
@@ -346,6 +355,10 @@ describe('createDomRenderer', () => {
     expect(badge.textContent).toBe('AI生成')
     expect(badge.style.left).toBe(`${GEN_UNIT_STYLE.badgeInset}px`)
     expect(badge.style.top).toBe(`${GEN_UNIT_STYLE.badgeInset}px`)
+    const generatedVideo = container!.querySelector(
+      '[data-fw-id="succeeded-video"] video',
+    ) as HTMLVideoElement
+    expect(generatedVideo.preload).toBe('none')
     await act(async () => renderer.destroy())
   })
 
@@ -370,7 +383,7 @@ describe('createDomRenderer', () => {
     expect(video).toBeInstanceOf(HTMLVideoElement)
     expect(video.controls).toBe(true)
     expect(video.playsInline).toBe(true)
-    expect(video.preload).toBe('metadata')
+    expect(video.preload).toBe('none')
     expect(video.dataset.fwInteraction).toBeUndefined()
     expect(video.style.pointerEvents).toBe('none')
     expect(video.getAttribute('src')).toBe('/fixtures/preview.mp4')

@@ -7,6 +7,7 @@ interface InteractionOverlayProps {
   viewport: Viewport
   selectionBounds: ReadonlyArray<{ fwId: string; rect: Rect }>
   hoverBounds: { fwId: string; rect: Rect } | null
+  toolbar?: ReactNode
 }
 
 function screenRect(rect: Rect, viewport: Viewport): CSSProperties {
@@ -62,6 +63,7 @@ export function InteractionOverlay({
   viewport,
   selectionBounds,
   hoverBounds,
+  toolbar,
 }: InteractionOverlayProps): ReactNode {
   const marquee = preview.marquee ?? null
   const singleSelection = selectionBounds.length === 1 ? selectionBounds[0]! : null
@@ -103,6 +105,7 @@ export function InteractionOverlay({
             }}
           />
         )}
+        {toolbar}
         {selectionRect === null ? null : (
           <div
             data-fw-selection-outline={singleSelection === null ? 'group' : 'single'}

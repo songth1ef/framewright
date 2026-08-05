@@ -9,6 +9,7 @@ import {
 } from '@framewright/core'
 import type { CSSProperties, ReactNode } from 'react'
 import { toNodeStyle } from '../node-style'
+import { PROGRESS_ANIMATION, SKELETON_ANIMATION } from '../renderer-styles'
 
 type GenerationNode = AiImageNode | AiVideoNode
 
@@ -23,9 +24,6 @@ export interface GenerationUnitProps {
   onNodeAction(fwId: string, action: string): void
   onNodesDelete(fwIds: readonly string[]): void
 }
-
-const SKELETON_ANIMATION = 'fw-generation-skeleton-sweep'
-const PROGRESS_ANIMATION = 'fw-generation-progress-indeterminate'
 
 const GENERATION_TOOLBAR_STYLE = {
   offset: 8,
@@ -57,16 +55,14 @@ const interactionButtonStyle: CSSProperties = {
   cursor: 'pointer',
 }
 
-function NodeToolbar({
+export function GenerationUnitToolbar({
   node,
   viewportScale,
-  cumulativeRotation,
   onNodeAction,
   onNodesDelete,
 }: {
   node: GenerationNode
   viewportScale: number
-  cumulativeRotation: number
   onNodeAction: GenerationUnitProps['onNodeAction']
   onNodesDelete: GenerationUnitProps['onNodesDelete']
 }): ReactNode {
@@ -111,11 +107,9 @@ function NodeToolbar({
         borderRadius: `${GENERATION_TOOLBAR_STYLE.borderRadius}px`,
         background: GENERATION_TOOLBAR_STYLE.background,
         boxShadow: GENERATION_TOOLBAR_STYLE.shadow,
-        opacity: 0,
-        visibility: 'hidden',
-        pointerEvents: 'none',
+        pointerEvents: 'auto',
         whiteSpace: 'nowrap',
-        transform: `rotate(${-cumulativeRotation}deg) scale(${inverseScale})`,
+        transform: `scale(${inverseScale})`,
         transformOrigin: 'bottom right',
       }}
     >
@@ -229,7 +223,12 @@ function SucceededContent({ node }: { node: GenerationNode }): ReactNode {
   const media = isAiImageNode(node) ? (
     <img alt="" draggable={false} src={node.src ?? undefined} style={mediaStyle} />
   ) : (
-    <video poster={isAiVideoNode(node) ? node.poster ?? undefined : undefined} src={node.src ?? undefined} style={mediaStyle} />
+    <video
+      poster={isAiVideoNode(node) ? node.poster ?? undefined : undefined}
+      preload="none"
+      src={node.src ?? undefined}
+      style={mediaStyle}
+    />
   )
 
   return (
@@ -327,11 +326,7 @@ export function GenerationUnit({
   node,
   position,
   size,
-  active,
-  viewportScale,
-  cumulativeRotation,
   onNodeAction,
-  onNodesDelete,
 }: GenerationUnitProps): ReactNode {
   const isEmpty = node.status === 'empty'
   const isFailed = node.status === 'failed'
@@ -351,33 +346,6 @@ export function GenerationUnit({
       data-fw-generation-unit="true"
       style={style}
     >
-      <style>{`
-        @keyframes ${SKELETON_ANIMATION} {
-          from { transform: translateX(-100%); }
-          to { transform: translateX(225%); }
-        }
-        @keyframes ${PROGRESS_ANIMATION} {
-          0%, 100% { transform: translateX(-100%); }
-          50% { transform: translateX(285%); }
-        }
-        [data-fw-generation-unit="true"]:hover {
-          z-index: 1;
-        }
-        [data-fw-generation-unit="true"]:hover > [data-fw-node-toolbar="true"] {
-          opacity: 1 !important;
-          visibility: visible !important;
-          pointer-events: auto !important;
-        }
-      `}</style>
-      {active ? null : (
-        <NodeToolbar
-          node={node}
-          viewportScale={viewportScale}
-          cumulativeRotation={cumulativeRotation}
-          onNodeAction={onNodeAction}
-          onNodesDelete={onNodesDelete}
-        />
-      )}
       <div
         data-fw-generation-surface="true"
         style={{

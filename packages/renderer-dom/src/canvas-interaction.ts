@@ -188,7 +188,6 @@ export function createCanvasInteraction(
 
   const updateHoverCursor = (target: EventTarget | null): void => {
     if (shouldIgnore(target)) {
-      setHovered(null)
       setCursor('default')
       return
     }
