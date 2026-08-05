@@ -20,7 +20,16 @@ export interface ViewportCullingOptions {
    * 设为 0 时只保留当前视口相交项。
    */
   overscan?: number
+  /** 最多挂载多少个节点（包含 root 容器）。默认 1500。 */
+  maxNodes?: number
+  /** 最多返回多少条连线。默认 1000。 */
+  maxConnections?: number
 }
+
+/** 2535 个节点时 DOM 已降至 24fps；1500 为该实测拐点留出约 40% 余量。 */
+export const DEFAULT_MAX_NODES = 1_500
+/** 100% 缩放实测 367 条连线可流畅运行；1000 保留约 2.7 倍余量并阻断万级爆炸。 */
+export const DEFAULT_MAX_CONNECTIONS = 1_000
 
 function getViewportBounds(
   viewport: Viewport,
@@ -45,6 +54,21 @@ function getViewportBounds(
 
 function getCullingBounds(viewport: Viewport, options: ViewportCullingOptions): Rect {
   return getViewportBounds(viewport, options, Math.max(0, options.overscan ?? 1))
+}
+
+function getLimit(value: number | undefined, fallback: number, name: string, allowZero: boolean) {
+  const limit = value ?? fallback
+  const minimum = allowZero ? 0 : 1
+  if (!Number.isSafeInteger(limit) || limit < minimum) {
+    throw new RangeError(`${name} 必须是${allowZero ? '非负' : '正'}安全整数`)
+  }
+  return limit
+}
+
+function squaredDistanceToRectCenter(rect: Rect, center: Point): number {
+  const deltaX = rect.x + rect.width / 2 - center.x
+  const deltaY = rect.y + rect.height / 2 - center.y
+  return deltaX * deltaX + deltaY * deltaY
 }
 
 function intersects(a: Rect, b: Rect): boolean {
@@ -75,6 +99,13 @@ export interface ViewportCullingResult {
   validViewportBounds: Rect
 }
 
+interface NodeCandidate {
+  fwId: string
+  distance: number
+  order: number
+  isRoot: boolean
+}
+
 /** 返回节点裁剪集合及其可安全复用的画布区域。 */
 export function getViewportCullingResult(
   root: FrameNode,
@@ -82,23 +113,50 @@ export function getViewportCullingResult(
   options: ViewportCullingOptions,
 ): ViewportCullingResult {
   const bounds = getCullingBounds(viewport, options)
-  const ids = new Set<string>()
+  const currentBounds = getViewportBounds(viewport, options, 0)
+  const viewportCenter = {
+    x: currentBounds.x + currentBounds.width / 2,
+    y: currentBounds.y + currentBounds.height / 2,
+  }
+  const candidates: NodeCandidate[] = []
 
   walkTreePruned(root, (node, absolute) => {
     if (!node.visible) return false
-    if (
-      intersects(bounds, {
-        x: absolute.x,
-        y: absolute.y,
-        width: node.width,
-        height: node.height,
+    const nodeBounds = {
+      x: absolute.x,
+      y: absolute.y,
+      width: node.width,
+      height: node.height,
+    }
+    if (intersects(bounds, nodeBounds)) {
+      candidates.push({
+        fwId: node.fwId,
+        distance: squaredDistanceToRectCenter(nodeBounds, viewportCenter),
+        order: candidates.length,
+        isRoot: node === root,
       })
-    ) {
-      ids.add(node.fwId)
     }
   })
 
-  return { nodeIds: ids, validViewportBounds: bounds }
+  const maxNodes = getLimit(options.maxNodes, DEFAULT_MAX_NODES, 'maxNodes', false)
+  if (candidates.length <= maxNodes) {
+    return {
+      nodeIds: new Set(candidates.map(({ fwId }) => fwId)),
+      validViewportBounds: bounds,
+    }
+  }
+
+  candidates.sort(
+    (left, right) =>
+      Number(right.isRoot) - Number(left.isRoot) ||
+      left.distance - right.distance ||
+      left.order - right.order,
+  )
+  return {
+    nodeIds: new Set(candidates.slice(0, maxNodes).map(({ fwId }) => fwId)),
+    // 排名依赖真实视口中心；截断后只允许相同视口复用，平移必须重新排名。
+    validViewportBounds: currentBounds,
+  }
 }
 
 /**
@@ -216,6 +274,11 @@ export function getConnectionsInViewport(
   boundsCache?: ConnectionBoundsCache,
 ): ConnectionItem[] {
   const bounds = getCullingBounds(viewport, options)
+  const currentBounds = getViewportBounds(viewport, options, 0)
+  const viewportCenter = {
+    x: currentBounds.x + currentBounds.width / 2,
+    y: currentBounds.y + currentBounds.height / 2,
+  }
   const geometry = new Map<string, { node: CanvasNode; absolute: Point }>()
 
   walkTreePruned(root, (node, absolute) => {
@@ -223,28 +286,66 @@ export function getConnectionsInViewport(
     geometry.set(node.fwId, { node, absolute })
   })
 
-  const connections: ConnectionItem[] = []
+  const maxConnections = getLimit(
+    options.maxConnections,
+    DEFAULT_MAX_CONNECTIONS,
+    'maxConnections',
+    true,
+  )
+  const candidates: Array<{
+    fromFwId: string
+    toFwId: string
+    from: Point
+    to: Point
+    distance: number
+    order: number
+  }> = []
   const connectionKeys = new Set<string>()
   for (const { node, absolute } of geometry.values()) {
     if (!isAiImageNode(node) && !isAiVideoNode(node)) continue
     for (const sourceFwId of node.sourceFwIds) {
       const source = geometry.get(sourceFwId)
       if (source === undefined) continue
-      const curve = computeConnectionCurve(
-        {
-          x: source.absolute.x + source.node.width,
-          y: source.absolute.y + source.node.height / 2,
-        },
-        { x: absolute.x, y: absolute.y + node.height / 2 },
-      )
+      const from = {
+        x: source.absolute.x + source.node.width,
+        y: source.absolute.y + source.node.height / 2,
+      }
+      const to = { x: absolute.x, y: absolute.y + node.height / 2 }
       const connectionKey = `${sourceFwId}\u0000${node.fwId}`
       connectionKeys.add(connectionKey)
-      const connectionBounds =
-        boundsCache?.get(sourceFwId, node.fwId, curve) ?? getConnectionBounds(curve)
-      if (!intersects(bounds, connectionBounds)) continue
-      connections.push({ fromFwId: sourceFwId, toFwId: node.fwId, curve })
+      const midpoint = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }
+      const deltaX = midpoint.x - viewportCenter.x
+      const deltaY = midpoint.y - viewportCenter.y
+      candidates.push({
+        fromFwId: sourceFwId,
+        toFwId: node.fwId,
+        from,
+        to,
+        distance: deltaX * deltaX + deltaY * deltaY,
+        order: candidates.length,
+      })
     }
   }
   boundsCache?.retain(connectionKeys)
+  if (maxConnections === 0) return []
+  if (candidates.length > maxConnections) {
+    candidates.sort(
+      (left, right) => left.distance - right.distance || left.order - right.order,
+    )
+  }
+
+  const connections: ConnectionItem[] = []
+  for (const candidate of candidates) {
+    const curve = computeConnectionCurve(candidate.from, candidate.to)
+    const connectionBounds =
+      boundsCache?.get(candidate.fromFwId, candidate.toFwId, curve) ?? getConnectionBounds(curve)
+    if (!intersects(bounds, connectionBounds)) continue
+    connections.push({
+      fromFwId: candidate.fromFwId,
+      toFwId: candidate.toFwId,
+      curve,
+    })
+    if (connections.length === maxConnections) break
+  }
   return connections
 }

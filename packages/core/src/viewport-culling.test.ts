@@ -1,7 +1,12 @@
 import { performance } from 'node:perf_hooks'
 import { describe, expect, it } from 'vitest'
+import { createScaleFixture } from './scale-fixture'
 import { createAiImageNode, createBoxNode, createFrameNode } from './node-schema'
+import { getContentBounds } from './viewport'
+import { collectVisibleNodeIds } from './visibility'
 import {
+  DEFAULT_MAX_CONNECTIONS,
+  DEFAULT_MAX_NODES,
   ConnectionBoundsCache,
   canReuseViewportCulling,
   getConnectionsInViewport,
@@ -69,6 +74,61 @@ describe('getNodesInViewport', () => {
     expect(ids.has('outside-after-zoom')).toBe(false)
   })
 
+  it('超过上限时保留距真实视口中心最近的节点，而不是按遍历顺序截断', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      width: 100,
+      height: 100,
+      children: [
+        createBoxNode({ fwId: 'first-but-far', x: 0, y: 0, width: 10, height: 10 }),
+        createBoxNode({ fwId: 'nearest', x: 45, y: 45, width: 10, height: 10 }),
+        createBoxNode({ fwId: 'second-nearest', x: 55, y: 45, width: 10, height: 10 }),
+      ],
+    })
+
+    expect([
+      ...getNodesInViewport(root, viewport, {
+        ...screen,
+        overscan: 0,
+        maxNodes: 3,
+      }),
+    ]).toEqual(['root', 'nearest', 'second-nearest'])
+  })
+
+  it.each([2, 1, 0.5, 0.25, 0.1, 0.01])('scale=%s 时挂载数不超过默认上限', (scale) => {
+    const root = createScaleFixture({
+      nodeCount: 10_000,
+      connectionPattern: 'none',
+      seed: 17,
+    })
+    const ids = getNodesInViewport(root, { scale, offsetX: 0, offsetY: 0 }, {
+      width: root.width * scale,
+      height: root.height * scale,
+      overscan: 0,
+    })
+
+    expect(ids.size).toBeLessThanOrEqual(DEFAULT_MAX_NODES)
+  })
+
+  it('数量上限只约束裁剪结果，不改变完整树的可见性与几何语义', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      x: 10,
+      y: 20,
+      width: 500,
+      height: 400,
+      children: Array.from({ length: 20 }, (_, index) =>
+        createBoxNode({ fwId: `node-${index}`, x: index * 20, y: index * 10 }),
+      ),
+    })
+    const expectedVisible = collectVisibleNodeIds(root)
+    const expectedBounds = getContentBounds(root)
+
+    expect(getNodesInViewport(root, viewport, { ...screen, maxNodes: 2 }).size).toBe(2)
+    expect(collectVisibleNodeIds(root)).toEqual(expectedVisible)
+    expect(getContentBounds(root)).toEqual(expectedBounds)
+  })
+
   it('叠加 visible 级联语义，隐藏 frame 的后代即使在视口内也不挂载', () => {
     const root = createFrameNode({
       fwId: 'root',
@@ -108,6 +168,23 @@ describe('getNodesInViewport', () => {
     expect(refreshed.nodeIds.has('next')).toBe(true)
   })
 
+  it('触发数量上限后，平移会重新按新视口中心选择最近节点', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      width: 1_000,
+      height: 100,
+      children: [
+        createBoxNode({ fwId: 'left', x: 20, y: 20, width: 10, height: 10 }),
+        createBoxNode({ fwId: 'right', x: 170, y: 20, width: 10, height: 10 }),
+      ],
+    })
+    const options = { ...screen, maxNodes: 2 }
+    const previous = getViewportCullingResult(root, viewport, options)
+
+    expect(previous.nodeIds.has('left')).toBe(true)
+    expect(canReuseViewportCulling(previous, { ...viewport, offsetX: -100 }, options)).toBe(false)
+  })
+
   it('10000 节点裁剪保持在 1ms 级', () => {
     const children = Array.from({ length: 10_000 }, (_, index) =>
       createBoxNode({
@@ -126,6 +203,28 @@ describe('getNodesInViewport', () => {
     const averageMs = (performance.now() - startedAt) / 20
 
     expect(averageMs).toBeLessThan(5)
+  })
+
+  it('10000 节点全落入视口并触发排序时，单次裁剪仍在 25ms 内', () => {
+    const root = createScaleFixture({
+      nodeCount: 10_000,
+      connectionPattern: 'many-to-many',
+      seed: 23,
+    })
+    const zoomedOut = { scale: 0.1, offsetX: 0, offsetY: 0 }
+    const fullCanvasScreen = {
+      width: root.width * zoomedOut.scale,
+      height: root.height * zoomedOut.scale,
+      overscan: 0,
+    }
+
+    getNodesInViewport(root, zoomedOut, fullCanvasScreen)
+    const startedAt = performance.now()
+    const ids = getNodesInViewport(root, zoomedOut, fullCanvasScreen)
+    const elapsedMs = performance.now() - startedAt
+
+    expect(ids.size).toBe(DEFAULT_MAX_NODES)
+    expect(elapsedMs).toBeLessThan(25)
   })
 })
 
@@ -205,5 +304,69 @@ describe('getConnectionsInViewport', () => {
     expect(
       getConnectionsInViewport(makeRoot(70), viewport, { ...screen, overscan: 0 }, cache),
     ).toHaveLength(1)
+  })
+
+  it('连线数量始终受默认上限约束', () => {
+    const sourceFwIds = Array.from({ length: DEFAULT_MAX_CONNECTIONS + 10 }, (_, index) =>
+      `source-${index}`,
+    )
+    const root = createFrameNode({
+      fwId: 'root',
+      width: 100,
+      height: 100,
+      children: [
+        ...sourceFwIds.map((fwId, index) =>
+          createBoxNode({ fwId, x: -200, y: index % 100, width: 20, height: 20 }),
+        ),
+        createAiImageNode({
+          fwId: 'target',
+          x: 300,
+          y: 40,
+          width: 20,
+          height: 20,
+          sourceFwIds,
+        }),
+      ],
+    })
+
+    expect(
+      getConnectionsInViewport(root, viewport, { ...screen, overscan: 0 }),
+    ).toHaveLength(DEFAULT_MAX_CONNECTIONS)
+  })
+
+  it('maxConnections=0 可显式关闭连线输出', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      children: [
+        createBoxNode({ fwId: 'source' }),
+        createAiImageNode({ fwId: 'target', sourceFwIds: ['source'] }),
+      ],
+    })
+
+    expect(
+      getConnectionsInViewport(root, viewport, { ...screen, maxConnections: 0 }),
+    ).toEqual([])
+  })
+
+  it('10000 节点 many-to-many 连线裁剪单次在 75ms 内且不超过上限', () => {
+    const root = createScaleFixture({
+      nodeCount: 10_000,
+      connectionPattern: 'many-to-many',
+      seed: 29,
+    })
+    const zoomedOut = { scale: 0.1, offsetX: 0, offsetY: 0 }
+    const fullCanvasScreen = {
+      width: root.width * zoomedOut.scale,
+      height: root.height * zoomedOut.scale,
+      overscan: 0,
+    }
+
+    getConnectionsInViewport(root, zoomedOut, fullCanvasScreen)
+    const startedAt = performance.now()
+    const connections = getConnectionsInViewport(root, zoomedOut, fullCanvasScreen)
+    const elapsedMs = performance.now() - startedAt
+
+    expect(connections).toHaveLength(DEFAULT_MAX_CONNECTIONS)
+    expect(elapsedMs).toBeLessThan(75)
   })
 })
