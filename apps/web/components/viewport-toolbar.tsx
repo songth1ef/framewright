@@ -1,3 +1,4 @@
+import type { InteractionMode } from '@framewright/core'
 import { useRef, type CSSProperties } from 'react'
 
 interface RendererOption {
@@ -8,9 +9,11 @@ interface RendererOption {
 interface ViewportToolbarProps {
   activeRendererId: string
   renderers: readonly RendererOption[]
+  interactionMode: InteractionMode
   scale: number
   disabled: boolean
   onRendererChange(id: string): void
+  onInteractionModeChange(mode: InteractionMode): void
   onZoomIn(): void
   onZoomOut(): void
   onFitCanvas(): void
@@ -62,9 +65,11 @@ function formatScale(scale: number): string {
 export function ViewportToolbar({
   activeRendererId,
   renderers,
+  interactionMode,
   scale,
   disabled,
   onRendererChange,
+  onInteractionModeChange,
   onZoomIn,
   onZoomOut,
   onFitCanvas,
@@ -77,6 +82,9 @@ export function ViewportToolbar({
   const activeIndex = renderers.findIndex((renderer) => renderer.id === activeRendererId)
   const active = renderers[activeIndex]
   const next = renderers[(activeIndex + 1) % renderers.length]
+  const nextInteractionMode: InteractionMode = interactionMode === 'unified' ? 'native' : 'unified'
+  const interactionModeLabel = interactionMode === 'unified' ? '统一' : '原生'
+  const nextInteractionModeLabel = nextInteractionMode === 'unified' ? '统一' : '原生'
 
   return (
     <div role="toolbar" aria-label="画布工具栏" data-testid="toolbar" style={toolbarStyle}>
@@ -167,6 +175,30 @@ export function ViewportToolbar({
         >
           切换
         </button>
+      </div>
+
+      <div role="group" aria-label="交互模式" style={groupStyle}>
+        <span style={{ color: '#667085', fontSize: 12 }}>交互</span>
+        <span
+          data-testid="active-interaction-mode"
+          style={{ color: '#101828', fontSize: 13, fontWeight: 600 }}
+        >
+          {interactionModeLabel}
+        </span>
+        <button
+          type="button"
+          data-testid="interaction-mode-switch"
+          aria-label={`切换交互模式，当前 ${interactionModeLabel}`}
+          title={`切换到${nextInteractionModeLabel}交互`}
+          disabled={disabled}
+          onClick={() => onInteractionModeChange(nextInteractionMode)}
+          style={{ ...buttonStyle, borderColor: '#d0d5dd', background: '#f9fafb' }}
+        >
+          切换
+        </button>
+      </div>
+
+      <div role="group" aria-label="帮助" style={groupStyle}>
         <button
           type="button"
           aria-label="打开快捷键帮助"

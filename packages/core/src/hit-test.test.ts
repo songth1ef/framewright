@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { createBoxNode, createFrameNode } from './node-schema'
-import { collectNodesInRect, hitTestPoint, intersects, rectFromPoints } from './hit-test'
+import {
+  collectNodesInRect,
+  filterSelectableHitCandidate,
+  hitTestPoint,
+  intersects,
+  rectFromPoints,
+} from './hit-test'
 
 function makeTree() {
   const hiddenFrame = createFrameNode({
@@ -126,5 +132,48 @@ describe('hitTestPoint', () => {
 
   it('只命中 root 的空白区域时返回 null', () => {
     expect(hitTestPoint(makeTree(), { x: 490, y: 390 })).toBeNull()
+  })
+})
+
+describe('filterSelectableHitCandidate', () => {
+  const root = createFrameNode({
+    fwId: 'root',
+    width: 500,
+    height: 400,
+    children: [
+      createBoxNode({ fwId: 'selectable', width: 50, height: 50 }),
+      createBoxNode({ fwId: 'locked', width: 50, height: 50, locked: true }),
+      createFrameNode({ fwId: 'transparent-frame', width: 50, height: 50 }),
+      createFrameNode({
+        fwId: 'opaque-frame',
+        width: 50,
+        height: 50,
+        background: '#fff',
+      }),
+    ],
+  })
+
+  // renderer-leafer 原 selectableHit 中的业务过滤参考实现。保留在测试里，
+  // 用表驱动证明抽取后的纯函数对所有既有分支保持等价。
+  const legacyBusinessFilter = (candidateFwId: string | null): string | null => {
+    if (candidateFwId === null || candidateFwId === root.fwId) return null
+    const candidate = [root, ...root.children].find((node) => node.fwId === candidateFwId)
+    if (candidate?.locked) return null
+    if (candidate?.fwType === 'frame' && candidate.background === null) return null
+    return candidate === undefined ? null : candidateFwId
+  }
+
+  it.each([
+    ['空候选', null],
+    ['root', 'root'],
+    ['locked 节点', 'locked'],
+    ['透明 frame', 'transparent-frame'],
+    ['普通节点', 'selectable'],
+    ['有背景 frame', 'opaque-frame'],
+    ['不存在的节点', 'missing'],
+  ] as const)('%s 与抽取前的业务过滤结果完全一致', (_label, candidateFwId) => {
+    expect(filterSelectableHitCandidate(root, candidateFwId)).toBe(
+      legacyBusinessFilter(candidateFwId),
+    )
   })
 })

@@ -1,5 +1,5 @@
-import { walkTree, type Point } from './node-tree'
-import type { FrameNode } from './node-schema'
+import { findNodeById, walkTree, type Point } from './node-tree'
+import { isFrameNode, type FrameNode } from './node-schema'
 import type { Rect } from './renderer-adapter'
 import { collectVisibleNodeIds } from './visibility'
 
@@ -58,4 +58,23 @@ export function hitTestPoint(root: FrameNode, canvasPoint: Point): string | null
   })
 
   return hit
+}
+
+/**
+ * 对空间查询给出的候选节点执行与渲染器无关的业务过滤。
+ *
+ * unified 与 native 模式只替换候选节点的来源；root、锁定节点和无背景 frame
+ * 都不属于可选中的业务单元。不存在的 fwId 同样按空命中处理。
+ */
+export function filterSelectableHitCandidate(
+  root: FrameNode,
+  candidateFwId: string | null,
+): string | null {
+  if (candidateFwId === null || candidateFwId === root.fwId) return null
+
+  const candidate = findNodeById(root, candidateFwId)
+  if (candidate === null || candidate.locked) return null
+  if (isFrameNode(candidate) && candidate.background === null) return null
+
+  return candidateFwId
 }

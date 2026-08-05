@@ -19,6 +19,7 @@ import {
   type AiVideoNode,
   type FrameNode,
   type InboundRef,
+  type InteractionMode,
   type NodeSlot,
   type RenderContext,
   type RendererAdapter,
@@ -37,6 +38,10 @@ import { createDocumentAutosave, type DocumentAutosave } from './document-autosa
 import { createGenerationController, type GenerationController, type GenerationNodePatch } from './generation-actions'
 import { createHttpGenerationBackend } from './generation-client'
 import { FpsMonitor } from './fps-monitor-view'
+import {
+  readStoredInteractionMode,
+  writeStoredInteractionMode,
+} from './interaction-mode-storage'
 import { loadServerHistory } from './server-history'
 import type { ServerHistory } from './server-history'
 import {
@@ -140,6 +145,9 @@ export function RendererHost({
   // 会话状态住在这里，不在渲染器内部——切换时原样传给新渲染器。
   // viewport 只额外落用户本机的独立轻量记录，绝不进入 Document 自动保存。
   const [selection, setSelection] = useState<readonly string[]>(['box-front'])
+  const [interactionMode, setInteractionMode] = useState<InteractionMode>(
+    () => readStoredInteractionMode(),
+  )
   const [viewport, setViewport] = useState(() =>
     documentId === undefined ? DEFAULT_VIEWPORT : readStoredViewport(documentId),
   )
@@ -167,6 +175,11 @@ export function RendererHost({
     viewportRef.current = next
     setViewport(next)
     viewportStorageWriterRef.current?.queue(next)
+  }, [])
+
+  const commitInteractionMode = useCallback((next: InteractionMode): void => {
+    setInteractionMode(next)
+    writeStoredInteractionMode(next)
   }, [])
 
   useEffect(() => {
@@ -465,7 +478,7 @@ export function RendererHost({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  const ctx: RenderContext = { root, selection, viewport, callbacks }
+  const ctx: RenderContext = { root, selection, viewport, interactionMode, callbacks }
   const ctxRef = useRef(ctx)
   ctxRef.current = ctx
 
@@ -517,12 +530,14 @@ export function RendererHost({
       <ViewportToolbar
         activeRendererId={active?.id ?? ''}
         renderers={RENDERERS}
+        interactionMode={interactionMode}
         scale={viewport.scale}
         disabled={!historyReady}
         onRendererChange={(id) => {
           const index = RENDERERS.findIndex((renderer) => renderer.id === id)
           if (index >= 0) setActiveIndex(index)
         }}
+        onInteractionModeChange={commitInteractionMode}
         onZoomIn={() => commitViewport(zoomViewport(viewportRef.current, getViewportSize(), 1.1))}
         onZoomOut={() => commitViewport(zoomViewport(viewportRef.current, getViewportSize(), 1 / 1.1))}
         onFitCanvas={() =>

@@ -1,12 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { SHAPE_TYPES, isAiImageNode, isAiVideoNode } from './node-schema'
 import {
+  DEFAULT_INTERACTION_MODE,
   DEFAULT_VIEWPORT,
   assertShapeCoverage,
+  resolveInteractionMode,
   type RendererCallbacks,
 } from './renderer-adapter'
 import { createDemoDocument } from './demo-document'
 import { collectNodeIds, findNodeById } from './node-tree'
+
+describe('DEFAULT_INTERACTION_MODE', () => {
+  it('默认使用统一交互路径', () => {
+    expect(DEFAULT_INTERACTION_MODE).toBe('unified')
+    expect(resolveInteractionMode(undefined)).toBe('unified')
+    expect(resolveInteractionMode('native')).toBe('native')
+  })
+})
 
 describe('DEFAULT_VIEWPORT', () => {
   it('缩放 1、无偏移', () => {
