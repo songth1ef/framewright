@@ -127,6 +127,19 @@ Prisma client、SQLite 文件、迁移历史、`node_modules`、端口 3100 全�
 | **`prisma/dev.db` + migration** | 任何跑 DB 测试或迁移的 | 同一时刻只一个 agent 动 DB 层 |
 | **`pnpm install` / lockfile / `node_modules`** | 任何加依赖或建新包的 | **编排方预建包骨架并预先 install**，执行方一律禁止装包 |
 | **`.git/index.lock`** | 任何 commit 的 | 撞了等几秒重试，**绝不许删 lock 文件**——删别人正在用的锁会毁坏仓库状态 |
+| **git 索引本身** | 任何 `git add` 过但还没 commit 的 | 用 `git commit <paths>` 而不是 `git add <paths>` + `git commit`，见下 |
+
+#### 🔴 `git add` 按路径**防不住**别人已暂存的文件
+
+编排方踩过：某个 agent `git add` 完自己的文件、还没 commit 就被打断，
+编排方随后 `git add docs/foo.md; git commit` —— **`commit` 提交的是整个索引**，
+于是那 9 个文件被裹进一条写着 `docs(...)` 的提交里。内容没丢，但消息完全对不上。
+
+**正确写法是 pathspec 形式**，只提交指定路径、无视索引里的其它东西：
+
+```bash
+git commit -- <path1> <path2>        # 而不是 git add <paths> && git commit
+```
 
 ### 切分方法
 
