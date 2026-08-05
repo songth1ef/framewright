@@ -59,6 +59,7 @@ async function mountGenerationNode(
       }),
       selection: [],
       viewport,
+      interactionMode: 'unified',
       callbacks,
     }),
   )
@@ -191,13 +192,13 @@ describe('生成单元 hover 业务工具条', () => {
         rotation: 45,
       }),
       callbacks,
-      { ...DEFAULT_VIEWPORT, scale: 0.3 },
+      { ...DEFAULT_VIEWPORT, scale: 0.5 },
     )
 
     const toolbar = await hoverNode(nodeElement)
-    expect(toolbar.style.transform).toBe('scale(3.3333333333333335)')
+    expect(toolbar.style.transform).toBe('scale(2)')
     expect(toolbar.style.transformOrigin).toBe('bottom right')
-    expect(toolbar.style.bottom).toBe('calc(100% + 26.6666666666667px)')
+    expect(toolbar.style.bottom).toBe('calc(100% + 16px)')
 
     await act(async () => renderer.destroy())
   })
@@ -249,6 +250,7 @@ describe('生成单元 hover 业务工具条', () => {
         root: createFrameNode({ fwId: 'root', width: 1000, height: 1000, children }),
         selection: [],
         viewport: DEFAULT_VIEWPORT,
+        interactionMode: 'unified',
         callbacks: createCallbacks(),
       }),
     )

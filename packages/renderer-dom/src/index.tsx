@@ -2,6 +2,7 @@ import {
   findNodeById,
   getConnectionsInViewport,
   getNodesInViewport,
+  getViewportLod,
   isAiImageNode,
   isAiVideoNode,
   isFrameNode,
@@ -11,6 +12,7 @@ import {
   type Rect,
   type RenderContext,
   type RendererAdapter,
+  type ViewportDetailLevel,
 } from '@framewright/core'
 import type { ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -26,7 +28,7 @@ import {
 import { InteractionOverlay } from './interaction-overlay'
 import { RendererStyles } from './renderer-styles'
 import { GenerationUnitToolbar } from './shapes/generation-unit'
-import { DOM_SHAPES } from './shapes/registry'
+import { DOM_SHAPES, LodShape } from './shapes/registry'
 import { createViewportInteraction, type ViewportInteraction } from './viewport-interaction'
 
 function renderNode(
@@ -41,6 +43,7 @@ function renderNode(
   onNodeAction: RenderContext['callbacks']['onNodeAction'],
   onNodesDelete: RenderContext['callbacks']['onNodesDelete'],
   activeVideoFwId: string | null,
+  detail: ViewportDetailLevel,
   viewportScale: number,
   parentRotation: number,
   connectionLayer?: ReactNode,
@@ -54,7 +57,7 @@ function renderNode(
   const absolute: Point = { x: parentAbsolute.x + position.x, y: parentAbsolute.y + position.y }
   const cumulativeRotation = parentRotation + node.rotation
   const visible = parentVisible && node.visible
-  const Shape = DOM_SHAPES[node.fwType]
+  const Shape = detail === 'full' ? DOM_SHAPES[node.fwType] : LodShape
   const children = isFrameNode(node)
     ? (
         <>
@@ -72,6 +75,7 @@ function renderNode(
               onNodeAction,
               onNodesDelete,
               activeVideoFwId,
+              detail,
               viewportScale,
               cumulativeRotation,
             ),
@@ -88,6 +92,7 @@ function renderNode(
       size={size}
       selected={selection.includes(node.fwId)}
       active={node.fwId === activeVideoFwId}
+      detail={detail}
       viewportScale={viewportScale}
       cumulativeRotation={cumulativeRotation}
       videoVisible={videoVisibleNodeIds.has(node.fwId)}
@@ -155,6 +160,7 @@ export function createDomRenderer(): RendererAdapter {
     bounds = new Map<string, Rect>()
     visibleNodeIds = []
     const { scale, offsetX, offsetY } = ctx.viewport
+    const lod = getViewportLod(scale)
     const previewMoves = new Map(
       (interactionPreview.moves ?? []).map((move) => [move.fwId, { x: move.x, y: move.y }]),
     )
@@ -175,24 +181,29 @@ export function createDomRenderer(): RendererAdapter {
       height: cursorContainer?.clientHeight || ctx.root.height * scale,
     }
     const mountedNodeIds = getNodesInViewport(ctx.root, ctx.viewport, viewportSize)
-    const videoVisibleNodeIds = getNodesInViewport(ctx.root, ctx.viewport, {
-      ...viewportSize,
-      overscan: 0,
-    })
+    const videoVisibleNodeIds =
+      lod.detail === 'full'
+        ? getNodesInViewport(ctx.root, ctx.viewport, {
+            ...viewportSize,
+            overscan: 0,
+          })
+        : new Set<string>()
     const rootBounds: Rect = {
       x: ctx.root.x,
       y: ctx.root.y,
       width: ctx.root.width,
       height: ctx.root.height,
     }
-    const connectionLayer = (
-      <ConnectionLayer
-        items={getConnectionsInViewport(ctx.root, ctx.viewport, viewportSize)}
-        selection={ctx.selection}
-        scale={scale}
-        rootBounds={rootBounds}
-      />
-    )
+    const connectionLayer =
+      lod.connections === 'hidden' ? undefined : (
+        <ConnectionLayer
+          items={getConnectionsInViewport(ctx.root, ctx.viewport, viewportSize)}
+          selection={ctx.selection}
+          scale={scale}
+          rootBounds={rootBounds}
+          detail={lod.connections}
+        />
+      )
     const canvasTree = renderNode(
       ctx.root,
       { x: 0, y: 0 },
@@ -205,6 +216,7 @@ export function createDomRenderer(): RendererAdapter {
       ctx.callbacks.onNodeAction,
       ctx.callbacks.onNodesDelete,
       activeVideoFwId,
+      lod.detail,
       scale,
       0,
       connectionLayer,
@@ -216,6 +228,7 @@ export function createDomRenderer(): RendererAdapter {
       hoveredNode !== null &&
       hoveredRect !== undefined &&
       hoveredFwId !== null &&
+      lod.detail === 'full' &&
       mountedNodeIds.has(hoveredFwId) &&
       (isAiImageNode(hoveredNode) || isAiVideoNode(hoveredNode))
         ? (
@@ -244,6 +257,7 @@ export function createDomRenderer(): RendererAdapter {
         <RendererStyles />
         <div
           data-fw-viewport="true"
+          data-fw-lod={lod.detail}
           style={{
             position: 'relative',
             width: '100%',
@@ -257,12 +271,13 @@ export function createDomRenderer(): RendererAdapter {
         <InteractionOverlay
           preview={interactionPreview}
           viewport={ctx.viewport}
-          selectionBounds={ctx.selection.flatMap((fwId) => {
+          selectionBounds={lod.detail === 'full' ? ctx.selection.flatMap((fwId) => {
             if (!mountedNodeIds.has(fwId)) return []
             const rect = bounds.get(fwId)
               return rect === undefined ? [] : [{ fwId, rect }]
-          })}
+          }) : []}
           hoverBounds={(() => {
+            if (lod.detail !== 'full') return null
             const fwId = interactionPreview.hoveredFwId
             if (fwId === undefined || fwId === null) return null
             if (!mountedNodeIds.has(fwId)) return null

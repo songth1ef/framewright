@@ -5,6 +5,7 @@ import {
   isAiVideoNode,
   walkTree,
   type ConnectionCurve,
+  type ConnectionDetailLevel,
   type FrameNode,
   type Rect,
 } from '@framewright/core'
@@ -61,6 +62,7 @@ export interface ConnectionLayerProps {
   selection: readonly string[]
   scale: number
   rootBounds: Rect
+  detail: Exclude<ConnectionDetailLevel, 'hidden'>
 }
 
 function curvePath(curve: ConnectionCurve): string {
@@ -72,6 +74,7 @@ export function ConnectionLayer({
   selection,
   scale,
   rootBounds,
+  detail,
 }: ConnectionLayerProps): ReactNode {
   const safeScale = scale > 0 ? scale : 1
   const radius = CONNECTION_STYLE.endpointRadius / safeScale
@@ -107,6 +110,21 @@ export function ConnectionLayer({
         const width =
           (highlighted ? CONNECTION_STYLE.highlightWidth : CONNECTION_STYLE.strokeWidth) /
           safeScale
+        if (detail === 'line') {
+          return (
+            <line
+              key={key}
+              data-fw-connection-from={item.fromFwId}
+              data-fw-connection-to={item.toFwId}
+              x1={item.curve.p0.x}
+              y1={item.curve.p0.y}
+              x2={item.curve.p3.x}
+              y2={item.curve.p3.y}
+              stroke={color}
+              strokeWidth={width}
+            />
+          )
+        }
         return (
           <g key={key}>
             <path

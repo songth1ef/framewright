@@ -39,6 +39,7 @@ function demoContext(
     root: createDemoDocument(),
     selection,
     viewport: { ...DEFAULT_VIEWPORT, scale },
+    interactionMode: 'unified',
     callbacks: NOOP_RENDERER_CALLBACKS,
   }
 }
@@ -113,6 +114,22 @@ describe('C2-dom ConnectionLayer', () => {
     for (const dot of dots) {
       expect(dot.getAttribute('r')).toBe(String(CONNECTION_STYLE.endpointRadius / 4))
     }
+    await act(async () => renderer.destroy())
+  })
+
+  it('simplified 档只用 p0 到 p3 的单个直线元素，不保留曲线与端点', async () => {
+    const renderer = await mountRenderer(demoContext([], 0.25))
+    const layer = container!.querySelector('[data-fw-connections]')!
+    const line = layer.querySelector('line')
+
+    expect(layer.querySelectorAll('line')).toHaveLength(2)
+    expect(layer.querySelector('path')).toBeNull()
+    expect(layer.querySelector('circle')).toBeNull()
+    expect(line?.getAttribute('x1')).toBe('600')
+    expect(line?.getAttribute('y1')).toBe('350')
+    expect(line?.getAttribute('x2')).toBe('620')
+    expect(line?.getAttribute('y2')).toBe('350')
+
     await act(async () => renderer.destroy())
   })
 

@@ -25,6 +25,7 @@ function makeContext(selection: readonly string[] = []): RenderContext {
     root: createDemoDocument(),
     selection,
     viewport: DEFAULT_VIEWPORT,
+    interactionMode: 'unified',
     callbacks: NOOP_RENDERER_CALLBACKS,
   }
 }
@@ -101,6 +102,7 @@ function makeGenerationContext(
     }),
     selection: [],
     viewport: DEFAULT_VIEWPORT,
+    interactionMode: 'unified',
     callbacks,
   }
 }
@@ -130,6 +132,7 @@ function makeVideoContext(): RenderContext {
     }),
     selection: [],
     viewport: DEFAULT_VIEWPORT,
+    interactionMode: 'unified',
     callbacks: NOOP_RENDERER_CALLBACKS,
   }
 }
@@ -158,6 +161,7 @@ function makeImgContext(src = '/fixtures/reference.png'): RenderContext {
     }),
     selection: [],
     viewport: DEFAULT_VIEWPORT,
+    interactionMode: 'unified',
     callbacks: NOOP_RENDERER_CALLBACKS,
   }
 }
@@ -185,6 +189,7 @@ function makeAudioContext(src = '/fixtures/theme.mp3'): RenderContext {
     }),
     selection: [],
     viewport: DEFAULT_VIEWPORT,
+    interactionMode: 'unified',
     callbacks: NOOP_RENDERER_CALLBACKS,
   }
 }
@@ -212,6 +217,7 @@ function makeInteractiveVideoContext(
     }),
     selection,
     viewport: DEFAULT_VIEWPORT,
+    interactionMode: 'unified',
     callbacks,
   }
 }
@@ -633,15 +639,15 @@ describe('createDomRenderer', () => {
     expect(handle.style.height).toBe('2px')
 
     await act(async () =>
-      renderer.update({ ...zoomedIn, viewport: { scale: 0.25, offsetX: 0, offsetY: 0 } }),
+      renderer.update({ ...zoomedIn, viewport: { scale: 0.5, offsetX: 0, offsetY: 0 } }),
     )
     expect(
       (container!.querySelector('[data-fw-selection-outline="single"]') as HTMLElement).style
         .borderWidth,
-    ).toBe('8px')
+    ).toBe('4px')
     expect(
       (container!.querySelector('[data-fw-resize-handle="nw"]') as HTMLElement).style.width,
-    ).toBe('32px')
+    ).toBe('16px')
     await act(async () => renderer.destroy())
   })
 

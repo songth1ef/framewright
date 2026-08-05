@@ -30,6 +30,7 @@ function makeContext(
     root: createFrameNode({ fwId: 'root', width: 1_000, height: 1_000, children }),
     selection: [],
     viewport,
+    interactionMode: 'unified',
     callbacks: NOOP_RENDERER_CALLBACKS,
   }
 }

@@ -53,6 +53,7 @@ function makeContext(
     root,
     selection,
     viewport: { scale: 1, offsetX: 0, offsetY: 0 },
+    interactionMode: 'unified',
     callbacks,
   }
 }
