@@ -12,12 +12,14 @@ import {
   type CanvasNode,
   type Corner,
   type FrameNode,
+  type Point,
   type RenderContext,
   type RendererCallbacks,
 } from '@framewright/core'
 import {
   createCanvasInteraction,
   EMPTY_CANVAS_HIT,
+  resolveSelectableHit,
   type CanvasHitProbe,
   type CanvasInteraction,
 } from './canvas-interaction'
@@ -104,11 +106,12 @@ function makeCallbacks(): RendererCallbacks {
 function makeContext(
   selection: readonly string[] = [],
   callbacks = makeCallbacks(),
+  interactionMode: RenderContext['interactionMode'] = 'unified',
 ): RenderContext {
   return {
     root,
     selection,
-    interactionMode: 'unified',
+    interactionMode,
     viewport: { scale: 1, offsetX: 0, offsetY: 0 },
     callbacks,
   }
@@ -219,6 +222,112 @@ describe('点选状态机', () => {
 
     expect(callbacks.onSelectionRequest).not.toHaveBeenCalled()
     expect(callbacks.onNodesMove).not.toHaveBeenCalled()
+  })
+})
+
+describe('native 拾取', () => {
+  it('两种模式在同一位置返回相同最终 id', () => {
+    const canvasPoint = { x: 15, y: 15 }
+
+    expect(
+      resolveSelectableHit({
+        root,
+        interactionMode: 'unified',
+        candidateFwId: 'box-a',
+        canvasPoint,
+        development: true,
+      }),
+    ).toBe('box-a')
+    expect(
+      resolveSelectableHit({
+        root,
+        interactionMode: 'native',
+        candidateFwId: 'box-a',
+        canvasPoint,
+        development: true,
+      }),
+    ).toBe('box-a')
+  })
+
+  it('native 候选取自探针的场景图拾取结果，点击即选中', () => {
+    const { callbacks } = setup(makeContext([], makeCallbacks(), 'native'))
+
+    pointer('pointerdown', 15, 15)
+
+    expect(callbacks.onSelectionRequest).toHaveBeenCalledOnce()
+    expect(callbacks.onSelectionRequest).toHaveBeenCalledWith(['box-a'], 'replace')
+  })
+
+  it.each(['locked', 'transparent-frame'])(
+    '%s 候选仍由 core 统一过滤为空白',
+    (fwId) => {
+      const { callbacks } = setup(makeContext(['box-a'], makeCallbacks(), 'native'))
+      const point = fwId === 'locked' ? { x: 75, y: 15 } : { x: 140, y: 15 }
+
+      pointer('pointerdown', point.x, point.y)
+      pointer('pointerup', point.x, point.y)
+
+      expect(callbacks.onSelectionRequest).toHaveBeenCalledOnce()
+      expect(callbacks.onSelectionRequest).toHaveBeenCalledWith([], 'replace')
+    },
+  )
+
+  it('update(ctx) 后立即从 unified 切到 native，无需重新挂载', () => {
+    const unifiedCallbacks = makeCallbacks()
+    setup(makeContext([], unifiedCallbacks, 'unified'))
+
+    pointer('pointerdown', 15, 15)
+    pointer('pointerup', 15, 15)
+    expect(unifiedCallbacks.onSelectionRequest).toHaveBeenCalledWith(['box-a'], 'replace')
+
+    const nativeCallbacks = makeCallbacks()
+    interaction?.update(makeContext([], nativeCallbacks, 'native'))
+    pointer('pointerdown', 45, 15)
+
+    expect(nativeCallbacks.onSelectionRequest).toHaveBeenCalledWith(['box-b'], 'replace')
+  })
+
+  it('开发态 native 严格比较同渲染器的 unified 结果并记录完整诊断', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    expect(() =>
+      resolveSelectableHit({
+        root,
+        interactionMode: 'native',
+        candidateFwId: 'box-b',
+        canvasPoint: { x: 15, y: 15 },
+        development: true,
+      }),
+    ).toThrow('Leafer native 拾取与 unified 拾取不一致')
+    expect(error).toHaveBeenCalledWith(
+      'Leafer native 拾取与 unified 拾取不一致',
+      {
+        rendererId: 'leafer',
+        canvasPoint: { x: 15, y: 15 },
+        nativeCandidateFwId: 'box-b',
+        unifiedCandidateFwId: 'box-a',
+        nativeFwId: 'box-b',
+        unifiedFwId: 'box-a',
+      },
+    )
+  })
+
+  it('生产态 native 不执行 unified 几何查询', () => {
+    const canvasPoint = {} as Point
+    Object.defineProperties(canvasPoint, {
+      x: { get: () => { throw new Error('不应读取 x') } },
+      y: { get: () => { throw new Error('不应读取 y') } },
+    })
+
+    expect(
+      resolveSelectableHit({
+        root,
+        interactionMode: 'native',
+        candidateFwId: 'box-a',
+        canvasPoint,
+        development: false,
+      }),
+    ).toBe('box-a')
   })
 })
 
@@ -514,6 +623,36 @@ describe('D2-leafer 挂载接线（真实渲染器 + 真实命中探针）', () 
     expect(callbacks.onSelectionRequest).toHaveBeenCalledOnce()
     expect(callbacks.onSelectionRequest).toHaveBeenCalledWith(['box-a'], 'replace')
   })
+
+  it('native 模式经真实场景图拾取选中（dev 双路一致性断言同时通过）', () => {
+    const callbacks = makeCallbacks()
+    renderer = createLeaferRenderer()
+    renderer.mount(container, makeContext([], callbacks, 'native'))
+
+    pointer('pointerdown', 15, 15)
+
+    expect(callbacks.onSelectionRequest).toHaveBeenCalledOnce()
+    expect(callbacks.onSelectionRequest).toHaveBeenCalledWith(['box-a'], 'replace')
+  })
+
+  it.each(['unified', 'native'] as const)(
+    'LOD dot 档（scale<0.2，节点已退化为纯色块）%s 模式仍可点选',
+    (interactionMode) => {
+      renderer?.destroy()
+      const callbacks = makeCallbacks()
+      renderer = createLeaferRenderer()
+      renderer.mount(container, {
+        ...makeContext([], callbacks, interactionMode),
+        viewport: { scale: 0.1, offsetX: 0, offsetY: 0 },
+      })
+
+      // box-a 画布 (10,10,20,20) → 屏幕 (1,1)-(3,3)
+      pointer('pointerdown', 2, 2)
+
+      expect(callbacks.onSelectionRequest).toHaveBeenCalledOnce()
+      expect(callbacks.onSelectionRequest).toHaveBeenCalledWith(['box-a'], 'replace')
+    },
+  )
 
   it('框选松手上报最小集合（overlay 结构断言见 interaction-overlay.test.ts）', () => {
     const callbacks = makeCallbacks()
