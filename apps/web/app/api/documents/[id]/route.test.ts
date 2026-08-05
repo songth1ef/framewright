@@ -16,6 +16,8 @@ function createService(): DocumentRouteService {
   return {
     getDocument: vi.fn(async () => storedDocument),
     saveDocument: vi.fn(async () => storedDocument),
+    renameDocument: vi.fn(async () => storedDocument),
+    deleteDocument: vi.fn(async () => undefined),
   }
 }
 
@@ -60,6 +62,23 @@ describe('GET /api/documents/[id]', () => {
 })
 
 describe('PUT /api/documents/[id]', () => {
+  it('仅携带 name 时调用窄重命名接口，不读改写整棵画布树', async () => {
+    const service = createService()
+    const { PUT } = createDocumentRouteHandlers(service)
+
+    const response = await PUT(
+      new Request('http://localhost/api/documents/doc-a', {
+        method: 'PUT',
+        body: JSON.stringify({ name: ' 分镜一 ' }),
+      }),
+      context('doc-a'),
+    )
+
+    expect(service.renameDocument).toHaveBeenCalledWith('doc-a', '分镜一')
+    expect(service.saveDocument).not.toHaveBeenCalled()
+    expect(response.status).toBe(200)
+  })
+
   it('解析并校验请求体后调用 server-core', async () => {
     const service = createService()
     const { PUT } = createDocumentRouteHandlers(service)
@@ -114,5 +133,45 @@ describe('PUT /api/documents/[id]', () => {
 
     vi.mocked(service.saveDocument).mockRejectedValueOnce(new Error('database offline'))
     expect((await PUT(request(), context('missing'))).status).toBe(500)
+  })
+})
+
+describe('DELETE /api/documents/[id]', () => {
+  it('只把合法 id 交给 server-core，并返回 204', async () => {
+    const service = createService()
+    const { DELETE } = createDocumentRouteHandlers(service)
+
+    const response = await DELETE(
+      new Request('http://localhost/api/documents/doc-a', { method: 'DELETE' }),
+      context('doc-a'),
+    )
+
+    expect(service.deleteDocument).toHaveBeenCalledWith('doc-a')
+    expect(response.status).toBe(204)
+  })
+
+  it('空白 id 返回 400，且不调用 server-core', async () => {
+    const service = createService()
+    const { DELETE } = createDocumentRouteHandlers(service)
+
+    const response = await DELETE(
+      new Request('http://localhost/api/documents/x', { method: 'DELETE' }),
+      context('  '),
+    )
+
+    expect(response.status).toBe(400)
+    expect(service.deleteDocument).not.toHaveBeenCalled()
+  })
+
+  it('Prisma P2025 映射为 404，其余异常映射为 500', async () => {
+    const service = createService()
+    const { DELETE } = createDocumentRouteHandlers(service)
+    const request = new Request('http://localhost/api/documents/missing', { method: 'DELETE' })
+
+    vi.mocked(service.deleteDocument).mockRejectedValueOnce({ code: 'P2025' })
+    expect((await DELETE(request, context('missing'))).status).toBe(404)
+
+    vi.mocked(service.deleteDocument).mockRejectedValueOnce(new Error('database offline'))
+    expect((await DELETE(request, context('missing'))).status).toBe(500)
   })
 })
