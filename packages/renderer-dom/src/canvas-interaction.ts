@@ -2,6 +2,7 @@ import {
   applySelection,
   collectVisibleNodeIds,
   collectNodesInRect,
+  filterSelectableHitCandidate,
   findNodeById,
   hitTestPoint,
   isVideoNode,
@@ -99,6 +100,47 @@ function exceededThreshold(start: Point, current: Point): boolean {
 function closestFwId(target: EventTarget | null): string | null {
   if (!(target instanceof Element)) return null
   return target.closest<HTMLElement>('[data-fw-id]')?.dataset.fwId ?? null
+}
+
+interface ResolveSelectableHitOptions {
+  root: FrameNode
+  interactionMode: RenderContext['interactionMode']
+  target: EventTarget | null
+  canvasPoint: Point
+  development: boolean
+}
+
+/** 只替换空间查询来源；两种模式的业务过滤始终收口到 core。 */
+export function resolveSelectableHit({
+  root,
+  interactionMode,
+  target,
+  canvasPoint,
+  development,
+}: ResolveSelectableHitOptions): string | null {
+  if (interactionMode === 'unified') {
+    return filterSelectableHitCandidate(root, hitTestPoint(root, canvasPoint))
+  }
+
+  const nativeCandidateFwId = closestFwId(target)
+  const nativeFwId = filterSelectableHitCandidate(root, nativeCandidateFwId)
+  if (!development) return nativeFwId
+
+  const unifiedCandidateFwId = hitTestPoint(root, canvasPoint)
+  const unifiedFwId = filterSelectableHitCandidate(root, unifiedCandidateFwId)
+  if (nativeFwId !== unifiedFwId) {
+    const message = 'DOM native 拾取与 unified 拾取不一致'
+    console.error(message, {
+      rendererId: 'dom',
+      canvasPoint,
+      nativeCandidateFwId,
+      unifiedCandidateFwId,
+      nativeFwId,
+      unifiedFwId,
+    })
+    throw new Error(message)
+  }
+  return nativeFwId
 }
 
 function shouldIgnore(target: EventTarget | null): boolean {
@@ -236,14 +278,13 @@ export function createCanvasInteraction(
   }
 
   const selectableHit = (event: MouseEvent, canvasPoint: Point): string | null => {
-    const targetId = closestFwId(event.target)
-    if (targetId === ctx.root.fwId) return null
-    if (targetId !== null && findNodeById(ctx.root, targetId)?.locked) return null
-
-    const hit = hitTestPoint(ctx.root, canvasPoint)
-    if (hit === null) return null
-    const node = findNodeById(ctx.root, hit)
-    return node !== null && isFrameNode(node) && node.background === null ? null : hit
+    return resolveSelectableHit({
+      root: ctx.root,
+      interactionMode: ctx.interactionMode,
+      target: event.target,
+      canvasPoint,
+      development: process.env.NODE_ENV !== 'production',
+    })
   }
 
   const onPointerDown = (event: PointerEvent): void => {
