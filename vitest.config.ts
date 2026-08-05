@@ -26,6 +26,17 @@ export default defineConfig({
       },
       {
         test: {
+          // 实测探针的纯函数部分（采样开窗判定等）。放在 `probes/` 而不是 `src/`，
+          // 所以必须单列一项 —— 否则各包只能在包内塞一份 vitest.config 自测，
+          // 那等于绕过全量门禁：测试存在、单跑能过、`pnpm test` 里根本不执行。
+          // 本仓这类事故已发生三次，第三次是 tools/check-test-discovery.mjs 自动抓到的。
+          name: 'probes',
+          environment: 'node',
+          include: ['packages/*/probes/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
           name: 'provider',
           environment: 'node',
           include: ['packages/provider/src/**/*.test.ts'],
