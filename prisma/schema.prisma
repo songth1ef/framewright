@@ -5,7 +5,10 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  // 默认值由 tools/prisma.mjs 提供，与 server-core/src/prisma.ts 的运行时口径一致
+  // （仓库根绝对路径）。写死相对路径会让 CLI 与运行时各算各的 —— 那正是当初那个
+  // 首页 500 的成因，也让 e2e 无法切到自己的库。
+  url = env("DATABASE_URL")
 }
 
 // 后端领域模型见 docs/backend-domain.md。
