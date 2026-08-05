@@ -67,7 +67,11 @@ function addPlaybackControls(container: IUI, width: number, height: number, src:
   const source = getOrCreateVideoSource(src)
   void source.load().catch(() => {})
   bar.on(PointerEvent.TAP, (event: IPointerEvent) => {
-    const local = event.getInnerPoint?.(container) ?? { x: event.x, y: event.y }
+    // 与 video-node 同口径：event.x/y 是 world 坐标，缺 getInnerPoint 时也做
+    // 同一个世界→容器换算，绝不把 world 坐标直接喂容器坐标系的 hitTest。
+    const local = event.getInnerPoint
+      ? event.getInnerPoint(container)
+      : container.getInnerPoint({ x: event.x, y: event.y })
     const hit: VideoControlHit | null = hitTestVideoControls(layout, local)
     if (hit === null) return
     switch (hit.type) {

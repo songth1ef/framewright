@@ -128,7 +128,12 @@ export function createVideoShape(): ShapeFactory {
     container.add(volumeFill)
 
     bar.on(PointerEvent.TAP, (event: IPointerEvent) => {
-      const local = event.getInnerPoint?.(container) ?? { x: event.x, y: event.y }
+      // event.x/y 是 world 坐标，必须换算到容器坐标系再命中（layout 是容器坐标系）。
+      // 兜底走 ILeaf.getInnerPoint（非可选）做同一个换算——绝不把 world 坐标直接喂 hitTest，
+      // 那是 hitByViewLocal 恒 null 的同型错误（见 video-node-tap.test.ts）。
+      const local = event.getInnerPoint
+        ? event.getInnerPoint(container)
+        : container.getInnerPoint({ x: event.x, y: event.y })
       const hit: VideoControlHit | null = hitTestVideoControls(layout, local)
       if (hit === null) return
       switch (hit.type) {
