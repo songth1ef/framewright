@@ -265,6 +265,7 @@ describe('createDomRenderer', () => {
     expect(video.controls).toBe(true)
     expect(video.playsInline).toBe(true)
     expect(video.preload).toBe('metadata')
+    expect(video.dataset.fwInteraction).toBe('ignore')
     expect(video.getAttribute('src')).toBe('/fixtures/preview.mp4')
     expect(video.getAttribute('poster')).toBe('/fixtures/poster.jpg')
     expect(video.style.objectFit).toBe('cover')

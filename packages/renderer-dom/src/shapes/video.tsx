@@ -16,6 +16,7 @@ export function VideoShape({ node, position, size }: ShapeProps): ReactNode {
     <video
       data-fw-id={node.fwId}
       data-fw-type="video"
+      data-fw-interaction="ignore"
       src={node.src}
       poster={node.poster ?? undefined}
       controls
