@@ -76,10 +76,15 @@ function getLimit(value: number | undefined, fallback: number, name: string, all
   return limit
 }
 
-function squaredDistanceToRectCenter(rect: Rect, center: Point): number {
+function normalizedRectDistanceToViewportCenter(
+  rect: Rect,
+  center: Point,
+  halfWidth: number,
+  halfHeight: number,
+): number {
   const deltaX = rect.x + rect.width / 2 - center.x
   const deltaY = rect.y + rect.height / 2 - center.y
-  return deltaX * deltaX + deltaY * deltaY
+  return Math.max(Math.abs(deltaX) / halfWidth, Math.abs(deltaY) / halfHeight)
 }
 
 function intersects(a: Rect, b: Rect): boolean {
@@ -130,6 +135,10 @@ export function getViewportCullingResult(
     x: currentBounds.x + currentBounds.width / 2,
     y: currentBounds.y + currentBounds.height / 2,
   }
+  // 按真实视口的半宽/半高归一化，使等值面与视口同宽高比。
+  // 零尺寸发生在 host 尚未完成测量时；用 1 作中性分母，避免 NaN/Infinity。
+  const viewportHalfWidth = currentBounds.width > 0 ? currentBounds.width / 2 : 1
+  const viewportHalfHeight = currentBounds.height > 0 ? currentBounds.height / 2 : 1
   const maxNodes = getLimit(options.maxNodes, DEFAULT_MAX_NODES, 'maxNodes', false)
   const connectionsVisible = resolveConnectionVisibility(options.connectionVisibility) === 'visible'
   const maxConnections = connectionsVisible
@@ -161,7 +170,12 @@ export function getViewportCullingResult(
       candidates.push({
         fwId: node.fwId,
         parentFwId,
-        distance: squaredDistanceToRectCenter(nodeBounds, viewportCenter),
+        distance: normalizedRectDistanceToViewportCenter(
+          nodeBounds,
+          viewportCenter,
+          viewportHalfWidth,
+          viewportHalfHeight,
+        ),
         order: candidates.length,
         isRoot: node === root,
       })

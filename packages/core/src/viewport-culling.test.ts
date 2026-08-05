@@ -117,6 +117,30 @@ describe('getNodesInViewport', () => {
     ]).toEqual(['root', 'nearest', 'second-nearest'])
   })
 
+  it('宽扁视口超过上限时，保留区按视口宽高比呈矩形而非圆形', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      width: 400,
+      height: 100,
+      children: [
+        createBoxNode({ fwId: 'center', x: 199, y: 49, width: 2, height: 2 }),
+        createBoxNode({ fwId: 'wide-left', x: 39, y: 49, width: 2, height: 2 }),
+        createBoxNode({ fwId: 'wide-right', x: 359, y: 49, width: 2, height: 2 }),
+        createBoxNode({ fwId: 'near-top', x: 199, y: 4, width: 2, height: 2 }),
+        createBoxNode({ fwId: 'near-bottom', x: 199, y: 94, width: 2, height: 2 }),
+      ],
+    })
+
+    expect([
+      ...getNodesInViewport(root, viewport, {
+        width: 400,
+        height: 100,
+        overscan: 0,
+        maxNodes: 4,
+      }),
+    ]).toEqual(['root', 'center', 'wide-left', 'wide-right'])
+  })
+
   it('最近节点位于嵌套 frame 时，祖先链计入上限并一并保留', () => {
     const root = createFrameNode({
       fwId: 'root',
