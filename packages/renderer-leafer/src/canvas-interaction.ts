@@ -3,6 +3,7 @@ import {
   collectNodesInRect,
   collectVisibleNodeIds,
   computeMoves,
+  filterSelectableHitCandidate,
   findNodeById,
   hitTestPoint,
   isFrameNode,
@@ -99,6 +100,52 @@ function exceededThreshold(start: Point, current: Point): boolean {
   return Math.hypot(current.x - start.x, current.y - start.y) > DRAG_THRESHOLD_CSS_PX
 }
 
+interface ResolveSelectableHitOptions {
+  root: FrameNode
+  interactionMode: RenderContext['interactionMode']
+  /** native 模式下 Leafer 场景图拾取给出的候选 fwId（探针沿父链找到的第一个 data.fwId） */
+  candidateFwId: string | null
+  canvasPoint: Point
+  development: boolean
+}
+
+/**
+ * 只替换空间查询来源；两种模式的业务过滤始终收口到 core 的 filterSelectableHitCandidate。
+ * 🔴 dev 模式下 native 每次拾取额外跑一遍完整 unified 路径并严格断言最终 fwId 一致——
+ * 没有这条断言，「变快了」和「行为变了」会混在一起分不清（renderer-contract 附录）。
+ * 生产模式不承担双路查询成本。
+ */
+export function resolveSelectableHit({
+  root,
+  interactionMode,
+  candidateFwId,
+  canvasPoint,
+  development,
+}: ResolveSelectableHitOptions): string | null {
+  if (interactionMode === 'unified') {
+    return filterSelectableHitCandidate(root, hitTestPoint(root, canvasPoint))
+  }
+
+  const nativeFwId = filterSelectableHitCandidate(root, candidateFwId)
+  if (!development) return nativeFwId
+
+  const unifiedCandidateFwId = hitTestPoint(root, canvasPoint)
+  const unifiedFwId = filterSelectableHitCandidate(root, unifiedCandidateFwId)
+  if (nativeFwId !== unifiedFwId) {
+    const message = 'Leafer native 拾取与 unified 拾取不一致'
+    console.error(message, {
+      rendererId: 'leafer',
+      canvasPoint,
+      nativeCandidateFwId: candidateFwId,
+      unifiedCandidateFwId,
+      nativeFwId,
+      unifiedFwId,
+    })
+    throw new Error(message)
+  }
+  return nativeFwId
+}
+
 interface NodeLocation {
   node: CanvasNode
   parent: FrameNode
@@ -144,6 +191,13 @@ function isEditableActiveElement(): boolean {
  * 与 DOM 版的唯一结构差异是命中来源：DOM 从 event.target 沿 closest() 解析，
  * 这侧由 CanvasHitProbe 回答（生产实现 = leafer.selector.getByPoint，见 hit-probe.ts）——
  * Leafer 的场景图画在 canvas 上，原生事件的 target 永远只是那张 canvas。
+ *
+ * ctx.interactionMode 只切换「点选候选 fwId」的空间查询来源（renderer-contract 附录）：
+ * unified 走 core.hitTestPoint 全树几何遍历；native 用探针的场景图拾取结果。
+ * 两种模式的业务过滤（root/locked/透明 frame）都收口到 core.filterSelectableHitCandidate，
+ * dev 模式下 native 每次拾取双跑 unified 并断言一致（见 resolveSelectableHit）。
+ * 🔴 native 拾取 ≠ 开启 Leafer 内建手势：视口与选择仍由 host 受控，
+ * builtin-gesture-guard 的挂载断言不受本开关影响。
  */
 export function createCanvasInteraction(
   container: HTMLElement,
@@ -217,13 +271,13 @@ export function createCanvasInteraction(
   }
 
   const selectableHit = (targetFwId: string | null, canvasPoint: Point): string | null => {
-    if (targetFwId === ctx.root.fwId) return null
-    if (targetFwId !== null && findNodeById(ctx.root, targetFwId)?.locked) return null
-
-    const hit = hitTestPoint(ctx.root, canvasPoint)
-    if (hit === null) return null
-    const node = findNodeById(ctx.root, hit)
-    return node !== null && isFrameNode(node) && node.background === null ? null : hit
+    return resolveSelectableHit({
+      root: ctx.root,
+      interactionMode: ctx.interactionMode,
+      candidateFwId: targetFwId,
+      canvasPoint,
+      development: process.env.NODE_ENV !== 'production',
+    })
   }
 
   const onPointerDown = (event: PointerEvent): void => {
