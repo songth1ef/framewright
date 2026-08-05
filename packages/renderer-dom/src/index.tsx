@@ -32,7 +32,10 @@ function renderNode(
   bounds: Map<string, Rect>,
   visibleNodeIds: string[],
   onNodeAction: RenderContext['callbacks']['onNodeAction'],
+  onNodesDelete: RenderContext['callbacks']['onNodesDelete'],
   activeVideoFwId: string | null,
+  viewportScale: number,
+  parentRotation: number,
   connectionLayer?: ReactNode,
 ): ReactNode {
   const previewResize = previewResizes.get(node.fwId)
@@ -40,6 +43,7 @@ function renderNode(
   const position: Point = previewResize ?? previewPosition ?? { x: node.x, y: node.y }
   const size = previewResize ?? { width: node.width, height: node.height }
   const absolute: Point = { x: parentAbsolute.x + position.x, y: parentAbsolute.y + position.y }
+  const cumulativeRotation = parentRotation + node.rotation
   const visible = parentVisible && node.visible
   bounds.set(node.fwId, {
     x: absolute.x,
@@ -65,7 +69,10 @@ function renderNode(
               bounds,
               visibleNodeIds,
               onNodeAction,
+              onNodesDelete,
               activeVideoFwId,
+              viewportScale,
+              cumulativeRotation,
             ),
           )}
         </>
@@ -80,7 +87,10 @@ function renderNode(
       size={size}
       selected={selection.includes(node.fwId)}
       active={node.fwId === activeVideoFwId}
+      viewportScale={viewportScale}
+      cumulativeRotation={cumulativeRotation}
       onNodeAction={onNodeAction}
+      onNodesDelete={onNodesDelete}
     >
       {children}
     </Shape>
@@ -153,7 +163,10 @@ export function createDomRenderer(): RendererAdapter {
             bounds,
             visibleNodeIds,
             ctx.callbacks.onNodeAction,
+            ctx.callbacks.onNodesDelete,
             activeVideoFwId,
+            scale,
+            0,
             connectionLayer,
           )}
         </div>

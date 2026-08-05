@@ -1,9 +1,11 @@
 import {
   GEN_UNIT_STYLE,
+  NODE_ACTIONS,
   isAiImageNode,
   isAiVideoNode,
   type AiImageNode,
   type AiVideoNode,
+  type NodeActionName,
   type Point,
 } from '@framewright/core'
 import type { CSSProperties, ReactNode } from 'react'
@@ -16,7 +18,11 @@ export interface GenerationUnitProps {
   position: Point
   size?: { width: number; height: number }
   selected: boolean
+  active: boolean
+  viewportScale: number
+  cumulativeRotation: number
   onNodeAction(fwId: string, action: string): void
+  onNodesDelete(fwIds: readonly string[]): void
 }
 
 const SKELETON_ANIMATION = 'fw-generation-skeleton-sweep'
@@ -33,12 +39,6 @@ const GENERATION_TOOLBAR_STYLE = {
   shadow: '0 4px 14px rgba(15, 23, 42, 0.16)',
   fontSize: 12,
 } as const
-
-const TOOLBAR_ACTIONS = [
-  { label: '重新生成', action: 'regenerate' },
-  { label: '下载', action: 'download' },
-  { label: '删除', action: 'delete' },
-] as const
 
 const centeredContent: CSSProperties = {
   width: '100%',
@@ -59,12 +59,50 @@ const interactionButtonStyle: CSSProperties = {
 }
 
 function NodeToolbar({
-  fwId,
+  node,
+  viewportScale,
+  cumulativeRotation,
   onNodeAction,
+  onNodesDelete,
 }: {
-  fwId: string
+  node: GenerationNode
+  viewportScale: number
+  cumulativeRotation: number
   onNodeAction: GenerationUnitProps['onNodeAction']
+  onNodesDelete: GenerationUnitProps['onNodesDelete']
 }): ReactNode {
+  const generating = node.status === 'pending' || node.status === 'running'
+  const generationAction: NodeActionName =
+    node.status === 'succeeded'
+      ? NODE_ACTIONS.regenerate
+      : node.status === 'failed'
+        ? NODE_ACTIONS.retry
+        : NODE_ACTIONS.generate
+  const generationLabel =
+    generationAction === NODE_ACTIONS.regenerate
+      ? '重新生成'
+      : generationAction === NODE_ACTIONS.retry
+        ? '重试'
+        : '生成'
+  const actions = [
+    {
+      label: generationLabel,
+      disabled: generating,
+      run: () => onNodeAction(node.fwId, generationAction),
+    },
+    {
+      label: '下载',
+      disabled: node.status !== 'succeeded',
+      run: () => onNodeAction(node.fwId, NODE_ACTIONS.download),
+    },
+    {
+      label: '删除',
+      disabled: false,
+      run: () => onNodesDelete([node.fwId]),
+    },
+  ]
+  const inverseScale = 1 / viewportScale
+
   return (
     <div
       data-fw-node-toolbar="true"
@@ -74,7 +112,7 @@ function NodeToolbar({
       style={{
         position: 'absolute',
         right: 0,
-        bottom: `calc(100% + ${GENERATION_TOOLBAR_STYLE.offset}px)`,
+        bottom: `calc(100% + ${GENERATION_TOOLBAR_STYLE.offset * inverseScale}px)`,
         zIndex: 2,
         display: 'flex',
         gap: `${GENERATION_TOOLBAR_STYLE.gap}px`,
@@ -87,13 +125,16 @@ function NodeToolbar({
         visibility: 'hidden',
         pointerEvents: 'none',
         whiteSpace: 'nowrap',
+        transform: `rotate(${-cumulativeRotation}deg) scale(${inverseScale})`,
+        transformOrigin: 'bottom right',
       }}
     >
-      {TOOLBAR_ACTIONS.map(({ label, action }) => (
+      {actions.map(({ label, disabled, run }) => (
         <button
-          key={action}
+          key={label}
           data-fw-interaction="ignore"
           type="button"
+          disabled={disabled}
           style={{
             ...interactionButtonStyle,
             padding: '3px 6px',
@@ -101,10 +142,12 @@ function NodeToolbar({
             color: GENERATION_TOOLBAR_STYLE.textColor,
             fontSize: `${GENERATION_TOOLBAR_STYLE.fontSize}px`,
             lineHeight: 1.4,
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            opacity: disabled ? 0.38 : 1,
           }}
           onClick={(event) => {
             event.stopPropagation()
-            onNodeAction(fwId, action)
+            run()
           }}
         >
           {label}
@@ -279,14 +322,14 @@ function renderContent(
 ): ReactNode {
   switch (node.status) {
     case 'empty':
-      return <EmptyContent onAction={() => onNodeAction(node.fwId, 'generate')} />
+      return <EmptyContent onAction={() => onNodeAction(node.fwId, NODE_ACTIONS.generate)} />
     case 'pending':
     case 'running':
       return <GeneratingContent />
     case 'succeeded':
       return <SucceededContent node={node} />
     case 'failed':
-      return <FailedContent node={node} onAction={() => onNodeAction(node.fwId, 'retry')} />
+      return <FailedContent node={node} onAction={() => onNodeAction(node.fwId, NODE_ACTIONS.retry)} />
   }
 }
 
@@ -294,7 +337,11 @@ export function GenerationUnit({
   node,
   position,
   size,
+  active,
+  viewportScale,
+  cumulativeRotation,
   onNodeAction,
+  onNodesDelete,
 }: GenerationUnitProps): ReactNode {
   const isEmpty = node.status === 'empty'
   const isFailed = node.status === 'failed'
@@ -332,7 +379,15 @@ export function GenerationUnit({
           pointer-events: auto !important;
         }
       `}</style>
-      <NodeToolbar fwId={node.fwId} onNodeAction={onNodeAction} />
+      {active ? null : (
+        <NodeToolbar
+          node={node}
+          viewportScale={viewportScale}
+          cumulativeRotation={cumulativeRotation}
+          onNodeAction={onNodeAction}
+          onNodesDelete={onNodesDelete}
+        />
+      )}
       <div
         data-fw-generation-surface="true"
         style={{

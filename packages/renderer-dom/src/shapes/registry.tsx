@@ -21,7 +21,10 @@ export interface ShapeProps {
   size?: { width: number; height: number }
   selected: boolean
   active: boolean
+  viewportScale: number
+  cumulativeRotation: number
   onNodeAction: RendererCallbacks['onNodeAction']
+  onNodesDelete: RendererCallbacks['onNodesDelete']
   children?: ReactNode
 }
 
@@ -51,7 +54,17 @@ function BoxShape({ node, position, size }: ShapeProps): ReactNode {
   return <div data-fw-id={node.fwId} data-fw-type="box" style={style} />
 }
 
-function GenerationUnitShape({ node, position, size, selected, onNodeAction }: ShapeProps): ReactNode {
+function GenerationUnitShape({
+  node,
+  position,
+  size,
+  selected,
+  active,
+  viewportScale,
+  cumulativeRotation,
+  onNodeAction,
+  onNodesDelete,
+}: ShapeProps): ReactNode {
   if (!isAiImageNode(node) && !isAiVideoNode(node)) return null
   return (
     <GenerationUnit
@@ -59,7 +72,11 @@ function GenerationUnitShape({ node, position, size, selected, onNodeAction }: S
       position={position}
       size={size}
       selected={selected}
+      active={active}
+      viewportScale={viewportScale}
+      cumulativeRotation={cumulativeRotation}
       onNodeAction={onNodeAction}
+      onNodesDelete={onNodesDelete}
     />
   )
 }
