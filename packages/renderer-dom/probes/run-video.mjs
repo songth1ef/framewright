@@ -14,6 +14,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { assertPlaybackStarted, buildWorkEvidence } from './browser/sampling.mjs'
+import { DOM_VIDEO_PROBE_WORKLOAD } from './probe-config.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(here, '../../..')
@@ -21,6 +22,7 @@ const distDir = path.join(here, '.dist')
 const resultsDir = path.join(here, 'results')
 const videoFile = path.join(here, 'fixtures', 'video.webm')
 const host = 'http://probe.local'
+const workload = DOM_VIDEO_PROBE_WORKLOAD
 
 if (!existsSync(videoFile)) {
   throw new Error(`缺少探针素材：${videoFile}`)
@@ -52,15 +54,7 @@ const [bundle, videoBytes] = await Promise.all([
 const results = {
   probe: 'renderer-dom-video',
   startedAt: new Date().toISOString(),
-  workload: {
-    renderer: 'DOM 原生 <video controls>',
-    concurrency: [1, 4, 8],
-    sampleWindowMs: 3000,
-    nodeSize: { width: 460, height: 260 },
-    viewport: { width: 1024, height: 700, viewWidth: 960, viewHeight: 600 },
-    audio: '全部 muted；避免多路音频混流混入视频渲染对比',
-    longFrameThresholdMs: 50,
-  },
+  workload,
   memory: {
     value: null,
     reason: 'Chromium 页面 API 无法覆盖视频解码缓冲与 GPU 显存；performance.memory 仅是 JS heap，故不采集。',
@@ -71,14 +65,16 @@ const results = {
 
 const browser = await chromium.launch()
 try {
-  const page = await browser.newPage({ viewport: { width: 1024, height: 700 } })
+  const page = await browser.newPage({
+    viewport: { width: workload.viewport.width, height: workload.viewport.height },
+  })
   page.on('pageerror', (error) => console.error('[pageerror]', error.message))
   await page.route(`${host}/**`, (route) => {
     const url = new URL(route.request().url())
     if (url.pathname === '/') {
       return route.fulfill({
         contentType: 'text/html',
-        body: '<!doctype html><html><body style="margin:0"><div id="view" style="position:relative;width:960px;height:600px;overflow:hidden"></div><script src="/probe.iife.js"></script></body></html>',
+        body: `<!doctype html><html><body style="margin:0"><div id="view" style="position:relative;width:${workload.viewport.viewWidth}px;height:${workload.viewport.viewHeight}px;overflow:hidden"></div><script src="/probe.iife.js"></script></body></html>`,
       })
     }
     if (url.pathname === '/probe.iife.js') {
@@ -94,7 +90,7 @@ try {
   await page.waitForFunction(() => window.__probe !== undefined)
   results.browser = await page.evaluate(() => navigator.userAgent)
 
-  for (const count of [1, 4, 8]) {
+  for (const count of workload.concurrency) {
     await page.evaluate((value) => window.__probe.ensureVideos(value), count)
     await page.evaluate((value) => window.__probe.waitUntilReady(value), count)
 
@@ -117,7 +113,10 @@ try {
 
     // 🔴 只有确认每一路已产生播放进度与解码帧之后，才在这里打开 3 秒采样窗口。
     const sampleStart = await page.evaluate((value) => window.__probe.snapshot(value), count)
-    const fps = await page.evaluate((ms) => window.__probe.sampleFps(ms), 3000)
+    const fps = await page.evaluate(
+      (ms) => window.__probe.sampleFps(ms),
+      workload.sampleWindowMs,
+    )
     const sampleEnd = await page.evaluate((value) => window.__probe.snapshot(value), count)
     const workEvidence = buildWorkEvidence(sampleStart, sampleEnd)
 

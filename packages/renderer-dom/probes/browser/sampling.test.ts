@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DOM_VIDEO_PROBE_WORKLOAD } from '../probe-config.mjs'
 import { assertPlaybackStarted, buildWorkEvidence, type PlaybackSnapshot } from './sampling.mjs'
 
 function snapshot(currentTime: number, totalVideoFrames: number): PlaybackSnapshot {
@@ -13,6 +14,15 @@ function snapshot(currentTime: number, totalVideoFrames: number): PlaybackSnapsh
 }
 
 describe('视频 probe 采样窗口', () => {
+  it('同题最坏情况让 8 路节点全部处于与 Leafer 相同的高视口内', () => {
+    expect(DOM_VIDEO_PROBE_WORKLOAD.viewport).toEqual({
+      width: 1024,
+      height: 1400,
+      viewWidth: 960,
+      viewHeight: 1300,
+    })
+  })
+
   it('拒绝在播放真正开始之前开窗', () => {
     expect(() => assertPlaybackStarted([snapshot(0, 0)], [snapshot(0, 0)])).toThrow(
       'probe-video-0 尚未开始播放',
