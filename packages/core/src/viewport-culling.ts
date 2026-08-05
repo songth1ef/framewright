@@ -1,4 +1,8 @@
-import { computeConnectionCurve, type ConnectionCurve } from './connection-style'
+import {
+  CONNECTION_CURVE_MAX_HORIZONTAL_OFFSET,
+  computeConnectionCurve,
+  type ConnectionCurve,
+} from './connection-style'
 import type { ConnectionItem } from './connections'
 import {
   isAiImageNode,
@@ -110,6 +114,29 @@ function intersects(a: Rect, b: Rect): boolean {
     a.x + a.width >= b.x &&
     a.y <= b.y + b.height &&
     a.y + a.height >= b.y
+  )
+}
+
+/**
+ * 只用端点判断连线是否可能与视口相交。
+ * y 区间是曲线精确范围；x 区间按控制点最大水平外推量保守扩张，false 一定不可见。
+ */
+export function connectionMayIntersectBounds(
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  bounds: Rect,
+): boolean {
+  const minX = Math.min(fromX, toX) - CONNECTION_CURVE_MAX_HORIZONTAL_OFFSET
+  const maxX = Math.max(fromX, toX) + CONNECTION_CURVE_MAX_HORIZONTAL_OFFSET
+  const minY = Math.min(fromY, toY)
+  const maxY = Math.max(fromY, toY)
+  return (
+    minX <= bounds.x + bounds.width &&
+    maxX >= bounds.x &&
+    minY <= bounds.y + bounds.height &&
+    maxY >= bounds.y
   )
 }
 
@@ -340,6 +367,10 @@ interface CachedConnectionBounds {
 export class ConnectionBoundsCache {
   private readonly entries = new Map<string, CachedConnectionBounds>()
 
+  get size(): number {
+    return this.entries.size
+  }
+
   get(fromFwId: string, toFwId: string, curve: ConnectionCurve): Rect {
     const key = `${fromFwId}\u0000${toFwId}`
     const cached = this.entries.get(key)
@@ -414,21 +445,21 @@ export function getConnectionsInViewport(
     for (const sourceFwId of node.sourceFwIds) {
       const source = geometry.get(sourceFwId)
       if (source === undefined) continue
-      const from = {
-        x: source.absolute.x + source.node.width,
-        y: source.absolute.y + source.node.height / 2,
-      }
-      const to = { x: absolute.x, y: absolute.y + node.height / 2 }
+      const fromX = source.absolute.x + source.node.width
+      const fromY = source.absolute.y + source.node.height / 2
+      const toX = absolute.x
+      const toY = absolute.y + node.height / 2
+      if (!connectionMayIntersectBounds(fromX, fromY, toX, toY, bounds)) continue
+
       const connectionKey = `${sourceFwId}\u0000${node.fwId}`
       connectionKeys.add(connectionKey)
-      const midpoint = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }
-      const deltaX = midpoint.x - viewportCenter.x
-      const deltaY = midpoint.y - viewportCenter.y
+      const deltaX = (fromX + toX) / 2 - viewportCenter.x
+      const deltaY = (fromY + toY) / 2 - viewportCenter.y
       candidates.push({
         fromFwId: sourceFwId,
         toFwId: node.fwId,
-        from,
-        to,
+        from: { x: fromX, y: fromY },
+        to: { x: toX, y: toY },
         distance: deltaX * deltaX + deltaY * deltaY,
         order: candidates.length,
       })

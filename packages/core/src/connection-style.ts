@@ -25,6 +25,9 @@ export interface ConnectionCurve {
   p3: Point
 }
 
+export const CONNECTION_CURVE_MIN_HORIZONTAL_OFFSET = 40
+export const CONNECTION_CURVE_MAX_HORIZONTAL_OFFSET = 160
+
 /**
  * 由两端锚点算出贝塞尔曲线的四个控制点。
  *
@@ -34,7 +37,10 @@ export interface ConnectionCurve {
  * 🔴 **两侧必须共用本函数**——`k` 决定曲线胖瘦，肉眼可见，各算各的必然分叉。
  */
 export function computeConnectionCurve(from: Point, to: Point): ConnectionCurve {
-  const k = Math.min(160, Math.max(40, Math.abs(to.x - from.x) * 0.5))
+  const k = Math.min(
+    CONNECTION_CURVE_MAX_HORIZONTAL_OFFSET,
+    Math.max(CONNECTION_CURVE_MIN_HORIZONTAL_OFFSET, Math.abs(to.x - from.x) * 0.5),
+  )
   return {
     p0: { x: from.x, y: from.y },
     c1: { x: from.x + k, y: from.y },
