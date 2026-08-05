@@ -185,6 +185,28 @@ describe('getNodesInViewport', () => {
     expect(canReuseViewportCulling(previous, { ...viewport, offsetX: -100 }, options)).toBe(false)
   })
 
+  it('节点未触顶但连线可能触顶时，平移同样不能复用旧中心集合', () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      width: 1_000,
+      height: 100,
+      children: [
+        createBoxNode({ fwId: 'source-a', x: 10 }),
+        createBoxNode({ fwId: 'source-b', x: 20 }),
+        createAiImageNode({
+          fwId: 'target',
+          x: 200,
+          sourceFwIds: ['source-a', 'source-b'],
+        }),
+      ],
+    })
+    const options = { ...screen, maxNodes: 10, maxConnections: 1 }
+    const previous = getViewportCullingResult(root, viewport, options)
+
+    expect(previous.nodeIds.size).toBeLessThan(options.maxNodes)
+    expect(canReuseViewportCulling(previous, { ...viewport, offsetX: -10 }, options)).toBe(false)
+  })
+
   it('10000 节点裁剪保持在 1ms 级', () => {
     const children = Array.from({ length: 10_000 }, (_, index) =>
       createBoxNode({

@@ -118,10 +118,21 @@ export function getViewportCullingResult(
     x: currentBounds.x + currentBounds.width / 2,
     y: currentBounds.y + currentBounds.height / 2,
   }
+  const maxNodes = getLimit(options.maxNodes, DEFAULT_MAX_NODES, 'maxNodes', false)
+  const maxConnections = getLimit(
+    options.maxConnections,
+    DEFAULT_MAX_CONNECTIONS,
+    'maxConnections',
+    true,
+  )
   const candidates: NodeCandidate[] = []
+  const visibleNodeIds = new Set<string>()
+  const connectionSources: Array<readonly string[]> = []
 
   walkTreePruned(root, (node, absolute) => {
     if (!node.visible) return false
+    visibleNodeIds.add(node.fwId)
+    if (isAiImageNode(node) || isAiVideoNode(node)) connectionSources.push(node.sourceFwIds)
     const nodeBounds = {
       x: absolute.x,
       y: absolute.y,
@@ -138,11 +149,19 @@ export function getViewportCullingResult(
     }
   })
 
-  const maxNodes = getLimit(options.maxNodes, DEFAULT_MAX_NODES, 'maxNodes', false)
+  let validConnectionCount = 0
+  for (const sourceFwIds of connectionSources) {
+    for (const sourceFwId of sourceFwIds) {
+      if (visibleNodeIds.has(sourceFwId)) validConnectionCount += 1
+      if (validConnectionCount > maxConnections) break
+    }
+    if (validConnectionCount > maxConnections) break
+  }
+  const connectionsMayBeLimited = validConnectionCount > maxConnections
   if (candidates.length <= maxNodes) {
     return {
       nodeIds: new Set(candidates.map(({ fwId }) => fwId)),
-      validViewportBounds: bounds,
+      validViewportBounds: connectionsMayBeLimited ? currentBounds : bounds,
     }
   }
 
