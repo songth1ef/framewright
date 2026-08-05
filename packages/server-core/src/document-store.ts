@@ -27,6 +27,8 @@ export interface SaveDocumentInput {
 
 export interface DocumentStore {
   listDocuments(): Promise<StoredDocument[]>
+  /** 按 project 维度列举画布，按最近更新时间倒序。 */
+  listProjectDocuments(projectId: string): Promise<StoredDocument[]>
   getDocument(documentId: string): Promise<StoredDocument | null>
   createDocument(input: CreateDocumentInput): Promise<StoredDocument>
   saveDocument(documentId: string, input: SaveDocumentInput): Promise<StoredDocument>
@@ -55,6 +57,14 @@ export function createDocumentStore(client: PrismaClient): DocumentStore {
   return {
     async listDocuments() {
       const documents = await client.document.findMany({
+        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+      })
+      return documents.map(toStoredDocument)
+    },
+
+    async listProjectDocuments(projectId) {
+      const documents = await client.document.findMany({
+        where: { projectId },
         orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
       })
       return documents.map(toStoredDocument)
