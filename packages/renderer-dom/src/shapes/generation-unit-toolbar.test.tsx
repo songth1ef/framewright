@@ -73,24 +73,6 @@ function toolbarButtons(toolbar: HTMLElement): HTMLButtonElement[] {
   return [...toolbar.querySelectorAll<HTMLButtonElement>('button')]
 }
 
-/**
- * 取「重新生成 / 下载 / 删除」三个按钮。
- *
- * 直接解构 `toolbarButtons(...)` 在 `noUncheckedIndexedAccess` 下每个元素都是
- * `HTMLButtonElement | undefined`，会让后续每一行断言都要判空。这里先断言数量再取，
- * 既收窄了类型，也让「工具条按钮数量变了」这件事以一条清晰的失败信息暴露出来，
- * 而不是变成一串 `Cannot read property of undefined`。
- */
-function expectThreeToolbarButtons(
-  toolbar: HTMLElement,
-): [HTMLButtonElement, HTMLButtonElement, HTMLButtonElement] {
-  const buttons = toolbarButtons(toolbar)
-  if (buttons.length !== 3) {
-    throw new Error(`期望工具条有 3 个按钮（重新生成/下载/删除），实际 ${buttons.length} 个`)
-  }
-  return [buttons[0]!, buttons[1]!, buttons[2]!]
-}
-
 describe('生成单元 hover 业务工具条', () => {
   it('重新生成与下载走 NODE_ACTIONS，删除只走 onNodesDelete 专用通道', async () => {
     const callbacks = createCallbacks()
@@ -135,12 +117,12 @@ describe('生成单元 hover 业务工具条', () => {
   })
 
   it.each([
-    ['empty', '生成', false, true, NODE_ACTIONS.generate],
-    ['pending', '生成', true, true, NODE_ACTIONS.generate],
-    ['running', '生成', true, true, NODE_ACTIONS.generate],
-    ['succeeded', '重新生成', false, false, NODE_ACTIONS.regenerate],
-    ['failed', '重试', false, true, NODE_ACTIONS.retry],
-  ] as const)('%s 状态按节点自身状态设置生成与下载可用性', async (status, label, generateDisabled, downloadDisabled, expectedAction) => {
+    ['empty', ['下载', '删除'], true],
+    ['pending', ['下载', '删除'], true],
+    ['running', ['下载', '删除'], true],
+    ['succeeded', ['重新生成', '下载', '删除'], false],
+    ['failed', ['下载', '删除'], true],
+  ] as const)('%s 状态只渲染卡片内主 CTA 未承载的工具条动作', async (status, expectedLabels, downloadDisabled) => {
     const callbacks = createCallbacks()
     const { renderer, toolbar } = await mountGenerationNode(
       createAiImageNode({
@@ -153,22 +135,15 @@ describe('生成单元 hover 业务工具条', () => {
       }),
       callbacks,
     )
-    const [generate, download, remove] = expectThreeToolbarButtons(toolbar)
+    const buttons = toolbarButtons(toolbar)
+    const download = buttons.find((button) => button.textContent === '下载')!
+    const remove = buttons.find((button) => button.textContent === '删除')!
 
-    expect(generate.textContent).toBe(label)
-    expect(generate.disabled).toBe(generateDisabled)
+    expect(buttons.map((button) => button.textContent)).toEqual(expectedLabels)
     expect(download.disabled).toBe(downloadDisabled)
     expect(remove.disabled).toBe(false)
-    for (const button of [generate, download]) {
-      expect(button.style.opacity).toBe(button.disabled ? '0.38' : '1')
-      expect(button.style.cursor).toBe(button.disabled ? 'not-allowed' : 'pointer')
-    }
-    await act(async () => generate.click())
-    if (generateDisabled) {
-      expect(callbacks.onNodeAction).not.toHaveBeenCalled()
-    } else {
-      expect(callbacks.onNodeAction).toHaveBeenCalledWith(`image-${status}`, expectedAction)
-    }
+    expect(download.style.opacity).toBe(downloadDisabled ? '0.38' : '1')
+    expect(download.style.cursor).toBe(downloadDisabled ? 'not-allowed' : 'pointer')
 
     await act(async () => renderer.destroy())
   })

@@ -5,7 +5,6 @@ import {
   isAiVideoNode,
   type AiImageNode,
   type AiVideoNode,
-  type NodeActionName,
   type Point,
 } from '@framewright/core'
 import type { CSSProperties, ReactNode } from 'react'
@@ -71,25 +70,16 @@ function NodeToolbar({
   onNodeAction: GenerationUnitProps['onNodeAction']
   onNodesDelete: GenerationUnitProps['onNodesDelete']
 }): ReactNode {
-  const generating = node.status === 'pending' || node.status === 'running'
-  const generationAction: NodeActionName =
-    node.status === 'succeeded'
-      ? NODE_ACTIONS.regenerate
-      : node.status === 'failed'
-        ? NODE_ACTIONS.retry
-        : NODE_ACTIONS.generate
-  const generationLabel =
-    generationAction === NODE_ACTIONS.regenerate
-      ? '重新生成'
-      : generationAction === NODE_ACTIONS.retry
-        ? '重试'
-        : '生成'
   const actions = [
-    {
-      label: generationLabel,
-      disabled: generating,
-      run: () => onNodeAction(node.fwId, generationAction),
-    },
+    ...(node.status === 'succeeded'
+      ? [
+          {
+            label: '重新生成',
+            disabled: false,
+            run: () => onNodeAction(node.fwId, NODE_ACTIONS.regenerate),
+          },
+        ]
+      : []),
     {
       label: '下载',
       disabled: node.status !== 'succeeded',
