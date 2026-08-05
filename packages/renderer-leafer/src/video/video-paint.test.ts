@@ -137,4 +137,22 @@ describe('帧驱动 tickVideoBindings', () => {
     tickVideoBindings()
     expect(forceUpdate.mock.calls.length).toBe(callsAfterFirst)
   })
+
+  it('暂停时 seek（进度变化）补画一帧——暂停态 seek 不落回画面的回归守护', async () => {
+    const screen = new Rect({ x: 0, y: 0, width: 100, height: 100 })
+    const forceUpdate = vi.spyOn(screen, 'forceUpdate').mockImplementation(() => {})
+
+    const source = getOrCreateVideoSource('http://probe.local/d.webm')
+    const loading = source.load()
+    fakeElement.emit('loadeddata')
+    await loading
+
+    attachVideoBinding({ screen, source })
+    tickVideoBindings() // 首帧
+    forceUpdate.mockClear()
+
+    fakeElement.currentTime = 5 // 暂停态 seek
+    tickVideoBindings()
+    expect(forceUpdate).toHaveBeenCalled()
+  })
 })

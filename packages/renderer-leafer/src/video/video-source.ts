@@ -79,7 +79,9 @@ export class HtmlVideoSource {
     this._state = 'loading'
     const el = this.createElement(this.url)
     this.el = el
-    el.src = this.url
+    // 工厂通常已设好 src；重复赋值（即使同值）在真实浏览器里会触发 emptied → 重新加载。
+    // 浏览器会把 el.src 归一化为绝对 URL，相对 URL 场景会再设一次，无害。
+    if (el.src !== this.url) el.src = this.url
     this.loadPromise = new Promise<void>((resolve, reject) => {
       this.onLoadedData = () => {
         this._state = 'ready'

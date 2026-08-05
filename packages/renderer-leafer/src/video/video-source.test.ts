@@ -46,6 +46,18 @@ function createSource(): { source: HtmlVideoSource; element: FakeVideoElement } 
   return { source, element }
 }
 
+/** 统计 src 赋值次数（复现「load 重复设 src 触发 emptied 重载」；类字段是 define 语义，accessor 子类化会被屏蔽，故用 Proxy） */
+function trackSrcSets(element: FakeVideoElement): { tracked: FakeVideoElement; getSets: () => number } {
+  let sets = 0
+  const tracked = new Proxy(element, {
+    set(target, prop, value): boolean {
+      if (prop === 'src') sets += 1
+      return Reflect.set(target, prop, value)
+    },
+  })
+  return { tracked, getSets: () => sets }
+}
+
 describe('HtmlVideoSource', () => {
   it('初始状态 idle，load 后 ready 并给出媒体宽高', async () => {
     const { source, element } = createSource()
@@ -65,6 +77,20 @@ describe('HtmlVideoSource', () => {
     element.emit('loadeddata')
     await Promise.all([first, second])
     expect(source.element).toBe(element)
+  })
+
+  it('工厂已设好同源 src 时 load 不重复赋值（浏览器里重设 src 会触发 emptied 重载）', async () => {
+    const element = new FakeVideoElement()
+    const { tracked, getSets } = trackSrcSets(element)
+    const url = 'http://probe.local/v.webm'
+    const source = new HtmlVideoSource(url, () => {
+      tracked.src = url // 模拟真实工厂：创建时已设置 src
+      return tracked
+    })
+    const loading = source.load()
+    element.emit('loadeddata')
+    await loading
+    expect(getSets()).toBe(1) // 工厂 1 次 + load 0 次
   })
 
   it('元素 error 事件 → load 拒绝，状态 error', async () => {
