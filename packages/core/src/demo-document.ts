@@ -1,3 +1,4 @@
+﻿import { DEMO_IMAGE_DATA_URL, DEMO_VIDEO_DATA_URL } from './demo-media'
 import {
   createAiImageNode,
   createAiVideoNode,
@@ -59,22 +60,28 @@ export function createDemoDocument(): FrameNode {
     children: [nestedBox],
   })
 
+  // 这两个纯素材节点原先没有 src，画面上就是两个空框 —— demo 当初只当几何夹具用，
+  // 媒体从来不是它的一部分。但它同时也是用户打开 localhost:3100 看到的东西，
+  // 空着会让人以为「图片/视频组件没做」。媒体内联在 demo-media.ts，
+  // 不入二进制文件、也不依赖外网。
   const img = createImgNode({
     fwId: 'img-1',
-    name: '图片占位',
+    name: '图片素材',
     x: 40,
     y: 300,
     width: 160,
     height: 100,
+    src: DEMO_IMAGE_DATA_URL,
   })
 
   const video = createVideoNode({
     fwId: 'video-1',
-    name: '视频占位',
+    name: '视频素材',
     x: 240,
     y: 300,
     width: 160,
     height: 100,
+    src: DEMO_VIDEO_DATA_URL,
   })
 
   // 溯源关系示例：一个 ai-image 派生出两个 ai-video（§3.2.2），
@@ -88,6 +95,8 @@ export function createDemoDocument(): FrameNode {
     height: 100,
     status: 'succeeded',
     prompt: 'a cat sitting on a windowsill',
+    // 成功态却没有产物，画出来就是个空框 —— 「成功」这一态原先在 demo 里看不出成功
+    src: DEMO_IMAGE_DATA_URL,
   })
 
   const aiVideo1 = createAiVideoNode({
