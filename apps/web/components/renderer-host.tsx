@@ -24,6 +24,7 @@ import {
 import { createDomRenderer } from '@framewright/renderer-dom'
 import { createLeaferRenderer } from '@framewright/renderer-leafer'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { DevPanelController, type DevPanelHandle } from './dev-panel'
 import { loadServerHistory } from './server-history'
 import type { ServerHistory } from './server-history'
 
@@ -34,6 +35,8 @@ const RENDERERS: ReadonlyArray<{ id: string; label: string; create: Factory }> =
   { id: 'dom', label: 'HTML / DOM', create: createDomRenderer },
   { id: 'leafer', label: 'LeaferJS', create: createLeaferRenderer },
 ]
+
+const DEV_PANEL_ENABLED = process.env.NODE_ENV !== 'production'
 
 interface NodeLocation {
   node: CanvasNode
@@ -89,6 +92,7 @@ export function RendererHost({
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const adapterRef = useRef<RendererAdapter | null>(null)
+  const devPanelRef = useRef<DevPanelHandle | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
 
   // 会话状态住在这里，不在渲染器内部——切换时原样传给新渲染器
@@ -205,6 +209,7 @@ export function RendererHost({
     if (op === null) return
     const next = applyOp(rootRef.current, op)
     historyRef.current.record(op)
+    if (DEV_PANEL_ENABLED) devPanelRef.current?.record(op)
     rootRef.current = next
     setRoot(next)
   }
@@ -260,12 +265,8 @@ export function RendererHost({
           next = applyOp(next, op)
           ops.push(op)
         }
-        const historyOp = groupOps(ops)
-        if (historyOp === null) return
-        historyRef.current.record(historyOp)
-        rootRef.current = next
-        setRoot(next)
-        const remaining = new Set(collectNodeIds(next))
+        commitOps(ops)
+        const remaining = new Set(collectNodeIds(rootRef.current))
         setSelection((current) => current.filter((fwId) => remaining.has(fwId)))
       },
       onViewportChange: setViewport,
@@ -338,6 +339,10 @@ export function RendererHost({
   }, [ctx])
 
   const active = RENDERERS[activeIndex]
+  const selectedNodes = selection.flatMap((fwId) => {
+    const node = findNodeById(root, fwId)
+    return node === null ? [] : [node]
+  })
 
   return (
     <main
@@ -419,6 +424,9 @@ export function RendererHost({
           position: 'relative',
         }}
       />
+      {DEV_PANEL_ENABLED ? (
+        <DevPanelController ref={devPanelRef} selectedNodes={selectedNodes} />
+      ) : null}
     </main>
   )
 }
