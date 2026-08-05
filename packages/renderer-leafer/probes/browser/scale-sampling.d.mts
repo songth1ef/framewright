@@ -14,6 +14,7 @@ export function buildFrameStats(
   frameDurationsMs: readonly number[],
   longFrameThresholdMs: number,
 ): FrameSample
+export function selectMountedLeafId(mountedIds: readonly string[], rootFwId: string): string
 export function buildDragEvidence(start: DragSnapshot, end: DragSnapshot): unknown
 export function buildZoomEvidence(start: ZoomSnapshot, end: ZoomSnapshot): unknown
 export function buildPanEvidence(start: PanSnapshot, end: PanSnapshot): unknown

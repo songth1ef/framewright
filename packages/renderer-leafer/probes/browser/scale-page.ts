@@ -11,7 +11,11 @@ import {
   type LeaferScaleProbeScenario,
 } from '../probe-config.mjs'
 import { buildScaleFixture, countFixtureConnections } from './scale-fixture'
-import { buildFrameStats, type FrameSample } from './scale-sampling.mjs'
+import {
+  buildFrameStats,
+  selectMountedLeafId,
+  type FrameSample,
+} from './scale-sampling.mjs'
 import type { DragSnapshot, PanSnapshot, ZoomSnapshot } from './scale-sampling.mjs'
 
 interface FirstScreenSample {
@@ -19,6 +23,7 @@ interface FirstScreenSample {
   fixtureBuildMs: number
   totalNodeCount: number
   totalConnectionCount: number
+  evidenceNodeFwId: string
   mountedLogicalNodeCount: number
   mountedConnectionCount: number
   mountedLeaferInstanceCount: number
@@ -59,6 +64,7 @@ let scene = new LeaferViewportScene(leafer)
 let root: FrameNode | null = null
 let viewport: Viewport = { scale: 1, offsetX: 0, offsetY: 0 }
 let initialScale = workload.zoom.startScale
+let evidenceNodeFwId: string | null = null
 
 function context(): RenderContext {
   if (root === null) throw new Error('规模场景尚未挂载')
@@ -76,6 +82,7 @@ function resetScene(nextRoot: FrameNode, nextInitialScale: number): void {
   scene.destroy()
   scene = new LeaferViewportScene(leafer)
   root = nextRoot
+  evidenceNodeFwId = null
   initialScale = nextInitialScale
   applyViewport({ scale: initialScale, offsetX: 0, offsetY: 0 })
 }
@@ -101,7 +108,7 @@ function countMountedConnections(): number {
 }
 
 function sampleNodePixel(): number[] | null {
-  const node = root?.children[0]
+  const node = root?.children.find((candidate) => candidate.fwId === evidenceNodeFwId)
   if (node === undefined) return null
   const dpr = window.devicePixelRatio || 1
   const cx = Math.floor((node.x + node.width / 2) * viewport.scale * dpr + viewport.offsetX * dpr)
@@ -125,6 +132,8 @@ async function mountScenario(value: LeaferScaleProbeScenario): Promise<FirstScre
 
   const renderStart = performance.now()
   scene.reconcile(context(), screen)
+  const mountedIds = scene.getMountedNodeIds()
+  evidenceNodeFwId = selectMountedLeafId(mountedIds, nextRoot.fwId)
   let paintedPixel: number[] | null = null
   let paintedAfterFrames = 0
   for (let frame = 0; frame < 10; frame += 1) {
@@ -133,9 +142,10 @@ async function mountScenario(value: LeaferScaleProbeScenario): Promise<FirstScre
     paintedPixel = sampleNodePixel()
     if (paintedPixel !== null) break
   }
-  if (paintedPixel === null) throw new Error(`${value.id} 首屏 10 帧后仍无 scale-node-0 像素`)
+  if (paintedPixel === null) {
+    throw new Error(`${value.id} 首屏 10 帧后仍无 ${evidenceNodeFwId} 像素`)
+  }
 
-  const mountedIds = scene.getMountedNodeIds()
   const mountedLogicalNodeCount = mountedIds.filter((fwId) => fwId !== nextRoot.fwId).length
   const totalConnectionCount = countFixtureConnections(nextRoot)
   if (
@@ -152,6 +162,7 @@ async function mountScenario(value: LeaferScaleProbeScenario): Promise<FirstScre
     fixtureBuildMs,
     totalNodeCount: value.nodeCount,
     totalConnectionCount,
+    evidenceNodeFwId,
     mountedLogicalNodeCount,
     mountedConnectionCount: countMountedConnections(),
     mountedLeaferInstanceCount: countMountedLeaferInstances(),
@@ -185,8 +196,8 @@ function sampleAnimation(
 }
 
 async function sampleDrag(ms: number, threshold: number): Promise<FrameSample> {
-  const node = root?.children[0]
-  if (node === undefined) throw new Error('没有可拖拽节点')
+  const node = root?.children.find((candidate) => candidate.fwId === evidenceNodeFwId)
+  if (node === undefined) throw new Error(`${evidenceNodeFwId ?? '未知节点'} 不在场景数据中`)
   const start = { x: node.x, y: node.y }
   return sampleAnimation(ms, threshold, (progress) => {
     scene.reconcile(context(), screen, {
@@ -233,8 +244,8 @@ async function samplePan(
 }
 
 function dragSnapshot(): DragSnapshot {
-  const node = root?.children[0]
-  if (node === undefined) throw new Error('没有可记录的拖拽节点')
+  const node = root?.children.find((candidate) => candidate.fwId === evidenceNodeFwId)
+  if (node === undefined) throw new Error(`${evidenceNodeFwId ?? '未知节点'} 不在场景数据中`)
   const ui = scene.getMountedUi(node.fwId)
   if (ui === undefined) throw new Error(`${node.fwId} 未实际挂载`)
   return { fwId: node.fwId, x: Number(ui.x), y: Number(ui.y) }

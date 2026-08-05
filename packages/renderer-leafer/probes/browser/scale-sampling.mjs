@@ -2,6 +2,12 @@ function requireMatchingNode(start, end) {
   if (start.fwId !== end.fwId) throw new Error('拖拽快照的节点不匹配')
 }
 
+export function selectMountedLeafId(mountedIds, rootFwId) {
+  const fwId = mountedIds.find((candidate) => candidate !== rootFwId)
+  if (fwId === undefined) throw new Error('没有实际挂载的叶子节点')
+  return fwId
+}
+
 export function buildFrameStats(frameDurationsMs, longFrameThresholdMs) {
   if (frameDurationsMs.length === 0) throw new Error('没有可用帧间隔')
   if (frameDurationsMs.some((duration) => !Number.isFinite(duration) || duration < 0)) {

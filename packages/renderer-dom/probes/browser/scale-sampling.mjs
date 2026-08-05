@@ -30,6 +30,33 @@ function requireMatchingNode(start, end) {
   if (start.fwId !== end.fwId) throw new Error('拖拽快照的节点不匹配')
 }
 
+export function selectMountedLeafId(mountedIds, rootFwId) {
+  const fwId = mountedIds.find((candidate) => candidate !== rootFwId)
+  if (fwId === undefined) throw new Error('没有实际挂载的叶子节点')
+  return fwId
+}
+
+export function measureConnectionLayer(layer) {
+  if (layer === null) {
+    return {
+      connectionLayerPresent: false,
+      mountedConnectionCount: 0,
+      mountedConnectionElementTypes: {},
+    }
+  }
+  const mountedConnectionElementTypes = {}
+  for (const child of layer.children) {
+    const elementType = child.tagName.toLowerCase()
+    mountedConnectionElementTypes[elementType] =
+      (mountedConnectionElementTypes[elementType] ?? 0) + 1
+  }
+  return {
+    connectionLayerPresent: true,
+    mountedConnectionCount: layer.children.length,
+    mountedConnectionElementTypes,
+  }
+}
+
 export function buildDragEvidence(start, end) {
   requireMatchingNode(start, end)
   const delta = { x: end.x - start.x, y: end.y - start.y }

@@ -1,0 +1,407 @@
+{
+  "probe": "renderer-dom-scale-s4-zoom-out",
+  "startedAt": "2026-08-05T08:25:16.552Z",
+  "workload": {
+    "renderer": "DOM（生产 createDomRenderer，React 节点层 + SVG 连线层）",
+    "scenarios": [
+      {
+        "id": "zoom-100",
+        "label": "100%",
+        "nodeCount": 10000,
+        "connectionPattern": "many-to-many",
+        "initialScale": 1
+      },
+      {
+        "id": "zoom-50",
+        "label": "50%",
+        "nodeCount": 10000,
+        "connectionPattern": "many-to-many",
+        "initialScale": 0.5
+      },
+      {
+        "id": "zoom-25",
+        "label": "25%",
+        "nodeCount": 10000,
+        "connectionPattern": "many-to-many",
+        "initialScale": 0.25
+      },
+      {
+        "id": "zoom-10",
+        "label": "10%",
+        "nodeCount": 10000,
+        "connectionPattern": "many-to-many",
+        "initialScale": 0.1
+      }
+    ],
+    "seed": 7,
+    "sampleWindowMs": 3000,
+    "caseTimeoutMs": 120000,
+    "viewport": {
+      "width": 1024,
+      "height": 1400,
+      "viewWidth": 960,
+      "viewHeight": 1300
+    },
+    "viewportRole": "browser viewport 为 1024×1400；其中 #view 是 960×1300 的可见画布裁剪区。由生产 renderer 执行视口裁剪；两侧必须使用同一口径。",
+    "dragDelta": {
+      "x": 240,
+      "y": 120
+    },
+    "panDelta": {
+      "x": -1200,
+      "y": -800
+    },
+    "longFrameThresholdMs": 50
+  },
+  "memory": null,
+  "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。",
+  "scenarios": [
+    {
+      "id": "zoom-100",
+      "label": "100%",
+      "nodeCount": 10000,
+      "connectionPattern": "many-to-many",
+      "initialScale": 1,
+      "status": "completed",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+      "firstScreen": {
+        "elapsedMs": 64.5,
+        "fixtureBuildMs": 11,
+        "totalNodeCount": 10000,
+        "totalConnectionCount": 17776,
+        "evidenceNodeFwId": "scale-node-0",
+        "mountedLogicalNodeCount": 170,
+        "connectionLayerPresent": true,
+        "mountedConnectionCount": 367,
+        "mountedConnectionElementTypes": {
+          "g": 367
+        },
+        "mountedDomElementCount": 2061,
+        "mountedToTotalRatio": 0.017,
+        "memory": null,
+        "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+      },
+      "drag": {
+        "frames": 168,
+        "elapsedMs": 3016.5000000000005,
+        "fps": 55.693684733963195,
+        "frameTimeMs": {
+          "median": 16.69999999999996,
+          "p95": 33.30000000000001,
+          "max": 33.40000000000009
+        },
+        "longFrames": 0,
+        "avgFps": 55.693684733963195,
+        "workEvidence": {
+          "fwId": "scale-node-0",
+          "start": {
+            "x": 40,
+            "y": 40
+          },
+          "end": {
+            "x": 280,
+            "y": 160
+          },
+          "delta": {
+            "x": 240,
+            "y": 120
+          },
+          "positionChanged": true
+        },
+        "memory": null,
+        "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+      },
+      "pan": {
+        "frames": 61,
+        "elapsedMs": 3016.6000000000004,
+        "fps": 20.221441357820062,
+        "frameTimeMs": {
+          "median": 50,
+          "p95": 83.30000000000018,
+          "max": 116.60000000000036
+        },
+        "longFrames": 16,
+        "avgFps": 20.221441357820062,
+        "workEvidence": {
+          "start": {
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "end": {
+            "offsetX": -1200,
+            "offsetY": -800
+          },
+          "delta": {
+            "x": -1200,
+            "y": -800
+          },
+          "offsetChanged": true
+        },
+        "memory": null,
+        "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+      },
+      "memory": null,
+      "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+    },
+    {
+      "id": "zoom-50",
+      "label": "50%",
+      "nodeCount": 10000,
+      "connectionPattern": "many-to-many",
+      "initialScale": 0.5,
+      "status": "completed",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+      "firstScreen": {
+        "elapsedMs": 71.40000000596046,
+        "fixtureBuildMs": 10.599999994039536,
+        "totalNodeCount": 10000,
+        "totalConnectionCount": 17776,
+        "evidenceNodeFwId": "scale-node-0",
+        "mountedLogicalNodeCount": 660,
+        "connectionLayerPresent": true,
+        "mountedConnectionCount": 1000,
+        "mountedConnectionElementTypes": {
+          "g": 1000
+        },
+        "mountedDomElementCount": 6307,
+        "mountedToTotalRatio": 0.066,
+        "memory": null,
+        "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+      },
+      "drag": {
+        "frames": 146,
+        "elapsedMs": 3016.5,
+        "fps": 48.40046411403945,
+        "frameTimeMs": {
+          "median": 16.699999999999875,
+          "p95": 33.40000000000009,
+          "max": 50
+        },
+        "longFrames": 0,
+        "avgFps": 48.40046411403945,
+        "workEvidence": {
+          "fwId": "scale-node-0",
+          "start": {
+            "x": 40,
+            "y": 40
+          },
+          "end": {
+            "x": 280,
+            "y": 160
+          },
+          "delta": {
+            "x": 240,
+            "y": 120
+          },
+          "positionChanged": true
+        },
+        "memory": null,
+        "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+      },
+      "pan": {
+        "frames": 55,
+        "elapsedMs": 3066.5719999999997,
+        "fps": 17.93533626472817,
+        "frameTimeMs": {
+          "median": 50.100000000000364,
+          "p95": 83.30000000000018,
+          "max": 83.30000000000018
+        },
+        "longFrames": 30,
+        "avgFps": 17.93533626472817,
+        "workEvidence": {
+          "start": {
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "end": {
+            "offsetX": -1200,
+            "offsetY": -800
+          },
+          "delta": {
+            "x": -1200,
+            "y": -800
+          },
+          "offsetChanged": true
+        },
+        "memory": null,
+        "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+      },
+      "memory": null,
+      "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+    },
+    {
+      "id": "zoom-25",
+      "label": "25%",
+      "nodeCount": 10000,
+      "connectionPattern": "many-to-many",
+      "initialScale": 0.25,
+      "status": "completed",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+      "firstScreen": {
+        "elapsedMs": 56.30000001192093,
+        "fixtureBuildMs": 14.400000005960464,
+        "totalNodeCount": 10000,
+        "totalConnectionCount": 17776,
+        "evidenceNodeFwId": "scale-node-0",
+        "mountedLogicalNodeCount": 1499,
+        "connectionLayerPresent": true,
+        "mountedConnectionCount": 1000,
+        "mountedConnectionElementTypes": {
+          "line": 1000
+        },
+        "mountedDomElementCount": 2506,
+        "mountedToTotalRatio": 0.1499,
+        "memory": null,
+        "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+      },
+      "drag": {
+        "frames": 169,
+        "elapsedMs": 3016.5,
+        "fps": 56.02519476214155,
+        "frameTimeMs": {
+          "median": 16.699999999999818,
+          "p95": 33.299999999999955,
+          "max": 33.400000000000034
+        },
+        "longFrames": 0,
+        "avgFps": 56.02519476214155,
+        "workEvidence": {
+          "fwId": "scale-node-0",
+          "start": {
+            "x": 40,
+            "y": 40
+          },
+          "end": {
+            "x": 280,
+            "y": 160
+          },
+          "delta": {
+            "x": 240,
+            "y": 120
+          },
+          "positionChanged": true
+        },
+        "memory": null,
+        "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+      },
+      "pan": {
+        "frames": 68,
+        "elapsedMs": 3016.5,
+        "fps": 22.542681916127965,
+        "frameTimeMs": {
+          "median": 49.950000000000045,
+          "p95": 66.69999999999982,
+          "max": 66.80000000000018
+        },
+        "longFrames": 11,
+        "avgFps": 22.542681916127965,
+        "workEvidence": {
+          "start": {
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "end": {
+            "offsetX": -1200,
+            "offsetY": -800
+          },
+          "delta": {
+            "x": -1200,
+            "y": -800
+          },
+          "offsetChanged": true
+        },
+        "memory": null,
+        "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+      },
+      "memory": null,
+      "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+    },
+    {
+      "id": "zoom-10",
+      "label": "10%",
+      "nodeCount": 10000,
+      "connectionPattern": "many-to-many",
+      "initialScale": 0.1,
+      "status": "completed",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+      "firstScreen": {
+        "elapsedMs": 29.799999982118607,
+        "fixtureBuildMs": 11.400000005960464,
+        "totalNodeCount": 10000,
+        "totalConnectionCount": 17776,
+        "evidenceNodeFwId": "scale-node-1621",
+        "mountedLogicalNodeCount": 1499,
+        "connectionLayerPresent": false,
+        "mountedConnectionCount": 0,
+        "mountedConnectionElementTypes": {},
+        "mountedDomElementCount": 1505,
+        "mountedToTotalRatio": 0.1499,
+        "memory": null,
+        "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+      },
+      "drag": {
+        "frames": 181,
+        "elapsedMs": 3016.5,
+        "fps": 60.00331510028178,
+        "frameTimeMs": {
+          "median": 16.699999999999818,
+          "p95": 16.700000000000273,
+          "max": 16.800000000000182
+        },
+        "longFrames": 0,
+        "avgFps": 60.00331510028178,
+        "workEvidence": {
+          "fwId": "scale-node-1621",
+          "start": {
+            "x": 4240,
+            "y": 2600
+          },
+          "end": {
+            "x": 4480,
+            "y": 2720
+          },
+          "delta": {
+            "x": 240,
+            "y": 120
+          },
+          "positionChanged": true
+        },
+        "memory": null,
+        "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+      },
+      "pan": {
+        "frames": 133,
+        "elapsedMs": 3016.5999999999995,
+        "fps": 44.0893721408208,
+        "frameTimeMs": {
+          "median": 16.700000000000273,
+          "p95": 33.400000000000546,
+          "max": 50
+        },
+        "longFrames": 0,
+        "avgFps": 44.0893721408208,
+        "workEvidence": {
+          "start": {
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "end": {
+            "offsetX": -1200,
+            "offsetY": -800
+          },
+          "delta": {
+            "x": -1200,
+            "y": -800
+          },
+          "offsetChanged": true
+        },
+        "memory": null,
+        "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+      },
+      "memory": null,
+      "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+    }
+  ],
+  "finishedAt": "2026-08-05T08:25:45.407Z"
+}

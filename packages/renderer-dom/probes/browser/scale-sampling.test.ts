@@ -7,10 +7,42 @@ import {
   buildDragEvidence,
   buildFrameStats,
   buildPanEvidence,
+  measureConnectionLayer,
+  selectMountedLeafId,
   buildZoomEvidence,
 } from './scale-sampling.mjs'
 
 describe('DOM 规模 probe', () => {
+  it('按连线层的全部直接子图元计数，并区分层缺失与真实空层', () => {
+    expect(measureConnectionLayer({
+      children: [
+        { tagName: 'path' },
+        { tagName: 'LINE' },
+        { tagName: 'line' },
+      ],
+    })).toEqual({
+      connectionLayerPresent: true,
+      mountedConnectionCount: 3,
+      mountedConnectionElementTypes: { line: 2, path: 1 },
+    })
+    expect(measureConnectionLayer({ children: [] })).toEqual({
+      connectionLayerPresent: true,
+      mountedConnectionCount: 0,
+      mountedConnectionElementTypes: {},
+    })
+    expect(measureConnectionLayer(null)).toEqual({
+      connectionLayerPresent: false,
+      mountedConnectionCount: 0,
+      mountedConnectionElementTypes: {},
+    })
+  })
+
+  it('从实际挂载集合选择叶子，不依赖 fixture 的第一个节点', () => {
+    expect(selectMountedLeafId(['root', 'scale-node-417', 'scale-node-9'], 'root'))
+      .toBe('scale-node-417')
+    expect(() => selectMountedLeafId(['root'], 'root')).toThrow('没有实际挂载的叶子节点')
+  })
+
   it('固定两侧共用的工作负载参数与 S3 场景矩阵', () => {
     expect(DOM_SCALE_PROBE_WORKLOAD).toMatchObject({
       sampleWindowMs: 3000,

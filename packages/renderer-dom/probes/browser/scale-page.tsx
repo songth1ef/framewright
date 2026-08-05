@@ -9,15 +9,23 @@ import {
 import { createDomRenderer } from '../../src/index'
 import { DOM_SCALE_PROBE_WORKLOAD, type DomScaleProbeScenario } from '../probe-config.mjs'
 import { buildScaleFixture, countFixtureConnections } from './scale-fixture'
-import { buildFrameStats, type FrameStats } from './scale-sampling.mjs'
+import {
+  buildFrameStats,
+  measureConnectionLayer,
+  selectMountedLeafId,
+  type FrameStats,
+} from './scale-sampling.mjs'
 
 interface FirstScreenSample {
   elapsedMs: number
   fixtureBuildMs: number
   totalNodeCount: number
   totalConnectionCount: number
+  evidenceNodeFwId: string
   mountedLogicalNodeCount: number
   mountedConnectionCount: number
+  connectionLayerPresent: boolean
+  mountedConnectionElementTypes: Record<string, number>
   mountedDomElementCount: number
   mountedToTotalRatio: number
 }
@@ -53,6 +61,7 @@ let renderer: RendererAdapter | null = null
 let root: FrameNode | null = null
 let viewport: Viewport = { scale: workload.zoom.startScale, offsetX: 0, offsetY: 0 }
 let initialScale = workload.zoom.startScale
+let evidenceNodeFwId: string | null = null
 
 function context(): RenderContext {
   if (root === null) throw new Error('尚未挂载规模场景')
@@ -92,7 +101,14 @@ async function mountScenario(scenario: DomScaleProbeScenario): Promise<FirstScre
   const elapsedMs = performance.now() - start
 
   const mountedNodes = view.querySelectorAll('[data-fw-id]:not([data-fw-type="frame"])').length
-  const mountedConnections = view.querySelectorAll('[data-fw-connections] path').length
+  const mountedIds = Array.from(
+    view.querySelectorAll<HTMLElement>('[data-fw-id]'),
+    (element) => element.dataset.fwId,
+  ).filter((fwId): fwId is string => fwId !== undefined)
+  evidenceNodeFwId = selectMountedLeafId(mountedIds, root.fwId)
+  const connectionMeasurement = measureConnectionLayer(
+    view.querySelector('[data-fw-connections]'),
+  )
   if (mountedNodes === 0) throw new Error('裁剪后没有实际挂载素材节点')
   if (scenario.initialScale === undefined && mountedNodes >= scenario.nodeCount) {
     throw new Error(`视口裁剪未生效：mounted=${mountedNodes}, total=${scenario.nodeCount}`)
@@ -103,8 +119,9 @@ async function mountScenario(scenario: DomScaleProbeScenario): Promise<FirstScre
     fixtureBuildMs,
     totalNodeCount: scenario.nodeCount,
     totalConnectionCount: countFixtureConnections(root),
+    evidenceNodeFwId,
     mountedLogicalNodeCount: mountedNodes,
-    mountedConnectionCount: mountedConnections,
+    ...connectionMeasurement,
     mountedDomElementCount: view.querySelectorAll('*').length,
     mountedToTotalRatio: mountedNodes / scenario.nodeCount,
   }
@@ -140,8 +157,8 @@ function sampleAnimation(
 async function sampleDrag(ms: number, threshold: number): Promise<FrameStats> {
   if (root === null) throw new Error('尚未挂载规模场景')
   viewport = { scale: initialScale, offsetX: 0, offsetY: 0 }
-  const node = root.children[0]
-  if (node === undefined) throw new Error('没有可拖拽节点')
+  const node = root.children.find((candidate) => candidate.fwId === evidenceNodeFwId)
+  if (node === undefined) throw new Error(`${evidenceNodeFwId ?? '未知节点'} 不在场景数据中`)
   const origin = { x: node.x, y: node.y }
   return sampleAnimation(ms, threshold, (progress) => {
     if (root === null) return
@@ -187,8 +204,8 @@ async function samplePan(
 }
 
 function dragSnapshot(): DragSnapshot {
-  const node = root?.children[0]
-  if (node === undefined) throw new Error('没有可记录的拖拽节点')
+  const node = root?.children.find((candidate) => candidate.fwId === evidenceNodeFwId)
+  if (node === undefined) throw new Error(`${evidenceNodeFwId ?? '未知节点'} 不在场景数据中`)
   return { fwId: node.fwId, x: node.x, y: node.y }
 }
 
@@ -204,6 +221,7 @@ function destroy(): void {
   renderer?.destroy()
   renderer = null
   root = null
+  evidenceNodeFwId = null
 }
 
 window.__scaleProbe = {

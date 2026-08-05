@@ -8,10 +8,17 @@ import {
   buildPanEvidence,
   buildZoomEvidence,
   buildFrameStats,
+  selectMountedLeafId,
 } from './scale-sampling.mjs'
 import { buildScaleFixture, countFixtureConnections } from './scale-fixture'
 
 describe('Leafer S3 规模 probe', () => {
+  it('从 scene 的实际挂载集合选择叶子，不依赖 fixture 的第一个节点', () => {
+    expect(selectMountedLeafId(['root', 'scale-node-417', 'scale-node-9'], 'root'))
+      .toBe('scale-node-417')
+    expect(() => selectMountedLeafId(['root'], 'root')).toThrow('没有实际挂载的叶子节点')
+  })
+
   it('锁死与 DOM 侧相同的 S3 场景与采样口径', () => {
     expect(LEAFER_SCALE_PROBE_WORKLOAD).toMatchObject({
       seed: 7,
