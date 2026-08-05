@@ -32,6 +32,16 @@ export interface DocumentStore {
   getDocument(documentId: string): Promise<StoredDocument | null>
   createDocument(input: CreateDocumentInput): Promise<StoredDocument>
   saveDocument(documentId: string, input: SaveDocumentInput): Promise<StoredDocument>
+  /**
+   * 🔴 只改名字，不碰 `root`。
+   *
+   * 别用「GET 整份 → 改 name → PUT 整份」代替它：画布有 800ms 防抖自动保存
+   * 在持续写 `root`，读改写之间只要落进一次自动保存，**这次重命名就会把用户
+   * 刚画的东西覆盖回旧快照**。窄更新没有这个窗口。
+   */
+  renameDocument(documentId: string, name: string): Promise<StoredDocument>
+  /** 删除画布。它的 `HistoryEntry` 由外键级联一并清除，不留孤儿。 */
+  deleteDocument(documentId: string): Promise<void>
 }
 
 function toJson(root: FrameNode): Prisma.InputJsonValue {
@@ -106,6 +116,19 @@ export function createDocumentStore(client: PrismaClient): DocumentStore {
       })
       return toStoredDocument(document)
     },
+
+    async renameDocument(documentId, name) {
+      // 只写 name 这一列 —— 见接口上的注释，读改写会和防抖自动保存抢 `root`。
+      const document = await client.document.update({
+        where: { id: documentId },
+        data: { name },
+      })
+      return toStoredDocument(document)
+    },
+
+    async deleteDocument(documentId) {
+      await client.document.delete({ where: { id: documentId } })
+    },
   }
 }
 
@@ -116,3 +139,5 @@ export const listProjectDocuments = defaultStore.listProjectDocuments
 export const getDocument = defaultStore.getDocument
 export const createDocument = defaultStore.createDocument
 export const saveDocument = defaultStore.saveDocument
+export const renameDocument = defaultStore.renameDocument
+export const deleteDocument = defaultStore.deleteDocument

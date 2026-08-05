@@ -98,3 +98,54 @@ describe('Document store', () => {
     await expect(store.getDocument('doc-a')).resolves.toEqual(saved)
   })
 })
+
+describe('Document 窄更新与删除', () => {
+  let prisma: Awaited<ReturnType<typeof createTestPrismaClient>>
+  let store: DocumentStore
+
+  beforeEach(async () => {
+    prisma = await createTestPrismaClient()
+    await prisma.project.create({ data: { id: 'proj-b', name: '测试项目' } })
+    store = createDocumentStore(prisma)
+  })
+
+  afterEach(async () => {
+    await prisma.$disconnect()
+  })
+
+  it('🔴 renameDocument 只改名字，不碰 root —— 防止和防抖自动保存互相覆盖', async () => {
+    const root = createFrameNode({
+      fwId: 'root',
+      children: [createBoxNode({ fwId: 'box-a', x: 12, y: 34 })],
+    })
+    await store.createDocument({ id: 'doc-r', projectId: 'proj-b', name: '旧名', root })
+
+    // 模拟改名期间自动保存写入了新内容
+    const newer = createFrameNode({
+      fwId: 'root',
+      children: [createBoxNode({ fwId: 'box-a', x: 999, y: 888 })],
+    })
+    await store.saveDocument('doc-r', { name: '旧名', root: newer, historySeq: 7 })
+
+    const renamed = await store.renameDocument('doc-r', '新名')
+
+    expect(renamed.name).toBe('新名')
+    // 关键断言：改名没有把 root 退回创建时的快照
+    expect(renamed.root.children[0]).toMatchObject({ fwId: 'box-a', x: 999, y: 888 })
+    expect(renamed.historySeq).toBe(7)
+  })
+
+  it('🔴 deleteDocument 连带清掉 HistoryEntry，不留孤儿', async () => {
+    const root = createFrameNode({ fwId: 'root', children: [] })
+    await store.createDocument({ id: 'doc-d', projectId: 'proj-b', name: '待删', root })
+    await prisma.historyEntry.create({
+      data: { documentId: 'doc-d', seq: 1, op: { kind: 'noop' } },
+    })
+    expect(await prisma.historyEntry.count({ where: { documentId: 'doc-d' } })).toBe(1)
+
+    await store.deleteDocument('doc-d')
+
+    expect(await store.getDocument('doc-d')).toBeNull()
+    expect(await prisma.historyEntry.count({ where: { documentId: 'doc-d' } })).toBe(0)
+  })
+})
