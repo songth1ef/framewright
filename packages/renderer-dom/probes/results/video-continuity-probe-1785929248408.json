@@ -1,0 +1,326 @@
+{
+  "probe": "video-playback-continuity",
+  "startedAt": "2026-08-05T11:26:24.125Z",
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+  "scenarios": [
+    {
+      "renderer": "dom",
+      "transition": "culling",
+      "before": {
+        "elementId": 1,
+        "currentTime": 0.220551,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 4
+      },
+      "mediaElementAbsentDuringTransition": true,
+      "videoDrawCallsBeforeTransition": null,
+      "videoDrawCallsDuringTransition": null,
+      "videoContentAbsentDuringTransition": true,
+      "immediateAfterRemount": {
+        "elementId": 2,
+        "currentTime": 0,
+        "paused": true,
+        "ended": false,
+        "readyState": 0,
+        "totalVideoFrames": 0
+      },
+      "playError": null,
+      "afterPlayReady": {
+        "elementId": 2,
+        "currentTime": 0.000084,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 2
+      },
+      "afterPlaybackProgress": {
+        "elementId": 2,
+        "currentTime": 0.020656,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 4
+      },
+      "classification": {
+        "elementRecreated": true,
+        "sessionCurrentTimePreserved": false,
+        "sessionPausedStatePreserved": false,
+        "sessionDecodedFrameCounterPreserved": false,
+        "playCallSucceeded": true,
+        "mediaBecameReadyAfterPlay": true,
+        "playbackAdvancedAfterPlay": true,
+        "decodedFramesAdvancedAfterPlay": true,
+        "mediaReadyAndPlayingAfterExplicitPlay": true,
+        "newElementReloadedAndPlayed": true
+      }
+    },
+    {
+      "renderer": "dom",
+      "transition": "simplified",
+      "before": {
+        "elementId": 3,
+        "currentTime": 0.221189,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 4
+      },
+      "mediaElementAbsentDuringTransition": true,
+      "videoDrawCallsBeforeTransition": null,
+      "videoDrawCallsDuringTransition": null,
+      "videoContentAbsentDuringTransition": true,
+      "immediateAfterRemount": {
+        "elementId": 4,
+        "currentTime": 0,
+        "paused": true,
+        "ended": false,
+        "readyState": 0,
+        "totalVideoFrames": 0
+      },
+      "playError": null,
+      "afterPlayReady": {
+        "elementId": 4,
+        "currentTime": 0.000051,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 2
+      },
+      "afterPlaybackProgress": {
+        "elementId": 4,
+        "currentTime": 0.020076,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 4
+      },
+      "classification": {
+        "elementRecreated": true,
+        "sessionCurrentTimePreserved": false,
+        "sessionPausedStatePreserved": false,
+        "sessionDecodedFrameCounterPreserved": false,
+        "playCallSucceeded": true,
+        "mediaBecameReadyAfterPlay": true,
+        "playbackAdvancedAfterPlay": true,
+        "decodedFramesAdvancedAfterPlay": true,
+        "mediaReadyAndPlayingAfterExplicitPlay": true,
+        "newElementReloadedAndPlayed": true
+      }
+    },
+    {
+      "renderer": "dom",
+      "transition": "dot",
+      "before": {
+        "elementId": 5,
+        "currentTime": 0.221078,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 4
+      },
+      "mediaElementAbsentDuringTransition": true,
+      "videoDrawCallsBeforeTransition": null,
+      "videoDrawCallsDuringTransition": null,
+      "videoContentAbsentDuringTransition": true,
+      "immediateAfterRemount": {
+        "elementId": 6,
+        "currentTime": 0,
+        "paused": true,
+        "ended": false,
+        "readyState": 0,
+        "totalVideoFrames": 0
+      },
+      "playError": null,
+      "afterPlayReady": {
+        "elementId": 6,
+        "currentTime": 0.000022,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 2
+      },
+      "afterPlaybackProgress": {
+        "elementId": 6,
+        "currentTime": 0.021231,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 4
+      },
+      "classification": {
+        "elementRecreated": true,
+        "sessionCurrentTimePreserved": false,
+        "sessionPausedStatePreserved": false,
+        "sessionDecodedFrameCounterPreserved": false,
+        "playCallSucceeded": true,
+        "mediaBecameReadyAfterPlay": true,
+        "playbackAdvancedAfterPlay": true,
+        "decodedFramesAdvancedAfterPlay": true,
+        "mediaReadyAndPlayingAfterExplicitPlay": true,
+        "newElementReloadedAndPlayed": true
+      }
+    },
+    {
+      "renderer": "leafer",
+      "transition": "culling",
+      "before": {
+        "elementId": 7,
+        "currentTime": 0.220307,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 4
+      },
+      "mediaElementAbsentDuringTransition": false,
+      "videoDrawCallsBeforeTransition": 13,
+      "videoDrawCallsDuringTransition": 0,
+      "videoContentAbsentDuringTransition": true,
+      "immediateAfterRemount": {
+        "elementId": 7,
+        "currentTime": 0.253858,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 4
+      },
+      "playError": null,
+      "afterPlayReady": {
+        "elementId": 7,
+        "currentTime": 0.254209,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 4
+      },
+      "afterPlaybackProgress": {
+        "elementId": 7,
+        "currentTime": 0.274781,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 6
+      },
+      "classification": {
+        "elementRecreated": false,
+        "sessionCurrentTimePreserved": true,
+        "sessionPausedStatePreserved": true,
+        "sessionDecodedFrameCounterPreserved": true,
+        "playCallSucceeded": true,
+        "mediaBecameReadyAfterPlay": true,
+        "playbackAdvancedAfterPlay": true,
+        "decodedFramesAdvancedAfterPlay": true,
+        "mediaReadyAndPlayingAfterExplicitPlay": true,
+        "newElementReloadedAndPlayed": false
+      }
+    },
+    {
+      "renderer": "leafer",
+      "transition": "simplified",
+      "before": {
+        "elementId": 7,
+        "currentTime": 0.220752,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 8
+      },
+      "mediaElementAbsentDuringTransition": false,
+      "videoDrawCallsBeforeTransition": 630,
+      "videoDrawCallsDuringTransition": 0,
+      "videoContentAbsentDuringTransition": true,
+      "immediateAfterRemount": {
+        "elementId": 7,
+        "currentTime": 0.253608,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 8
+      },
+      "playError": null,
+      "afterPlayReady": {
+        "elementId": 7,
+        "currentTime": 0.253909,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 8
+      },
+      "afterPlaybackProgress": {
+        "elementId": 7,
+        "currentTime": 0.275494,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 10
+      },
+      "classification": {
+        "elementRecreated": false,
+        "sessionCurrentTimePreserved": true,
+        "sessionPausedStatePreserved": true,
+        "sessionDecodedFrameCounterPreserved": true,
+        "playCallSucceeded": true,
+        "mediaBecameReadyAfterPlay": true,
+        "playbackAdvancedAfterPlay": true,
+        "decodedFramesAdvancedAfterPlay": true,
+        "mediaReadyAndPlayingAfterExplicitPlay": true,
+        "newElementReloadedAndPlayed": false
+      }
+    },
+    {
+      "renderer": "leafer",
+      "transition": "dot",
+      "before": {
+        "elementId": 7,
+        "currentTime": 0.220539,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 12
+      },
+      "mediaElementAbsentDuringTransition": false,
+      "videoDrawCallsBeforeTransition": 1246,
+      "videoDrawCallsDuringTransition": 0,
+      "videoContentAbsentDuringTransition": true,
+      "immediateAfterRemount": {
+        "elementId": 7,
+        "currentTime": 0.253768,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 12
+      },
+      "playError": null,
+      "afterPlayReady": {
+        "elementId": 7,
+        "currentTime": 0.25406,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 12
+      },
+      "afterPlaybackProgress": {
+        "elementId": 7,
+        "currentTime": 0.275285,
+        "paused": false,
+        "ended": false,
+        "readyState": 4,
+        "totalVideoFrames": 14
+      },
+      "classification": {
+        "elementRecreated": false,
+        "sessionCurrentTimePreserved": true,
+        "sessionPausedStatePreserved": true,
+        "sessionDecodedFrameCounterPreserved": true,
+        "playCallSucceeded": true,
+        "mediaBecameReadyAfterPlay": true,
+        "playbackAdvancedAfterPlay": true,
+        "decodedFramesAdvancedAfterPlay": true,
+        "mediaReadyAndPlayingAfterExplicitPlay": true,
+        "newElementReloadedAndPlayed": false
+      }
+    }
+  ],
+  "finishedAt": "2026-08-05T11:27:28.408Z"
+}
