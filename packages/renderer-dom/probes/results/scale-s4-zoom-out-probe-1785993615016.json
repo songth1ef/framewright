@@ -1,0 +1,1266 @@
+{
+  "probe": "renderer-dom-scale-s4-zoom-out",
+  "startedAt": "2026-08-06T05:19:10.632Z",
+  "workload": {
+    "renderer": "DOM（生产 createDomRenderer，React 节点层 + SVG 连线层）",
+    "scenarios": [
+      {
+        "id": "zoom-800",
+        "label": "800%",
+        "nodeCount": 10000,
+        "connectionPattern": "many-to-many",
+        "initialScale": 8
+      },
+      {
+        "id": "zoom-100",
+        "label": "100%",
+        "nodeCount": 10000,
+        "connectionPattern": "many-to-many",
+        "initialScale": 1
+      },
+      {
+        "id": "zoom-50",
+        "label": "50%",
+        "nodeCount": 10000,
+        "connectionPattern": "many-to-many",
+        "initialScale": 0.5
+      },
+      {
+        "id": "zoom-25",
+        "label": "25%",
+        "nodeCount": 10000,
+        "connectionPattern": "many-to-many",
+        "initialScale": 0.25
+      },
+      {
+        "id": "zoom-10",
+        "label": "10%",
+        "nodeCount": 10000,
+        "connectionPattern": "many-to-many",
+        "initialScale": 0.1
+      }
+    ],
+    "seed": 7,
+    "sampleWindowMs": 3000,
+    "repeatCount": 5,
+    "repeatCooldownMs": 1000,
+    "caseTimeoutMs": 120000,
+    "viewport": {
+      "width": 1024,
+      "height": 1400,
+      "viewWidth": 960,
+      "viewHeight": 1300
+    },
+    "viewportRole": "browser viewport 为 1024×1400；其中 #view 是 960×1300 的可见画布裁剪区。由生产 renderer 执行视口裁剪；两侧必须使用同一口径。",
+    "dragDelta": {
+      "x": 240,
+      "y": 120
+    },
+    "panDelta": {
+      "x": -1200,
+      "y": -800
+    },
+    "longFrameThresholdMs": 50
+  },
+  "sampling": {
+    "repeatCount": 1,
+    "repeatCooldownMs": 0,
+    "isolation": "每次样本启动独立子进程，并新建 browser 与 page"
+  },
+  "memory": null,
+  "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。",
+  "scenarios": [
+    {
+      "id": "zoom-800",
+      "label": "800%",
+      "nodeCount": 10000,
+      "connectionPattern": "many-to-many",
+      "initialScale": 8,
+      "status": "completed",
+      "requestedSampleCount": 1,
+      "samples": [
+        {
+          "sampleIndex": 1,
+          "id": "zoom-800",
+          "label": "800%",
+          "nodeCount": 10000,
+          "connectionPattern": "many-to-many",
+          "initialScale": 8,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 9319.599999964237,
+            "fixtureBuildMs": 85.70000004768372,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 17776,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 1,
+            "connectionLayerPresent": true,
+            "mountedConnectionCount": 0,
+            "mountedConnectionElementTypes": {},
+            "mountedDomElementCount": 8,
+            "mountedToTotalRatio": 0.0001,
+            "requestedImageCount": 1,
+            "decodedImageCount": 1,
+            "failedImageCount": 0,
+            "devicePixelRatio": 1,
+            "viewportPixelBudget": 1248000,
+            "requestedPixelBudget": 2160000,
+            "decodedPixelBudget": 2160000,
+            "decodedToViewportRatio": 1.7307692307692308,
+            "maxDisplayStretchRatio": 2,
+            "maxVisibleStretchRatio": 0.35555555555555557,
+            "decodedImages": [
+              {
+                "url": "https://picsum.photos/seed/framewright-3x2/1800/1200",
+                "naturalWidth": 1800,
+                "naturalHeight": 1200,
+                "instanceCount": 1,
+                "displayWidth": 3600,
+                "displayHeight": 2400,
+                "visibleWidth": 640,
+                "visibleHeight": 980,
+                "displayStretchRatio": 2,
+                "visibleStretchRatio": 0.35555555555555557
+              }
+            ],
+            "downloadedImageCount": 1,
+            "downloadedImageBytes": 390584,
+            "visualFingerprint": "a262f4f8d30c06568b22dda6d8ddfb76c0ffe0e3465fea82fe6084b7920a1a3f",
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "drag": {
+            "frames": 181,
+            "elapsedMs": 3016.6000000000004,
+            "fps": 60.001325996154605,
+            "frameTimeMs": {
+              "median": 16.69999999999891,
+              "p95": 16.700000000000728,
+              "max": 16.80000000000109
+            },
+            "longFrames": 0,
+            "avgFps": 60.001325996154605,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "pan": {
+            "frames": 181,
+            "elapsedMs": 3016.405999999999,
+            "fps": 60.005184978414725,
+            "frameTimeMs": {
+              "median": 16.700000000000728,
+              "p95": 16.700000000000728,
+              "max": 16.80000000000291
+            },
+            "longFrames": 0,
+            "avgFps": 60.005184978414725,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "a262f4f8d30c06568b22dda6d8ddfb76c0ffe0e3465fea82fe6084b7920a1a3f",
+                "endFingerprint": "1578ef08851da5467a58a8bcd5e3b6b41396ca76fcc3a82da5484552c3ae2f01",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 0,
+                "mountedConnectionCountEnd": 0,
+                "connectionCountChanged": false
+              }
+            },
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+        }
+      ],
+      "completedSampleCount": 1,
+      "aggregate": {
+        "firstScreen": {
+          "elapsedMs": {
+            "median": 9319.599999964237,
+            "q1": 9319.599999964237,
+            "q3": 9319.599999964237,
+            "iqr": 0
+          }
+        },
+        "drag": {
+          "avgFps": {
+            "median": 60.001325996154605,
+            "q1": 60.001325996154605,
+            "q3": 60.001325996154605,
+            "iqr": 0
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 16.69999999999891,
+              "q1": 16.69999999999891,
+              "q3": 16.69999999999891,
+              "iqr": 0
+            },
+            "p95": {
+              "median": 16.700000000000728,
+              "q1": 16.700000000000728,
+              "q3": 16.700000000000728,
+              "iqr": 0
+            },
+            "max": {
+              "median": 16.80000000000109,
+              "q1": 16.80000000000109,
+              "q3": 16.80000000000109,
+              "iqr": 0
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        },
+        "pan": {
+          "avgFps": {
+            "median": 60.005184978414725,
+            "q1": 60.005184978414725,
+            "q3": 60.005184978414725,
+            "iqr": 0
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 16.700000000000728,
+              "q1": 16.700000000000728,
+              "q3": 16.700000000000728,
+              "iqr": 0
+            },
+            "p95": {
+              "median": 16.700000000000728,
+              "q1": 16.700000000000728,
+              "q3": 16.700000000000728,
+              "iqr": 0
+            },
+            "max": {
+              "median": 16.80000000000291,
+              "q1": 16.80000000000291,
+              "q3": 16.80000000000291,
+              "iqr": 0
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "zoom-100",
+      "label": "100%",
+      "nodeCount": 10000,
+      "connectionPattern": "many-to-many",
+      "initialScale": 1,
+      "status": "completed",
+      "requestedSampleCount": 1,
+      "samples": [
+        {
+          "sampleIndex": 1,
+          "id": "zoom-100",
+          "label": "100%",
+          "nodeCount": 10000,
+          "connectionPattern": "many-to-many",
+          "initialScale": 1,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 4974.5,
+            "fixtureBuildMs": 82.30000001192093,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 17776,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 24,
+            "connectionLayerPresent": true,
+            "mountedConnectionCount": 75,
+            "mountedConnectionElementTypes": {
+              "g": 75
+            },
+            "mountedDomElementCount": 377,
+            "mountedToTotalRatio": 0.0024,
+            "requestedImageCount": 15,
+            "decodedImageCount": 15,
+            "failedImageCount": 0,
+            "devicePixelRatio": 1,
+            "viewportPixelBudget": 1248000,
+            "requestedPixelBudget": 1563816,
+            "decodedPixelBudget": 1563816,
+            "decodedToViewportRatio": 1.2530576923076924,
+            "maxDisplayStretchRatio": 1.0416666666666667,
+            "maxVisibleStretchRatio": 1.0416666666666667,
+            "decodedImages": [
+              {
+                "url": "https://picsum.photos/seed/framewright-21x9/462/198",
+                "naturalWidth": 462,
+                "naturalHeight": 198,
+                "instanceCount": 4,
+                "displayWidth": 480,
+                "displayHeight": 202.5,
+                "visibleWidth": 480,
+                "visibleHeight": 202.5,
+                "displayStretchRatio": 1.0389610389610389,
+                "visibleStretchRatio": 1.0389610389610389
+              },
+              {
+                "url": "https://picsum.photos/seed/framewright-3x2/450/300",
+                "naturalWidth": 450,
+                "naturalHeight": 300,
+                "instanceCount": 2,
+                "displayWidth": 450,
+                "displayHeight": 300,
+                "visibleWidth": 450,
+                "visibleHeight": 300,
+                "displayStretchRatio": 1,
+                "visibleStretchRatio": 1
+              },
+              {
+                "url": "https://picsum.photos/seed/framewright-4k/480/270",
+                "naturalWidth": 480,
+                "naturalHeight": 270,
+                "instanceCount": 1,
+                "displayWidth": 478,
+                "displayHeight": 240,
+                "visibleWidth": 0,
+                "visibleHeight": 0,
+                "displayStretchRatio": 0.9958333333333333,
+                "visibleStretchRatio": 0
+              },
+              {
+                "url": "https://picsum.photos/seed/framewright-4x3/400/300",
+                "naturalWidth": 400,
+                "naturalHeight": 300,
+                "instanceCount": 4,
+                "displayWidth": 400,
+                "displayHeight": 300,
+                "visibleWidth": 320,
+                "visibleHeight": 300,
+                "displayStretchRatio": 1,
+                "visibleStretchRatio": 0.8
+              },
+              {
+                "url": "https://picsum.photos/seed/framewright-5x4/375/300",
+                "naturalWidth": 375,
+                "naturalHeight": 300,
+                "instanceCount": 2,
+                "displayWidth": 373,
+                "displayHeight": 270,
+                "visibleWidth": 0,
+                "visibleHeight": 0,
+                "displayStretchRatio": 0.9946666666666667,
+                "visibleStretchRatio": 0
+              },
+              {
+                "url": "https://picsum.photos/seed/framewright-9x16/162/288",
+                "naturalWidth": 162,
+                "naturalHeight": 288,
+                "instanceCount": 2,
+                "displayWidth": 168.75,
+                "displayHeight": 300,
+                "visibleWidth": 168.75,
+                "visibleHeight": 300,
+                "displayStretchRatio": 1.0416666666666667,
+                "visibleStretchRatio": 1.0416666666666667
+              }
+            ],
+            "downloadedImageCount": 9,
+            "downloadedImageBytes": 123245,
+            "visualFingerprint": "6a6e6b1a8f5985a85c73441769302fbbd83de567a5d71e2a1935cdc2a935bbf9",
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "drag": {
+            "frames": 181,
+            "elapsedMs": 3016.5,
+            "fps": 60.00331510028178,
+            "frameTimeMs": {
+              "median": 16.699999999999818,
+              "p95": 16.700000000000728,
+              "max": 16.800000000000182
+            },
+            "longFrames": 0,
+            "avgFps": 60.00331510028178,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "pan": {
+            "frames": 178,
+            "elapsedMs": 3000,
+            "fps": 59.333333333333336,
+            "frameTimeMs": {
+              "median": 16.69999999999891,
+              "p95": 16.799999999999272,
+              "max": 33.399999999999636
+            },
+            "longFrames": 0,
+            "avgFps": 59.333333333333336,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "6a6e6b1a8f5985a85c73441769302fbbd83de567a5d71e2a1935cdc2a935bbf9",
+                "endFingerprint": "52e8c6e822af8ad4ef95bae0a5ace179eece4e03b5fc0e200178396684a3f902",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 75,
+                "mountedConnectionCountEnd": 114,
+                "connectionCountChanged": true
+              }
+            },
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+        }
+      ],
+      "completedSampleCount": 1,
+      "aggregate": {
+        "firstScreen": {
+          "elapsedMs": {
+            "median": 4974.5,
+            "q1": 4974.5,
+            "q3": 4974.5,
+            "iqr": 0
+          }
+        },
+        "drag": {
+          "avgFps": {
+            "median": 60.00331510028178,
+            "q1": 60.00331510028178,
+            "q3": 60.00331510028178,
+            "iqr": 0
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 16.699999999999818,
+              "q1": 16.699999999999818,
+              "q3": 16.699999999999818,
+              "iqr": 0
+            },
+            "p95": {
+              "median": 16.700000000000728,
+              "q1": 16.700000000000728,
+              "q3": 16.700000000000728,
+              "iqr": 0
+            },
+            "max": {
+              "median": 16.800000000000182,
+              "q1": 16.800000000000182,
+              "q3": 16.800000000000182,
+              "iqr": 0
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        },
+        "pan": {
+          "avgFps": {
+            "median": 59.333333333333336,
+            "q1": 59.333333333333336,
+            "q3": 59.333333333333336,
+            "iqr": 0
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 16.69999999999891,
+              "q1": 16.69999999999891,
+              "q3": 16.69999999999891,
+              "iqr": 0
+            },
+            "p95": {
+              "median": 16.799999999999272,
+              "q1": 16.799999999999272,
+              "q3": 16.799999999999272,
+              "iqr": 0
+            },
+            "max": {
+              "median": 33.399999999999636,
+              "q1": 33.399999999999636,
+              "q3": 33.399999999999636,
+              "iqr": 0
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "zoom-50",
+      "label": "50%",
+      "nodeCount": 10000,
+      "connectionPattern": "many-to-many",
+      "initialScale": 0.5,
+      "status": "completed",
+      "requestedSampleCount": 1,
+      "samples": [
+        {
+          "sampleIndex": 1,
+          "id": "zoom-50",
+          "label": "50%",
+          "nodeCount": 10000,
+          "connectionPattern": "many-to-many",
+          "initialScale": 0.5,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 6271.699999988079,
+            "fixtureBuildMs": 80.70000004768372,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 17776,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 77,
+            "connectionLayerPresent": true,
+            "mountedConnectionCount": 196,
+            "mountedConnectionElementTypes": {
+              "g": 196
+            },
+            "mountedDomElementCount": 1042,
+            "mountedToTotalRatio": 0.0077,
+            "requestedImageCount": 54,
+            "decodedImageCount": 54,
+            "failedImageCount": 0,
+            "devicePixelRatio": 1,
+            "viewportPixelBudget": 1248000,
+            "requestedPixelBudget": 1411496,
+            "decodedPixelBudget": 1411496,
+            "decodedToViewportRatio": 1.1310064102564104,
+            "maxDisplayStretchRatio": 1.0416666666666667,
+            "maxVisibleStretchRatio": 1.0416666666666667,
+            "decodedImages": [
+              {
+                "url": "https://picsum.photos/seed/framewright-16x9/240/135",
+                "naturalWidth": 240,
+                "naturalHeight": 135,
+                "instanceCount": 5,
+                "displayWidth": 240,
+                "displayHeight": 135,
+                "visibleWidth": 239,
+                "visibleHeight": 79.5,
+                "displayStretchRatio": 1,
+                "visibleStretchRatio": 0.9958333333333333
+              },
+              {
+                "url": "https://picsum.photos/seed/framewright-1x1/150/150",
+                "naturalWidth": 150,
+                "naturalHeight": 150,
+                "instanceCount": 6,
+                "displayWidth": 150,
+                "displayHeight": 150,
+                "visibleWidth": 149,
+                "visibleHeight": 150,
+                "displayStretchRatio": 1,
+                "visibleStretchRatio": 0.9933333333333333
+              },
+              {
+                "url": "https://picsum.photos/seed/framewright-21x9/231/99",
+                "naturalWidth": 231,
+                "naturalHeight": 99,
+                "instanceCount": 8,
+                "displayWidth": 240,
+                "displayHeight": 101.25,
+                "visibleWidth": 240,
+                "visibleHeight": 101.25,
+                "displayStretchRatio": 1.0389610389610389,
+                "visibleStretchRatio": 1.0389610389610389
+              },
+              {
+                "url": "https://picsum.photos/seed/framewright-2x3/100/150",
+                "naturalWidth": 100,
+                "naturalHeight": 150,
+                "instanceCount": 3,
+                "displayWidth": 99,
+                "displayHeight": 135,
+                "visibleWidth": 0,
+                "visibleHeight": 135,
+                "displayStretchRatio": 0.99,
+                "visibleStretchRatio": 0
+              },
+              {
+                "url": "https://picsum.photos/seed/framewright-3x2/225/150",
+                "naturalWidth": 225,
+                "naturalHeight": 150,
+                "instanceCount": 8,
+                "displayWidth": 225,
+                "displayHeight": 150,
+                "visibleWidth": 225,
+                "visibleHeight": 150,
+                "displayStretchRatio": 1,
+                "visibleStretchRatio": 1
+              },
+              {
+                "url": "https://picsum.photos/seed/framewright-4k/240/135",
+                "naturalWidth": 240,
+                "naturalHeight": 135,
+                "instanceCount": 6,
+                "displayWidth": 240,
+                "displayHeight": 135,
+                "visibleWidth": 240,
+                "visibleHeight": 135,
+                "displayStretchRatio": 1,
+                "visibleStretchRatio": 1
+              },
+              {
+                "url": "https://picsum.photos/seed/framewright-4x3/200/150",
+                "naturalWidth": 200,
+                "naturalHeight": 150,
+                "instanceCount": 5,
+                "displayWidth": 200,
+                "displayHeight": 150,
+                "visibleWidth": 200,
+                "visibleHeight": 150,
+                "displayStretchRatio": 1,
+                "visibleStretchRatio": 1
+              },
+              {
+                "url": "https://picsum.photos/seed/framewright-5x4/190/152",
+                "naturalWidth": 190,
+                "naturalHeight": 152,
+                "instanceCount": 7,
+                "displayWidth": 187.5,
+                "displayHeight": 150,
+                "visibleWidth": 186.5,
+                "visibleHeight": 135,
+                "displayStretchRatio": 0.9868421052631579,
+                "visibleStretchRatio": 0.9815789473684211
+              },
+              {
+                "url": "https://picsum.photos/seed/framewright-9x16/81/144",
+                "naturalWidth": 81,
+                "naturalHeight": 144,
+                "instanceCount": 6,
+                "displayWidth": 84.375,
+                "displayHeight": 150,
+                "visibleWidth": 84.375,
+                "visibleHeight": 150,
+                "displayStretchRatio": 1.0416666666666667,
+                "visibleStretchRatio": 1.0416666666666667
+              }
+            ],
+            "downloadedImageCount": 12,
+            "downloadedImageBytes": 51431,
+            "visualFingerprint": "709debacf12886ca8f6a17b68dd2e6092d84a18777cf9fba6289640abc8aded8",
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "drag": {
+            "frames": 181,
+            "elapsedMs": 3016.5,
+            "fps": 60.00331510028178,
+            "frameTimeMs": {
+              "median": 16.69999999999891,
+              "p95": 16.700000000000728,
+              "max": 16.80000000000109
+            },
+            "longFrames": 0,
+            "avgFps": 60.00331510028178,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "pan": {
+            "frames": 176,
+            "elapsedMs": 3000,
+            "fps": 58.666666666666664,
+            "frameTimeMs": {
+              "median": 16.69999999999891,
+              "p95": 16.799999999999272,
+              "max": 33.400000000001455
+            },
+            "longFrames": 0,
+            "avgFps": 58.666666666666664,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "baa733c1c397e7207b3377b919d4f6c6b4c2c3ab876b42f7b3bbf7ed06ea6537",
+                "endFingerprint": "83c0e0fdfaf2ec791414c8ecb65a184a0c48e5607f63b377b704d871985c6d45",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 196,
+                "mountedConnectionCountEnd": 352,
+                "connectionCountChanged": true
+              }
+            },
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+        }
+      ],
+      "completedSampleCount": 1,
+      "aggregate": {
+        "firstScreen": {
+          "elapsedMs": {
+            "median": 6271.699999988079,
+            "q1": 6271.699999988079,
+            "q3": 6271.699999988079,
+            "iqr": 0
+          }
+        },
+        "drag": {
+          "avgFps": {
+            "median": 60.00331510028178,
+            "q1": 60.00331510028178,
+            "q3": 60.00331510028178,
+            "iqr": 0
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 16.69999999999891,
+              "q1": 16.69999999999891,
+              "q3": 16.69999999999891,
+              "iqr": 0
+            },
+            "p95": {
+              "median": 16.700000000000728,
+              "q1": 16.700000000000728,
+              "q3": 16.700000000000728,
+              "iqr": 0
+            },
+            "max": {
+              "median": 16.80000000000109,
+              "q1": 16.80000000000109,
+              "q3": 16.80000000000109,
+              "iqr": 0
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        },
+        "pan": {
+          "avgFps": {
+            "median": 58.666666666666664,
+            "q1": 58.666666666666664,
+            "q3": 58.666666666666664,
+            "iqr": 0
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 16.69999999999891,
+              "q1": 16.69999999999891,
+              "q3": 16.69999999999891,
+              "iqr": 0
+            },
+            "p95": {
+              "median": 16.799999999999272,
+              "q1": 16.799999999999272,
+              "q3": 16.799999999999272,
+              "iqr": 0
+            },
+            "max": {
+              "median": 33.400000000001455,
+              "q1": 33.400000000001455,
+              "q3": 33.400000000001455,
+              "iqr": 0
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "zoom-25",
+      "label": "25%",
+      "nodeCount": 10000,
+      "connectionPattern": "many-to-many",
+      "initialScale": 0.25,
+      "status": "completed",
+      "requestedSampleCount": 1,
+      "samples": [
+        {
+          "sampleIndex": 1,
+          "id": "zoom-25",
+          "label": "25%",
+          "nodeCount": 10000,
+          "connectionPattern": "many-to-many",
+          "initialScale": 0.25,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 30.100000023841858,
+            "fixtureBuildMs": 75.89999997615814,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 17776,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 286,
+            "connectionLayerPresent": true,
+            "mountedConnectionCount": 639,
+            "mountedConnectionElementTypes": {
+              "g": 1
+            },
+            "mountedDomElementCount": 295,
+            "mountedToTotalRatio": 0.0286,
+            "requestedImageCount": 0,
+            "decodedImageCount": 0,
+            "failedImageCount": 0,
+            "devicePixelRatio": 1,
+            "viewportPixelBudget": 1248000,
+            "requestedPixelBudget": 0,
+            "decodedPixelBudget": 0,
+            "decodedToViewportRatio": 0,
+            "maxDisplayStretchRatio": 0,
+            "maxVisibleStretchRatio": 0,
+            "decodedImages": [],
+            "downloadedImageCount": 0,
+            "downloadedImageBytes": 0,
+            "visualFingerprint": "f34b4e694e7f3e204823a7fd47cdd3ea3a1d04d8ac3e500778042c5b663b580e",
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "drag": {
+            "frames": 181,
+            "elapsedMs": 3016.6,
+            "fps": 60.00132599615461,
+            "frameTimeMs": {
+              "median": 16.699999999999818,
+              "p95": 16.700000000000273,
+              "max": 16.800000000000182
+            },
+            "longFrames": 0,
+            "avgFps": 60.00132599615461,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "pan": {
+            "frames": 179,
+            "elapsedMs": 3016.5339999999997,
+            "fps": 59.339626206765786,
+            "frameTimeMs": {
+              "median": 16.699999999999818,
+              "p95": 16.800000000000182,
+              "max": 33.400000000000546
+            },
+            "longFrames": 0,
+            "avgFps": 59.339626206765786,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "f34b4e694e7f3e204823a7fd47cdd3ea3a1d04d8ac3e500778042c5b663b580e",
+                "endFingerprint": "b465b932222305b52d71aa12e02ea011fa5b19451dbfe6e04e0dbcb4070748fc",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 639,
+                "mountedConnectionCountEnd": 1000,
+                "connectionCountChanged": true
+              }
+            },
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+        }
+      ],
+      "completedSampleCount": 1,
+      "aggregate": {
+        "firstScreen": {
+          "elapsedMs": {
+            "median": 30.100000023841858,
+            "q1": 30.100000023841858,
+            "q3": 30.100000023841858,
+            "iqr": 0
+          }
+        },
+        "drag": {
+          "avgFps": {
+            "median": 60.00132599615461,
+            "q1": 60.00132599615461,
+            "q3": 60.00132599615461,
+            "iqr": 0
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 16.699999999999818,
+              "q1": 16.699999999999818,
+              "q3": 16.699999999999818,
+              "iqr": 0
+            },
+            "p95": {
+              "median": 16.700000000000273,
+              "q1": 16.700000000000273,
+              "q3": 16.700000000000273,
+              "iqr": 0
+            },
+            "max": {
+              "median": 16.800000000000182,
+              "q1": 16.800000000000182,
+              "q3": 16.800000000000182,
+              "iqr": 0
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        },
+        "pan": {
+          "avgFps": {
+            "median": 59.339626206765786,
+            "q1": 59.339626206765786,
+            "q3": 59.339626206765786,
+            "iqr": 0
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 16.699999999999818,
+              "q1": 16.699999999999818,
+              "q3": 16.699999999999818,
+              "iqr": 0
+            },
+            "p95": {
+              "median": 16.800000000000182,
+              "q1": 16.800000000000182,
+              "q3": 16.800000000000182,
+              "iqr": 0
+            },
+            "max": {
+              "median": 33.400000000000546,
+              "q1": 33.400000000000546,
+              "q3": 33.400000000000546,
+              "iqr": 0
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "zoom-10",
+      "label": "10%",
+      "nodeCount": 10000,
+      "connectionPattern": "many-to-many",
+      "initialScale": 0.1,
+      "status": "completed",
+      "requestedSampleCount": 1,
+      "samples": [
+        {
+          "sampleIndex": 1,
+          "id": "zoom-10",
+          "label": "10%",
+          "nodeCount": 10000,
+          "connectionPattern": "many-to-many",
+          "initialScale": 0.1,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 38.60000002384186,
+            "fixtureBuildMs": 76.10000002384186,
+            "totalNodeCount": 10000,
+            "totalConnectionCount": 17776,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 1499,
+            "connectionLayerPresent": false,
+            "mountedConnectionCount": 0,
+            "mountedConnectionElementTypes": {},
+            "mountedDomElementCount": 1505,
+            "mountedToTotalRatio": 0.1499,
+            "requestedImageCount": 0,
+            "decodedImageCount": 0,
+            "failedImageCount": 0,
+            "devicePixelRatio": 1,
+            "viewportPixelBudget": 1248000,
+            "requestedPixelBudget": 0,
+            "decodedPixelBudget": 0,
+            "decodedToViewportRatio": 0,
+            "maxDisplayStretchRatio": 0,
+            "maxVisibleStretchRatio": 0,
+            "decodedImages": [],
+            "downloadedImageCount": 0,
+            "downloadedImageBytes": 0,
+            "visualFingerprint": "fce5c242b7dfb60a140c67276daf0ca25fdc12645e8ce71c51c92f916873362d",
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "drag": {
+            "frames": 181,
+            "elapsedMs": 3016.5,
+            "fps": 60.00331510028178,
+            "frameTimeMs": {
+              "median": 16.699999999999818,
+              "p95": 16.700000000000273,
+              "max": 16.800000000000182
+            },
+            "longFrames": 0,
+            "avgFps": 60.00331510028178,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            },
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "pan": {
+            "frames": 181,
+            "elapsedMs": 3016.5,
+            "fps": 60.00331510028178,
+            "frameTimeMs": {
+              "median": 16.699999999999818,
+              "p95": 16.799999999999727,
+              "max": 16.800000000000182
+            },
+            "longFrames": 0,
+            "avgFps": 60.00331510028178,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "fce5c242b7dfb60a140c67276daf0ca25fdc12645e8ce71c51c92f916873362d",
+                "endFingerprint": "c2a397845d954ee0a9781c4ac44c2f2e695b0cbcbf9ca2a51532440f4edf5291",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 0,
+                "mountedConnectionCountEnd": 0,
+                "connectionCountChanged": false
+              }
+            },
+            "memory": null,
+            "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+          },
+          "memory": null,
+          "memoryReason": "页面级 API 无法可靠覆盖 DOM、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。"
+        }
+      ],
+      "completedSampleCount": 1,
+      "aggregate": {
+        "firstScreen": {
+          "elapsedMs": {
+            "median": 38.60000002384186,
+            "q1": 38.60000002384186,
+            "q3": 38.60000002384186,
+            "iqr": 0
+          }
+        },
+        "drag": {
+          "avgFps": {
+            "median": 60.00331510028178,
+            "q1": 60.00331510028178,
+            "q3": 60.00331510028178,
+            "iqr": 0
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 16.699999999999818,
+              "q1": 16.699999999999818,
+              "q3": 16.699999999999818,
+              "iqr": 0
+            },
+            "p95": {
+              "median": 16.700000000000273,
+              "q1": 16.700000000000273,
+              "q3": 16.700000000000273,
+              "iqr": 0
+            },
+            "max": {
+              "median": 16.800000000000182,
+              "q1": 16.800000000000182,
+              "q3": 16.800000000000182,
+              "iqr": 0
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        },
+        "pan": {
+          "avgFps": {
+            "median": 60.00331510028178,
+            "q1": 60.00331510028178,
+            "q3": 60.00331510028178,
+            "iqr": 0
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 16.699999999999818,
+              "q1": 16.699999999999818,
+              "q3": 16.699999999999818,
+              "iqr": 0
+            },
+            "p95": {
+              "median": 16.799999999999727,
+              "q1": 16.799999999999727,
+              "q3": 16.799999999999727,
+              "iqr": 0
+            },
+            "max": {
+              "median": 16.800000000000182,
+              "q1": 16.800000000000182,
+              "q3": 16.800000000000182,
+              "iqr": 0
+            }
+          },
+          "longFrames": {
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        }
+      }
+    }
+  ],
+  "finishedAt": "2026-08-06T05:20:15.015Z"
+}

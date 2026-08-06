@@ -29,6 +29,7 @@ export const DOM_SCALE_PROBE_WORKLOAD = Object.freeze({
 export const DOM_ZOOM_OUT_PROBE_WORKLOAD = Object.freeze({
   renderer: DOM_SCALE_PROBE_WORKLOAD.renderer,
   scenarios: Object.freeze([
+    Object.freeze({ id: 'zoom-800', label: '800%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 8 }),
     Object.freeze({ id: 'zoom-100', label: '100%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 1 }),
     Object.freeze({ id: 'zoom-50', label: '50%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 0.5 }),
     Object.freeze({ id: 'zoom-25', label: '25%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 0.25 }),

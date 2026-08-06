@@ -1,6 +1,8 @@
 import {
   NOOP_RENDERER_CALLBACKS,
   applyNodeMoves,
+  rewriteDemoImageRequests,
+  selectDemoImageRequestTier,
   type FrameNode,
   type RenderContext,
   type RendererAdapter,
@@ -31,11 +33,24 @@ interface FirstScreenSample {
   requestedImageCount: number
   decodedImageCount: number
   failedImageCount: number
+  devicePixelRatio: number
+  viewportPixelBudget: number
+  requestedPixelBudget: number
+  decodedPixelBudget: number
+  decodedToViewportRatio: number
+  maxDisplayStretchRatio: number
+  maxVisibleStretchRatio: number
   decodedImages: Array<{
     url: string
     naturalWidth: number
     naturalHeight: number
     instanceCount: number
+    displayWidth: number
+    displayHeight: number
+    visibleWidth: number
+    visibleHeight: number
+    displayStretchRatio: number
+    visibleStretchRatio: number
   }>
 }
 
@@ -81,6 +96,7 @@ function context(): RenderContext {
     viewport,
     selection: [],
     callbacks: NOOP_RENDERER_CALLBACKS,
+    viewportSize: { width: view.clientWidth, height: view.clientHeight },
     cullingLimits: maxConnections === undefined ? undefined : { maxConnections },
   }
 }
@@ -99,7 +115,17 @@ async function waitForMountedNodes(): Promise<void> {
 
 async function decodeMountedImages(): Promise<Pick<
   FirstScreenSample,
-  'requestedImageCount' | 'decodedImageCount' | 'failedImageCount' | 'decodedImages'
+  | 'requestedImageCount'
+  | 'decodedImageCount'
+  | 'failedImageCount'
+  | 'devicePixelRatio'
+  | 'viewportPixelBudget'
+  | 'requestedPixelBudget'
+  | 'decodedPixelBudget'
+  | 'decodedToViewportRatio'
+  | 'maxDisplayStretchRatio'
+  | 'maxVisibleStretchRatio'
+  | 'decodedImages'
 >> {
   const images = Array.from(view.querySelectorAll<HTMLImageElement>('img'))
   await Promise.allSettled(images.map(async (image) => {
@@ -108,28 +134,81 @@ async function decodeMountedImages(): Promise<Pick<
   }))
 
   const decoded = images.filter((image) => image.naturalWidth > 0 && image.naturalHeight > 0)
+  const viewRect = view.getBoundingClientRect()
   const grouped = new Map<string, FirstScreenSample['decodedImages'][number]>()
   for (const image of decoded) {
     const url = image.currentSrc || image.src
     const key = `${url}\n${image.naturalWidth}x${image.naturalHeight}`
     const existing = grouped.get(key)
+    const rect = image.getBoundingClientRect()
+    const visibleWidth = Math.max(0, Math.min(rect.right, viewRect.right) - Math.max(rect.left, viewRect.left))
+    const visibleHeight = Math.max(0, Math.min(rect.bottom, viewRect.bottom) - Math.max(rect.top, viewRect.top))
+    const evidence = {
+      displayWidth: rect.width,
+      displayHeight: rect.height,
+      visibleWidth,
+      visibleHeight,
+      displayStretchRatio: rect.width / image.naturalWidth,
+      visibleStretchRatio: visibleWidth / image.naturalWidth,
+    }
     if (existing === undefined) {
       grouped.set(key, {
         url,
         naturalWidth: image.naturalWidth,
         naturalHeight: image.naturalHeight,
         instanceCount: 1,
+        ...evidence,
       })
     } else {
       existing.instanceCount += 1
+      existing.displayWidth = Math.max(existing.displayWidth, evidence.displayWidth)
+      existing.displayHeight = Math.max(existing.displayHeight, evidence.displayHeight)
+      existing.visibleWidth = Math.max(existing.visibleWidth, evidence.visibleWidth)
+      existing.visibleHeight = Math.max(existing.visibleHeight, evidence.visibleHeight)
+      existing.displayStretchRatio = Math.max(
+        existing.displayStretchRatio,
+        evidence.displayStretchRatio,
+      )
+      existing.visibleStretchRatio = Math.max(
+        existing.visibleStretchRatio,
+        evidence.visibleStretchRatio,
+      )
     }
   }
+
+  const requestedPixelBudget = images.reduce((total, image) => {
+    const segments = new URL(image.currentSrc || image.src).pathname.split('/').filter(Boolean)
+    const width = Number(segments.at(-2))
+    const height = Number(segments.at(-1))
+    return total + (
+      Number.isSafeInteger(width) && Number.isSafeInteger(height) ? width * height : 0
+    )
+  }, 0)
+  const decodedPixelBudget = decoded.reduce(
+    (total, image) => total + image.naturalWidth * image.naturalHeight,
+    0,
+  )
+  const viewportPixelBudget = view.clientWidth * view.clientHeight * window.devicePixelRatio ** 2
+  const decodedImages = [...grouped.values()].sort((left, right) => left.url.localeCompare(right.url))
 
   return {
     requestedImageCount: images.length,
     decodedImageCount: decoded.length,
     failedImageCount: images.length - decoded.length,
-    decodedImages: [...grouped.values()].sort((left, right) => left.url.localeCompare(right.url)),
+    devicePixelRatio: window.devicePixelRatio,
+    viewportPixelBudget,
+    requestedPixelBudget,
+    decodedPixelBudget,
+    decodedToViewportRatio: viewportPixelBudget === 0 ? 0 : decodedPixelBudget / viewportPixelBudget,
+    maxDisplayStretchRatio: decodedImages.reduce(
+      (maximum, image) => Math.max(maximum, image.displayStretchRatio),
+      0,
+    ),
+    maxVisibleStretchRatio: decodedImages.reduce(
+      (maximum, image) => Math.max(maximum, image.visibleStretchRatio),
+      0,
+    ),
+    decodedImages,
   }
 }
 
@@ -138,9 +217,16 @@ async function mountScenario(scenario: DomScaleProbeScenario): Promise<FirstScre
   renderer = null
   view.replaceChildren()
   const fixtureStart = performance.now()
-  root = buildScaleFixture(scenario)
-  const fixtureBuildMs = performance.now() - fixtureStart
   initialScale = scenario.initialScale ?? workload.zoom.startScale
+  root = rewriteDemoImageRequests(
+    buildScaleFixture(scenario),
+    {
+      tier: selectDemoImageRequestTier(initialScale, window.devicePixelRatio),
+      viewportSize: { width: view.clientWidth, height: view.clientHeight },
+      devicePixelRatio: window.devicePixelRatio,
+    },
+  )
+  const fixtureBuildMs = performance.now() - fixtureStart
   maxConnections = 'maxConnections' in scenario && typeof scenario.maxConnections === 'number'
     ? scenario.maxConnections
     : undefined

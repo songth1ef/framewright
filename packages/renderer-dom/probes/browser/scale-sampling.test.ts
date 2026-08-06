@@ -80,6 +80,7 @@ describe('DOM 规模 probe', () => {
       panDelta: { x: -1200, y: -800 },
     })
     expect(DOM_ZOOM_OUT_PROBE_WORKLOAD.scenarios).toEqual([
+      { id: 'zoom-800', label: '800%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 8 },
       { id: 'zoom-100', label: '100%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 1 },
       { id: 'zoom-50', label: '50%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 0.5 },
       { id: 'zoom-25', label: '25%', nodeCount: 10000, connectionPattern: 'many-to-many', initialScale: 0.25 },
