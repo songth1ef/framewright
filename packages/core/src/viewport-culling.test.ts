@@ -1,7 +1,12 @@
-import { performance } from 'node:perf_hooks'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createScaleFixture } from './scale-fixture'
-import { createAiImageNode, createBoxNode, createFrameNode } from './node-schema'
+import {
+  createAiImageNode,
+  createBoxNode,
+  createFrameNode,
+  type CanvasNode,
+  type FrameNode,
+} from './node-schema'
 import { getContentBounds } from './viewport'
 import { collectVisibleNodeIds } from './visibility'
 import {
@@ -16,6 +21,58 @@ import {
 
 const viewport = { scale: 1, offsetX: 0, offsetY: 0 }
 const screen = { width: 100, height: 100 }
+
+function observeVisibleReads(root: FrameNode): {
+  root: FrameNode
+  getVisibleReadCount: () => number
+} {
+  let visibleReadCount = 0
+  const observe = (node: CanvasNode): CanvasNode => {
+    const children = node.fwType === 'frame' ? node.children.map(observe) : undefined
+    return new Proxy(node, {
+      get(target, property, receiver) {
+        if (property === 'visible') visibleReadCount += 1
+        if (property === 'children' && children !== undefined) return children
+        return Reflect.get(target, property, receiver)
+      },
+    })
+  }
+
+  return {
+    root: observe(root) as FrameNode,
+    getVisibleReadCount: () => visibleReadCount,
+  }
+}
+
+function observeSortWork<T>(run: () => T): {
+  result: T
+  sortCallCount: number
+  comparisonCount: number
+} {
+  const originalSort = Array.prototype.sort
+  let sortCallCount = 0
+  let comparisonCount = 0
+  const sortSpy = vi.spyOn(Array.prototype, 'sort').mockImplementation(function (
+    this: unknown[],
+    compareFn?: (left: unknown, right: unknown) => number,
+  ) {
+    sortCallCount += 1
+    const observedCompare =
+      compareFn === undefined
+        ? undefined
+        : (left: unknown, right: unknown) => {
+            comparisonCount += 1
+            return compareFn(left, right)
+          }
+    return Reflect.apply(originalSort, this, [observedCompare]) as unknown[]
+  })
+
+  try {
+    return { result: run(), sortCallCount, comparisonCount }
+  } finally {
+    sortSpy.mockRestore()
+  }
+}
 
 describe('getNodesInViewport', () => {
   it('连线显隐不改变 node 树的裁剪结果', () => {
@@ -369,7 +426,7 @@ describe('getNodesInViewport', () => {
     expect(canReuseViewportCulling(previous, { ...viewport, offsetX: -10 }, options)).toBe(false)
   })
 
-  it('10000 节点裁剪保持在 1ms 级', () => {
+  it('10000 节点裁剪只遍历一次 node 树', () => {
     const children = Array.from({ length: 10_000 }, (_, index) =>
       createBoxNode({
         fwId: `node-${index}`,
@@ -380,16 +437,14 @@ describe('getNodesInViewport', () => {
       }),
     )
     const root = createFrameNode({ fwId: 'root', width: 2_000, height: 2_000, children })
+    const observed = observeVisibleReads(root)
 
-    for (let index = 0; index < 10; index += 1) getNodesInViewport(root, viewport, screen)
-    const startedAt = performance.now()
-    for (let index = 0; index < 20; index += 1) getNodesInViewport(root, viewport, screen)
-    const averageMs = (performance.now() - startedAt) / 20
+    getNodesInViewport(observed.root, viewport, screen)
 
-    expect(averageMs).toBeLessThan(5)
+    expect(observed.getVisibleReadCount()).toBe(10_001)
   })
 
-  it('10000 节点全落入视口并触发排序时，单次裁剪仍在 25ms 内', () => {
+  it('10000 节点全落入视口时，候选只物化一次且排序工作量保持 O(n log n)', () => {
     const root = createScaleFixture({
       nodeCount: 10_000,
       connectionPattern: 'many-to-many',
@@ -401,14 +456,20 @@ describe('getNodesInViewport', () => {
       height: root.height * zoomedOut.scale,
       overscan: 0,
     }
+    const observed = observeVisibleReads(root)
+    const candidateCount = 10_001
+    const comparisonBudget =
+      2 * candidateCount * Math.ceil(Math.log2(candidateCount))
 
-    getNodesInViewport(root, zoomedOut, fullCanvasScreen)
-    const startedAt = performance.now()
-    const ids = getNodesInViewport(root, zoomedOut, fullCanvasScreen)
-    const elapsedMs = performance.now() - startedAt
+    const work = observeSortWork(() =>
+      getNodesInViewport(observed.root, zoomedOut, fullCanvasScreen),
+    )
 
-    expect(ids.size).toBe(DEFAULT_MAX_NODES)
-    expect(elapsedMs).toBeLessThan(25)
+    expect(work.result.size).toBe(DEFAULT_MAX_NODES)
+    expect(observed.getVisibleReadCount()).toBe(candidateCount)
+    expect(work.sortCallCount).toBe(1)
+    expect(work.comparisonCount).toBeGreaterThan(0)
+    expect(work.comparisonCount).toBeLessThanOrEqual(comparisonBudget)
   })
 })
 
@@ -547,7 +608,7 @@ describe('getConnectionsInViewport', () => {
     ).toEqual([])
   })
 
-  it('10000 节点 many-to-many 连线裁剪单次在 75ms 内且不超过上限', () => {
+  it('10000 节点 many-to-many 连线裁剪保持单次遍历、O(e log e) 排序并在预算处早停', () => {
     const root = createScaleFixture({
       nodeCount: 10_000,
       connectionPattern: 'many-to-many',
@@ -559,13 +620,30 @@ describe('getConnectionsInViewport', () => {
       height: root.height * zoomedOut.scale,
       overscan: 0,
     }
+    const observed = observeVisibleReads(root)
+    const connectionCount = root.children.reduce(
+      (count, node) => count + ('sourceFwIds' in node ? node.sourceFwIds.length : 0),
+      0,
+    )
+    const comparisonBudget =
+      2 * connectionCount * Math.ceil(Math.log2(connectionCount))
+    const boundsCache = new ConnectionBoundsCache()
+    const boundsGetSpy = vi.spyOn(boundsCache, 'get')
 
-    getConnectionsInViewport(root, zoomedOut, fullCanvasScreen)
-    const startedAt = performance.now()
-    const connections = getConnectionsInViewport(root, zoomedOut, fullCanvasScreen)
-    const elapsedMs = performance.now() - startedAt
+    const work = observeSortWork(() =>
+      getConnectionsInViewport(
+        observed.root,
+        zoomedOut,
+        fullCanvasScreen,
+        boundsCache,
+      ),
+    )
 
-    expect(connections).toHaveLength(DEFAULT_MAX_CONNECTIONS)
-    expect(elapsedMs).toBeLessThan(75)
+    expect(work.result).toHaveLength(DEFAULT_MAX_CONNECTIONS)
+    expect(observed.getVisibleReadCount()).toBe(10_001)
+    expect(work.sortCallCount).toBe(1)
+    expect(work.comparisonCount).toBeGreaterThan(0)
+    expect(work.comparisonCount).toBeLessThanOrEqual(comparisonBudget)
+    expect(boundsGetSpy).toHaveBeenCalledTimes(DEFAULT_MAX_CONNECTIONS)
   })
 })
