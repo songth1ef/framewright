@@ -1,3 +1,4 @@
+import { GEN_UNIT_STYLE } from './generation-unit-style'
 import {
   createAudioNode,
   createAiImageNode,
@@ -172,11 +173,37 @@ function pickAsset<T>(assets: readonly T[], random: () => number): T {
   return asset
 }
 
-function fitNodeSize(sourceWidth: number, sourceHeight: number): { width: number; height: number } {
-  const scale = Math.min(NODE_CELL_WIDTH / sourceWidth, NODE_CELL_HEIGHT / sourceHeight)
+/**
+ * 生成单元的 chrome 尺寸：边框在盒内（box-sizing: border-box），footer 占底部一条。
+ * 图片区 = 节点盒子减去这些，见 `docs/generation-unit-spec.md`「内容区高度 = node.height - footerHeight」。
+ */
+const GEN_UNIT_CHROME = {
+  width: GEN_UNIT_STYLE.borderWidth * 2,
+  height: GEN_UNIT_STYLE.borderWidth * 2 + GEN_UNIT_STYLE.footerHeight,
+} as const
+
+const NO_CHROME = { width: 0, height: 0 } as const
+
+/**
+ * 把素材按宽高比放进格子。
+ *
+ * 🔴 宽高比必须成立在**图片区**上，不是节点盒子上。生成单元的 chrome
+ * （footer + 边框）会从盒子里挖走一块：5:4 的素材落在 125×100 的节点上时，
+ * 图片区只剩 123×70（1.76），`object-fit: cover` 于是裁掉约 29% 的画面。
+ * 所以先按「格子减 chrome」算图片区，再把 chrome 加回节点尺寸。
+ */
+function fitNodeSize(
+  sourceWidth: number,
+  sourceHeight: number,
+  chrome: { width: number; height: number } = NO_CHROME,
+): { width: number; height: number } {
+  const surfaceCellWidth = NODE_CELL_WIDTH - chrome.width
+  const surfaceCellHeight = NODE_CELL_HEIGHT - chrome.height
+  const scale = Math.min(surfaceCellWidth / sourceWidth, surfaceCellHeight / sourceHeight)
+  const round = (value: number) => Math.round(value * 1_000) / 1_000
   return {
-    width: Math.round(sourceWidth * scale * 1_000) / 1_000,
-    height: Math.round(sourceHeight * scale * 1_000) / 1_000,
+    width: round(sourceWidth * scale) + chrome.width,
+    height: round(sourceHeight * scale) + chrome.height,
   }
 }
 
@@ -300,7 +327,13 @@ function createMaterialNode(
     type === 'video' || type === 'ai-video' ? pickAsset(mediaAssets.videos, random) : undefined
   const primaryAsset = imageAsset ?? videoAsset
   if (!primaryAsset) throw new Error(`规模夹具不支持素材类型 ${type}`)
-  const size = fitNodeSize(primaryAsset.width, primaryAsset.height)
+  // img / video 没有 chrome，整个盒子就是图片区；ai-* 是生成单元，要留出 footer 与边框。
+  const isGenerationUnit = type === 'ai-image' || type === 'ai-video'
+  const size = fitNodeSize(
+    primaryAsset.width,
+    primaryAsset.height,
+    isGenerationUnit ? GEN_UNIT_CHROME : NO_CHROME,
+  )
   const base = {
     fwId: nodeId(index),
     name: `规模夹具 ${index + 1}`,

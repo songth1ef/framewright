@@ -6,6 +6,7 @@ import {
   createScaleFixture,
   type ScaleFixtureNodeType,
 } from './scale-fixture'
+import { GEN_UNIT_STYLE } from './generation-unit-style'
 import type { AiImageNode, AiVideoNode, CanvasNode } from './node-schema'
 
 type GeneratedNode = AiImageNode | AiVideoNode
@@ -252,5 +253,31 @@ describe('createScaleFixture', () => {
     expect(elapsedMs).toBeLessThan(1_000)
     expect(jsonBytes).toBeGreaterThan(1_000_000)
     expect(jsonBytes).toBeLessThan(10_000_000)
+  })
+})
+
+describe('生成单元的图片区宽高比与素材一致', () => {
+  // 节点盒子按素材宽高比算是不够的：生成单元的 chrome（footer + 边框）会从盒子里
+  // 挖走一块，图片区的宽高比因此偏离素材，object-fit: cover 就会裁掉画面。
+  // 实测 5:4 的 4K 素材落在 125×100 节点上时，图片区变成 123×70（1.76），
+  // 上下被裁掉约 29%。所以宽高比必须算在**图片区**上，不是节点盒子上。
+  it('ai-image 节点减去 footer 与边框后，图片区宽高比等于素材宽高比', () => {
+    const root = createScaleFixture({
+      nodeCount: 40,
+      connectionPattern: 'fanin',
+      seed: 'aspect-ratio-check',
+      mediaAssets: CORS_SAFE_PROBE_MEDIA_ASSETS,
+    })
+    const generated = generatedNodes(root.children).filter((node) => node.fwType === 'ai-image')
+    expect(generated.length).toBeGreaterThan(0)
+
+    for (const node of generated) {
+      const sourceWidth = node.params['sourceWidth'] as number
+      const sourceHeight = node.params['sourceHeight'] as number
+      const surfaceWidth = node.width - GEN_UNIT_STYLE.borderWidth * 2
+      const surfaceHeight =
+        node.height - GEN_UNIT_STYLE.borderWidth * 2 - GEN_UNIT_STYLE.footerHeight
+      expect(surfaceWidth / surfaceHeight).toBeCloseTo(sourceWidth / sourceHeight, 2)
+    }
   })
 })
