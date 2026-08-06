@@ -25,19 +25,39 @@ export interface PublicAudioAsset {
   channels: number
 }
 
+// 规模夹具的素材格子最大为 480×300；按 2 倍请求，兼顾高分屏与解码成本。
+const IMAGE_REQUEST_BOUND = { width: 960, height: 600 } as const
+
+function picsumRequestUrl(seed: string, aspectRatio: string): string {
+  const [ratioWidthText, ratioHeightText] = aspectRatio.split(':')
+  const ratioWidth = Number(ratioWidthText)
+  const ratioHeight = Number(ratioHeightText)
+  if (
+    !Number.isSafeInteger(ratioWidth) || ratioWidth <= 0 ||
+    !Number.isSafeInteger(ratioHeight) || ratioHeight <= 0
+  ) {
+    throw new Error(`图片宽高比格式无效：${aspectRatio}`)
+  }
+
+  // 使用整数倍同时缩放两边，避免把宽屏、竖屏素材请求成另一种宽高比。
+  const scale = Math.floor(Math.min(
+    IMAGE_REQUEST_BOUND.width / ratioWidth,
+    IMAGE_REQUEST_BOUND.height / ratioHeight,
+  ))
+  return `https://picsum.photos/seed/${seed}/${ratioWidth * scale}/${ratioHeight * scale}`
+}
+
 /**
  * 真实公开图片素材。
  *
- * 2026-08-05 实测方法：每条 URL 先用
- * `curl -L --range 0-0` 验证最终响应为 HTTP 206 image/jpeg，再用
- * `ffprobe -show_entries stream=width,height` 核对下列真实像素尺寸。
- * Picsum 的固定 seed 让同一 URL 始终返回同一张公开照片。
- * Picsum 的 8K 候选 7680×4320 实测返回 HTTP 400，因此改用已实测的 Wikimedia 原图。
+ * width / height / resolutionTier 声明性能测试所模拟的源素材规格，不等于 URL
+ * 实际返回的解码尺寸。URL 按 480×300 格子的 2 倍上限请求，并保持声明的
+ * aspectRatio；Picsum 的固定 seed 保证改变请求尺寸后仍是同一张公开照片。
  */
 export const PUBLIC_IMAGE_ASSETS = [
   {
     id: 'picsum-16x9-720p',
-    url: 'https://picsum.photos/seed/framewright-16x9/1280/720',
+    url: picsumRequestUrl('framewright-16x9', '16:9'),
     width: 1280,
     height: 720,
     aspectRatio: '16:9',
@@ -45,7 +65,7 @@ export const PUBLIC_IMAGE_ASSETS = [
   },
   {
     id: 'picsum-4x3-1k',
-    url: 'https://picsum.photos/seed/framewright-4x3/1440/1080',
+    url: picsumRequestUrl('framewright-4x3', '4:3'),
     width: 1440,
     height: 1080,
     aspectRatio: '4:3',
@@ -53,7 +73,7 @@ export const PUBLIC_IMAGE_ASSETS = [
   },
   {
     id: 'picsum-1x1-2k',
-    url: 'https://picsum.photos/seed/framewright-1x1/2048/2048',
+    url: picsumRequestUrl('framewright-1x1', '1:1'),
     width: 2048,
     height: 2048,
     aspectRatio: '1:1',
@@ -61,7 +81,7 @@ export const PUBLIC_IMAGE_ASSETS = [
   },
   {
     id: 'picsum-9x16-1k',
-    url: 'https://picsum.photos/seed/framewright-9x16/1080/1920',
+    url: picsumRequestUrl('framewright-9x16', '9:16'),
     width: 1080,
     height: 1920,
     aspectRatio: '9:16',
@@ -69,7 +89,7 @@ export const PUBLIC_IMAGE_ASSETS = [
   },
   {
     id: 'picsum-21x9-2k',
-    url: 'https://picsum.photos/seed/framewright-21x9/2560/1080',
+    url: picsumRequestUrl('framewright-21x9', '21:9'),
     width: 2560,
     height: 1080,
     aspectRatio: '21:9',
@@ -77,7 +97,7 @@ export const PUBLIC_IMAGE_ASSETS = [
   },
   {
     id: 'picsum-3x2-2k',
-    url: 'https://picsum.photos/seed/framewright-3x2/3000/2000',
+    url: picsumRequestUrl('framewright-3x2', '3:2'),
     width: 3000,
     height: 2000,
     aspectRatio: '3:2',
@@ -85,7 +105,7 @@ export const PUBLIC_IMAGE_ASSETS = [
   },
   {
     id: 'picsum-2x3-2k',
-    url: 'https://picsum.photos/seed/framewright-2x3/2000/3000',
+    url: picsumRequestUrl('framewright-2x3', '2:3'),
     width: 2000,
     height: 3000,
     aspectRatio: '2:3',
@@ -93,7 +113,7 @@ export const PUBLIC_IMAGE_ASSETS = [
   },
   {
     id: 'picsum-5x4-4k',
-    url: 'https://picsum.photos/seed/framewright-5x4/4000/3200',
+    url: picsumRequestUrl('framewright-5x4', '5:4'),
     width: 4000,
     height: 3200,
     aspectRatio: '5:4',
@@ -101,18 +121,15 @@ export const PUBLIC_IMAGE_ASSETS = [
   },
   {
     id: 'picsum-16x9-4k',
-    url: 'https://picsum.photos/seed/framewright-4k/3840/2160',
+    url: picsumRequestUrl('framewright-4k', '16:9'),
     width: 3840,
     height: 2160,
     aspectRatio: '16:9',
     resolutionTier: '4K',
   },
-  // 8K 档：picsum 单边上限约 5000px（7680×4320 实测 400），改用 Wikimedia Commons 全景图。
-  // 2026-08-05 整文件下载（14.7 MB）后 ffprobe 实测 10109×4542（≈20:9）。
-  // 原图 CC BY 3.0（作者 Murdockcrc），这里只做运行时热链、不入库。
   {
-    id: 'wikimedia-fronalpstock-8k',
-    url: 'https://upload.wikimedia.org/wikipedia/commons/3/3f/Fronalpstock_big.jpg',
+    id: 'picsum-20x9-8k',
+    url: picsumRequestUrl('framewright-20x9', '20:9'),
     width: 10109,
     height: 4542,
     aspectRatio: '20:9',

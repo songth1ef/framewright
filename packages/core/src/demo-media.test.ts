@@ -35,6 +35,30 @@ describe('公开 demo 素材清单', () => {
     )
   })
 
+  it('图片请求尺寸不超过素材格子的 2 倍，且与声明宽高比一致', () => {
+    let hasDownscaledRequest = false
+
+    for (const asset of PUBLIC_IMAGE_ASSETS) {
+      const parsed = new URL(asset.url)
+      const pathSegments = parsed.pathname.split('/').filter(Boolean)
+      const seedIndex = pathSegments.indexOf('seed')
+      expect(seedIndex).toBeGreaterThanOrEqual(0)
+      const requestWidth = Number(pathSegments[seedIndex + 2])
+      const requestHeight = Number(pathSegments[seedIndex + 3])
+      const [ratioWidth, ratioHeight] = asset.aspectRatio.split(':').map(Number)
+
+      expect(requestWidth).toBeGreaterThan(0)
+      expect(requestHeight).toBeGreaterThan(0)
+      expect(requestWidth).toBeLessThanOrEqual(960)
+      expect(requestHeight).toBeLessThanOrEqual(600)
+      expect(requestWidth * ratioHeight!).toBe(requestHeight * ratioWidth!)
+
+      if (requestWidth < asset.width || requestHeight < asset.height) hasDownscaledRequest = true
+    }
+
+    expect(hasDownscaledRequest).toBe(true)
+  })
+
   it('视频时长覆盖约 5 秒、10 秒、30 秒和 1 分钟', () => {
     const durations = PUBLIC_VIDEO_ASSETS.map((asset) => asset.durationSeconds)
 

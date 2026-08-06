@@ -42,7 +42,10 @@ const DEFAULT_SCALE_FIXTURE_MEDIA_ASSETS: ScaleFixtureMediaAssets = {
  * test-videos.co.uk、media.w3.org、nps.gov 等非 CORS 长视频未进入探针。
  */
 export const CORS_SAFE_PROBE_MEDIA_ASSETS: ScaleFixtureMediaAssets = {
-  images: PUBLIC_IMAGE_ASSETS.filter((asset) => new URL(asset.url).hostname === 'picsum.photos'),
+  // 固定沿用原有九张 Picsum 素材，避免 8K 条目改为 Picsum 后改变探针的随机分布，
+  // 从而让素材请求尺寸优化的前后对比混入夹具构成变化。
+  images: PUBLIC_IMAGE_ASSETS.filter((asset) =>
+    new URL(asset.url).hostname === 'picsum.photos' && asset.resolutionTier !== '8K'),
   videos: PUBLIC_VIDEO_ASSETS.filter((asset) => new URL(asset.url).hostname === 'mdn.github.io'),
   audios: PUBLIC_AUDIO_ASSETS.filter((asset) =>
     ['mdn.github.io', 'samplelib.com'].includes(new URL(asset.url).hostname)),

@@ -28,6 +28,15 @@ interface FirstScreenSample {
   mountedConnectionElementTypes: Record<string, number>
   mountedDomElementCount: number
   mountedToTotalRatio: number
+  requestedImageCount: number
+  decodedImageCount: number
+  failedImageCount: number
+  decodedImages: Array<{
+    url: string
+    naturalWidth: number
+    naturalHeight: number
+    instanceCount: number
+  }>
 }
 
 interface PanSnapshot { offsetX: number; offsetY: number }
@@ -88,6 +97,42 @@ async function waitForMountedNodes(): Promise<void> {
   throw new Error('首屏 60 帧内没有挂载任何节点')
 }
 
+async function decodeMountedImages(): Promise<Pick<
+  FirstScreenSample,
+  'requestedImageCount' | 'decodedImageCount' | 'failedImageCount' | 'decodedImages'
+>> {
+  const images = Array.from(view.querySelectorAll<HTMLImageElement>('img'))
+  await Promise.allSettled(images.map(async (image) => {
+    if (image.complete && image.naturalWidth > 0) return
+    await image.decode()
+  }))
+
+  const decoded = images.filter((image) => image.naturalWidth > 0 && image.naturalHeight > 0)
+  const grouped = new Map<string, FirstScreenSample['decodedImages'][number]>()
+  for (const image of decoded) {
+    const url = image.currentSrc || image.src
+    const key = `${url}\n${image.naturalWidth}x${image.naturalHeight}`
+    const existing = grouped.get(key)
+    if (existing === undefined) {
+      grouped.set(key, {
+        url,
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
+        instanceCount: 1,
+      })
+    } else {
+      existing.instanceCount += 1
+    }
+  }
+
+  return {
+    requestedImageCount: images.length,
+    decodedImageCount: decoded.length,
+    failedImageCount: images.length - decoded.length,
+    decodedImages: [...grouped.values()].sort((left, right) => left.url.localeCompare(right.url)),
+  }
+}
+
 async function mountScenario(scenario: DomScaleProbeScenario): Promise<FirstScreenSample> {
   renderer?.destroy()
   renderer = null
@@ -109,6 +154,7 @@ async function mountScenario(scenario: DomScaleProbeScenario): Promise<FirstScre
   renderer = createDomRenderer()
   renderer.mount(view, context())
   await waitForMountedNodes()
+  const imageEvidence = await decodeMountedImages()
   const elapsedMs = performance.now() - start
 
   const mountedNodes = view.querySelectorAll('[data-fw-id]:not([data-fw-type="frame"])').length
@@ -135,6 +181,7 @@ async function mountScenario(scenario: DomScaleProbeScenario): Promise<FirstScre
     ...connectionMeasurement,
     mountedDomElementCount: view.querySelectorAll('*').length,
     mountedToTotalRatio: mountedNodes / scenario.nodeCount,
+    ...imageEvidence,
   }
 }
 
