@@ -80,4 +80,32 @@ describe('demo 图片自适应请求', () => {
         ({ id, width, height, aspectRatio, resolutionTier }),
     )).toEqual(metadataBefore)
   })
+
+  it('视口尺寸为 0（尚未测量）时不封顶也不抛错', () => {
+    // 🔴 真实崩溃回归：ResizeObserver 在容器隐藏、或首次布局完成前会以 0×0 触发，
+    // 原实现一律 assert「必须是正有限数」，整个画布页面直接抛 RangeError 崩掉。
+    // 「尚未测量」是合法瞬时状态，必须和「值算错了」区别对待。
+    const asset = PUBLIC_IMAGE_ASSETS[0]!
+    const zeroViewport = {
+      nodeSize: { width: 480, height: 300 },
+      viewportSize: { width: 0, height: 0 },
+      devicePixelRatio: 2,
+    }
+
+    expect(() => getDemoImageRequest(asset, 4, zeroViewport)).not.toThrow()
+    // 尺寸未知时无从封顶，应保持传入档位，等测量到了下一轮自然修正
+    expect(getDemoImageRequest(asset, 4, zeroViewport)).toEqual(getDemoImageRequest(asset, 4))
+  })
+
+  it('视口尺寸是 NaN / 负数 / Infinity 时仍然抛错', () => {
+    // 放过 0 不等于放过一切 —— 这些是真的算错了，不该被悄悄吞掉
+    const asset = PUBLIC_IMAGE_ASSETS[0]!
+    const base = { nodeSize: { width: 480, height: 300 }, devicePixelRatio: 2 }
+
+    for (const bad of [Number.NaN, -1, Number.POSITIVE_INFINITY]) {
+      expect(() =>
+        getDemoImageRequest(asset, 4, { ...base, viewportSize: { width: bad, height: 600 } }),
+      ).toThrow(RangeError)
+    }
+  })
 })

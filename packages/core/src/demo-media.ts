@@ -108,15 +108,31 @@ function assertPositiveFinite(value: number, name: string): void {
   if (!Number.isFinite(value) || value <= 0) throw new RangeError(`${name} 必须是正有限数`)
 }
 
+/** 允许 0（表示「尚未测量」），但仍拒绝 NaN / Infinity / 负数。 */
+function assertFiniteNonNegative(value: number, name: string): void {
+  if (!Number.isFinite(value) || value < 0) throw new RangeError(`${name} 必须是非负有限数`)
+}
+
 function capTierToVisibleViewport(
   tier: DemoImageRequestTier,
   cap: DemoImageRequestViewportCap,
 ): DemoImageRequestTier {
   assertPositiveFinite(cap.nodeSize.width, 'nodeSize.width')
   assertPositiveFinite(cap.nodeSize.height, 'nodeSize.height')
-  assertPositiveFinite(cap.viewportSize.width, 'viewportSize.width')
-  assertPositiveFinite(cap.viewportSize.height, 'viewportSize.height')
   assertPositiveFinite(cap.devicePixelRatio, 'devicePixelRatio')
+
+  // 🔴 视口尺寸为 0 是**合法的瞬时状态**，不是编程错误：
+  // ResizeObserver 在容器隐藏、或首次布局完成之前会以 0×0 触发。
+  // 这里原本一律 assert，结果整个画布页面直接抛 RangeError 崩掉。
+  //
+  // 尺寸未知时无从封顶，就不封顶 —— 保持传入档位，等测量到了下一轮自然修正。
+  // 而 NaN / 负数 / Infinity 仍然抛：那些是真的算错了，不该被悄悄放过。
+  //
+  // 同一个教训在 `viewport-culling.ts` 的半退化视口那里也踩过：
+  // 「尚未测量」必须和「值算错了」区别对待。
+  assertFiniteNonNegative(cap.viewportSize.width, 'viewportSize.width')
+  assertFiniteNonNegative(cap.viewportSize.height, 'viewportSize.height')
+  if (cap.viewportSize.width <= 0 || cap.viewportSize.height <= 0) return tier
 
   const visibleDensity = Math.min(
     cap.viewportSize.width * cap.devicePixelRatio / cap.nodeSize.width,

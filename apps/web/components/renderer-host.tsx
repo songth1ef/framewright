@@ -243,7 +243,9 @@ export function RendererHost({
   }, [])
 
   useEffect(() => {
-    if (viewportSize === null) return
+    // 尺寸为 0 表示容器还没测量到（ResizeObserver 会先以 0×0 触发一次），
+    // 此时算不出该请求多大的图，保持当前档位等下一轮 —— 不是错误状态，不要报错。
+    if (viewportSize === null || viewportSize.width <= 0 || viewportSize.height <= 0) return
     const nextProjection: DemoImageRequestProjection = {
       tier: desiredDemoImageRequestTier,
       viewportSize,
