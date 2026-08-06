@@ -25,10 +25,50 @@ export interface PublicAudioAsset {
   channels: number
 }
 
-// 规模夹具的素材格子最大为 480×300；按 2 倍请求，兼顾高分屏与解码成本。
-const IMAGE_REQUEST_BOUND = { width: 960, height: 600 } as const
+export const DEMO_IMAGE_REQUEST_TIERS = [0.125, 0.25, 0.5, 1, 2, 4, 8] as const
+export type DemoImageRequestTier = (typeof DEMO_IMAGE_REQUEST_TIERS)[number]
 
-function picsumRequestUrl(seed: string, aspectRatio: string): string {
+// 请求档位以规模夹具的 480×300 素材格子为 1×；URL 中仍使用宽高比的整数倍。
+const IMAGE_REQUEST_CELL = { width: 480, height: 300 } as const
+const IMAGE_REQUEST_DOWNGRADE_RATIO = 0.8
+
+/**
+ * 按实际显示像素选择离散档位。升档不欠分辨率；降档越过 20% 迟滞带才发生，
+ * 避免滚轮缩放在 1×/2× 等边界附近反复下载与解码。
+ */
+export function selectDemoImageRequestTier(
+  canvasScale: number,
+  devicePixelRatio: number,
+  previousTier?: DemoImageRequestTier,
+): DemoImageRequestTier {
+  if (!Number.isFinite(canvasScale) || canvasScale <= 0) {
+    throw new RangeError('canvasScale 必须是正有限数')
+  }
+  if (!Number.isFinite(devicePixelRatio) || devicePixelRatio <= 0) {
+    throw new RangeError('devicePixelRatio 必须是正有限数')
+  }
+
+  const requiredDensity = canvasScale * devicePixelRatio
+  if (previousTier === undefined) {
+    return DEMO_IMAGE_REQUEST_TIERS.find((tier) => tier >= requiredDensity) ?? 8
+  }
+
+  let index = DEMO_IMAGE_REQUEST_TIERS.indexOf(previousTier)
+  if (index < 0) throw new RangeError(`未知图片请求档位：${previousTier}`)
+  while (index < DEMO_IMAGE_REQUEST_TIERS.length - 1 && requiredDensity > previousTier) {
+    index += 1
+    previousTier = DEMO_IMAGE_REQUEST_TIERS[index]!
+  }
+  while (
+    index > 0 &&
+    requiredDensity < (DEMO_IMAGE_REQUEST_TIERS[index]! / 2) * IMAGE_REQUEST_DOWNGRADE_RATIO
+  ) {
+    index -= 1
+  }
+  return DEMO_IMAGE_REQUEST_TIERS[index]!
+}
+
+function parseAspectRatio(aspectRatio: string): readonly [number, number] {
   const [ratioWidthText, ratioHeightText] = aspectRatio.split(':')
   const ratioWidth = Number(ratioWidthText)
   const ratioHeight = Number(ratioHeightText)
@@ -39,20 +79,131 @@ function picsumRequestUrl(seed: string, aspectRatio: string): string {
     throw new Error(`图片宽高比格式无效：${aspectRatio}`)
   }
 
-  // 使用整数倍同时缩放两边，避免把宽屏、竖屏素材请求成另一种宽高比。
-  const scale = Math.floor(Math.min(
-    IMAGE_REQUEST_BOUND.width / ratioWidth,
-    IMAGE_REQUEST_BOUND.height / ratioHeight,
+  return [ratioWidth, ratioHeight]
+}
+
+function picsumRequestUrl(seed: string, aspectRatio: string): string {
+  const [ratioWidth, ratioHeight] = parseAspectRatio(aspectRatio)
+  const baseScale = Math.floor(Math.min(
+    IMAGE_REQUEST_CELL.width / ratioWidth,
+    IMAGE_REQUEST_CELL.height / ratioHeight,
   ))
+  const scale = baseScale * 2
   return `https://picsum.photos/seed/${seed}/${ratioWidth * scale}/${ratioHeight * scale}`
+}
+
+export interface DemoImageRequest {
+  url: string
+  width: number
+  height: number
+}
+
+export interface DemoImageRequestViewportCap {
+  nodeSize: { width: number; height: number }
+  viewportSize: { width: number; height: number }
+  devicePixelRatio: number
+}
+
+function assertPositiveFinite(value: number, name: string): void {
+  if (!Number.isFinite(value) || value <= 0) throw new RangeError(`${name} 必须是正有限数`)
+}
+
+function capTierToVisibleViewport(
+  tier: DemoImageRequestTier,
+  cap: DemoImageRequestViewportCap,
+): DemoImageRequestTier {
+  assertPositiveFinite(cap.nodeSize.width, 'nodeSize.width')
+  assertPositiveFinite(cap.nodeSize.height, 'nodeSize.height')
+  assertPositiveFinite(cap.viewportSize.width, 'viewportSize.width')
+  assertPositiveFinite(cap.viewportSize.height, 'viewportSize.height')
+  assertPositiveFinite(cap.devicePixelRatio, 'devicePixelRatio')
+
+  const visibleDensity = Math.min(
+    cap.viewportSize.width * cap.devicePixelRatio / cap.nodeSize.width,
+    cap.viewportSize.height * cap.devicePixelRatio / cap.nodeSize.height,
+  )
+  const viewportTier = DEMO_IMAGE_REQUEST_TIERS.find(
+    (candidate) => candidate >= visibleDensity,
+  ) ?? 8
+  return Math.min(tier, viewportTier) as DemoImageRequestTier
+}
+
+/** 根据显示档位生成请求 URL；声明的源素材元数据始终保持不变。 */
+export function getDemoImageRequest(
+  asset: PublicImageAsset,
+  tier: DemoImageRequestTier,
+  viewportCap?: DemoImageRequestViewportCap,
+): DemoImageRequest {
+  if (!DEMO_IMAGE_REQUEST_TIERS.includes(tier)) {
+    throw new RangeError(`未知图片请求档位：${tier}`)
+  }
+  const parsed = new URL(asset.url)
+  const segments = parsed.pathname.split('/').filter(Boolean)
+  const seedIndex = segments.indexOf('seed')
+  const seed = seedIndex < 0 ? undefined : segments[seedIndex + 1]
+  if (parsed.hostname !== 'picsum.photos' || seed === undefined) {
+    throw new Error(`不支持自适应请求的 demo 图片：${asset.id}`)
+  }
+
+  const requestTier = viewportCap === undefined ? tier : capTierToVisibleViewport(tier, viewportCap)
+  const [ratioWidth, ratioHeight] = parseAspectRatio(asset.aspectRatio)
+  const baseScale = Math.floor(Math.min(
+    IMAGE_REQUEST_CELL.width / ratioWidth,
+    IMAGE_REQUEST_CELL.height / ratioHeight,
+  ))
+  const sourceScale = Math.floor(Math.min(
+    asset.width / ratioWidth,
+    asset.height / ratioHeight,
+  ))
+  // 小于 1× 时向上取整宽高比倍数：宁可多一组比例单位，也不欠显示像素。
+  const requestScale = Math.min(Math.ceil(baseScale * requestTier), sourceScale)
+  const width = ratioWidth * requestScale
+  const height = ratioHeight * requestScale
+  return {
+    url: `https://picsum.photos/seed/${seed}/${width}/${height}`,
+    width,
+    height,
+  }
+}
+
+function picsumSeed(url: string): string | null {
+  try {
+    const parsed = new URL(url)
+    if (parsed.hostname !== 'picsum.photos') return null
+    const segments = parsed.pathname.split('/').filter(Boolean)
+    const seedIndex = segments.indexOf('seed')
+    return seedIndex < 0 ? null : (segments[seedIndex + 1] ?? null)
+  } catch {
+    return null
+  }
+}
+
+/** 未命中公开 demo 清单的 URL 原样返回，绝不改写用户素材或真实 provider 结果。 */
+export function resolveDemoImageRequestUrl(
+  url: string,
+  tier: DemoImageRequestTier,
+  viewportCap?: DemoImageRequestViewportCap,
+): string {
+  const seed = picsumSeed(url)
+  if (seed === null) return url
+  const asset = PUBLIC_IMAGE_ASSETS.find((candidate) => picsumSeed(candidate.url) === seed)
+  return asset === undefined ? url : getDemoImageRequest(asset, tier, viewportCap).url
+}
+
+export function isDemoImageRequestUrl(url: string): boolean {
+  const seed = picsumSeed(url)
+  return seed !== null && PUBLIC_IMAGE_ASSETS.some(
+    (candidate) => picsumSeed(candidate.url) === seed,
+  )
 }
 
 /**
  * 真实公开图片素材。
  *
  * width / height / resolutionTier 声明性能测试所模拟的源素材规格，不等于 URL
- * 实际返回的解码尺寸。URL 按 480×300 格子的 2 倍上限请求，并保持声明的
- * aspectRatio；Picsum 的固定 seed 保证改变请求尺寸后仍是同一张公开照片。
+ * 实际返回的解码尺寸。列表中的 URL 是兼容旧文档的 2× 初始值；运行时按
+ * 480×300 格子 × 画布缩放 × DPR 分档请求。Picsum 的固定 seed 保证换档后
+ * 仍是同一张公开照片。
  */
 export const PUBLIC_IMAGE_ASSETS = [
   {
