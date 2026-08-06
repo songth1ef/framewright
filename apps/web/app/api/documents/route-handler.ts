@@ -1,4 +1,5 @@
 import type { FrameNode } from '@framewright/core'
+import { decodeJsonBody } from '@framewright/core'
 import { isCanvasNode, isRecord } from './[id]/route-handler'
 
 interface StoredDocumentDto {
@@ -27,7 +28,9 @@ function jsonError(error: string, status: number): Response {
 async function parseCreateInput(request: Request): Promise<CreateDocumentDto | null> {
   let value: unknown
   try {
-    value = await request.json()
+    // 大画布走 gzip：Node 的 fetch 只自动解压**响应**体，请求体必须显式处理。
+    // 未压缩的请求走原路径，行为不变。见 packages/core/src/compressed-json.ts。
+    value = await decodeJsonBody(request)
   } catch {
     return null
   }

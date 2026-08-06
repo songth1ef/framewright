@@ -1,3 +1,4 @@
+import { encodeJsonBody } from '@framewright/core'
 import { clearStoredViewport } from './viewport-storage'
 
 export interface DocumentSummary {
@@ -17,10 +18,14 @@ export async function loadDocumentSummaries(): Promise<DocumentSummary[]> {
 }
 
 export async function createCanvasDocument(name: string, root: unknown): Promise<DocumentSummary> {
+  // 大画布必须压缩后再传：Vercel serverless 请求体上限 4.5MB（十进制），
+  // 而 10000 节点的负载是 4,554,794 字节 —— 超 1.2%，线上必然 413，本地却毫无问题。
+  // 见 packages/core/src/compressed-json.ts 的完整实测数据。
+  const encoded = await encodeJsonBody({ name, root })
   const response = await requireOk(await fetch('/api/documents', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ name, root }),
+    headers: encoded.headers,
+    body: encoded.body,
   }))
   return response.json() as Promise<DocumentSummary>
 }
