@@ -4,7 +4,7 @@
 > 一眼看清「做到哪了、下一步是什么、什么卡着」。
 > 规则：只写状态，不写过程；结论进 `docs/lessons.md`，设计进 `docs/architecture.md`。
 
-**最后更新**：2026-08-03（北京时间）
+**最后更新**：2026-08-06（北京时间）
 
 ---
 
@@ -27,6 +27,13 @@
 | P1 骨架贯通 | 按 `documentId` 存读画布、持久化撤销历史、mock provider、**`ai-image`/`ai-video` 业务组件节点（含四种 status 视觉）** | ⬜ 未开始 | — |
 | P2 交互补齐 | **无限画布**：中键平移 / 滚轮锚点缩放 / 左键框选 / 点选拖拽；选中粒度恒为业务单元；`core` 新增 `viewport.ts` + `hit-test.ts` | ⬜ 未开始 | — |
 | P3 真实生成 | 接真实 provider，生成单元落真实素材 | ⬜ 未开始 | — |
+
+## 部署状态
+
+- ✅ `main` push 的 GitHub Actions 门禁已配置：typecheck → 测试发现 → 全量单测 → 全量 e2e → Vercel 生产部署。
+- ✅ 生产数据库按 URL 协议切到 libSQL / Turso；本地开发与 e2e 继续使用文件 SQLite。
+- ✅ Next 生产构建已在本机与 Linux Node 22 干净容器通过；Linux 下 `better_sqlite3.node` 安装与 Next trace 均已实测。
+- ⏳ 首次线上部署需人工创建 Turso / Vercel 项目、执行现有 migration 并配置五个 GitHub Secrets，步骤见 `docs/deploy.md`。
 
 ## P0 任务清单
 

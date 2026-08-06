@@ -158,6 +158,7 @@ P0 功能面小是刻意的——两遍的成本此时最低，返工也最便�
 |---|---|---|---|
 | LeaferJS | `renderer-leafer` 的渲染底座 | **MIT** ✅ | 2026-08-03 读 `github.com/leaferjs/LeaferJS` README：「LeaferJS 是采用 MIT 许可的开源项目，可以永久免费使用」 |
 | **gzm-design（果米设计）** | 编辑器服务层的**代码来源**（非运行时依赖），见 §9 | **MIT** ✅ | 2026-08-03 双源核实：`gitee.com/sourcenet/gzm-design` 的 LICENSE 文件原文 + GitHub 镜像 `github.com/LvHuaiSheng/gzm-design`。版权行 `Copyright © 2023-present guozimi.cn`，商用无额外限制 |
+| `@prisma/adapter-libsql@6.19.3` | 生产环境通过 libSQL / Turso 访问 SQLite | **Apache-2.0** ✅ | 2026-08-06 双源核实：npm 包元数据与随包 LICENSE；上游为 `github.com/prisma/prisma`，版本与 Prisma Client 6.19.3 对齐 |
 
 **LeaferJS license 已核实为 MIT**，与「未来可能闭源商用」不冲突，方案 B 的前提成立。
 

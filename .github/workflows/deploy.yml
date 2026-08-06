@@ -1,0 +1,76 @@
+name: 门禁通过后部署 Vercel
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vercel-production
+  cancel-in-progress: true
+
+jobs:
+  verify-and-deploy:
+    name: 全量验证并部署生产环境
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # 单元测试使用独立文件库；e2e 的 globalSetup 会再覆盖成 prisma/e2e.db。
+      DATABASE_URL: file:${{ github.workspace }}/prisma/ci.db
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v6
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.10.0
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 生成 Prisma Client
+        run: npx prisma generate --schema prisma/schema.prisma
+
+      - name: 初始化 CI 文件数据库
+        run: node tools/prisma.mjs migrate deploy --schema prisma/schema.prisma
+
+      - name: TypeScript 类型检查
+        run: pnpm typecheck
+
+      - name: 测试发现门禁
+        run: pnpm test:discovery
+
+      - name: 全量单元测试
+        run: pnpm test
+
+      - name: 安装 Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: 全量 e2e
+        run: pnpm e2e
+
+      - name: 部署到 Vercel 生产环境
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: >-
+          npx --yes vercel@58.7.1 deploy --prod --yes
+          --token="$VERCEL_TOKEN"
+          --env DATABASE_URL="$TURSO_DATABASE_URL"
+          --env TURSO_AUTH_TOKEN="$TURSO_AUTH_TOKEN"
+          --build-env DATABASE_URL="$TURSO_DATABASE_URL"
+          --build-env TURSO_AUTH_TOKEN="$TURSO_AUTH_TOKEN"

@@ -10,13 +10,17 @@ const nextConfig: NextConfig = {
     '@framewright/renderer-leafer',
     '@framewright/server-core',
   ],
-  // Prisma 与 better-sqlite3（原生模块）不进服务端 bundle：
-  // better-sqlite3 是 .node 原生模块打不进 bundle；
+  // Prisma、SQLite 原生模块与 libSQL Node 客户端不进服务端 bundle：
+  // better-sqlite3 / libsql 的本地驱动包含 .node 原生模块，不能打进 webpack bundle；
+  // @libsql/client 的 Node 入口还会动态选择平台包，必须保留为运行时依赖。
   // Prisma 6 的 client engine 用 WASM 查询编译器，被打包后解析不到 .wasm
   serverExternalPackages: [
     '@prisma/client',
     '@prisma/adapter-better-sqlite3',
+    '@prisma/adapter-libsql',
+    '@libsql/client',
     'better-sqlite3',
+    'libsql',
   ],
   webpack(config, { isServer }) {
     if (isServer) {
@@ -25,6 +29,7 @@ const nextConfig: NextConfig = {
       config.externals.push({
         '@prisma/client': 'commonjs @prisma/client',
         '@prisma/adapter-better-sqlite3': 'commonjs @prisma/adapter-better-sqlite3',
+        '@prisma/adapter-libsql': 'commonjs @prisma/adapter-libsql',
         'better-sqlite3': 'commonjs better-sqlite3',
       })
     }

@@ -241,3 +241,11 @@ Leafer 侧关于 Leafer 内建手势的每一条都对（技术处境），关�
 3. **🔴 overlay 层不能整层 `hittable: false`**：`worldHittable` 沿父链逐级检查，父层 false 会把子元素全部打成不可命中——缩放控制点就点不到了。正确做法：层用 `Group`（非 branchLeaf，永不自命中），装饰元素（框选框/描边）逐个 `hittable: false`，控制点保持可命中。
 
 **桩环境边界**（接踩坑 1）：jsdom 桩下 `measureText` 返回 0 宽，**Text 元素命中不可靠**；Rect 经 hitCanvas 的命中在桩下恒真（假 2d context 全 truthy）。所以命中类单测只断言 data 标记与结构，真实命中判定归 e2e（真实浏览器）。
+
+### 5. pnpm workspace 的服务端外部包必须从 Next app 可解析（2026-08-06）
+
+**现象**：`server-core` 静态引入 `@prisma/adapter-libsql` 后，Next 把它的 Node 入口打进 webpack，进而把 libSQL 依赖里的 README / LICENSE 当 JavaScript 解析，生产构建失败。只加 `serverExternalPackages` 不够；手工 external 后虽能编译，但 trace 不包含 adapter，部署运行时会缺包。
+
+**结论**：workspace 源码包由 Next 转译、且其中的 Node 依赖要 external 时，该依赖还必须是 Next app 的直接运行时依赖。这样 webpack 能保留 Node `require`，文件追踪也能从 app 的 `node_modules` 入口收集 adapter、传递依赖与原生文件。
+
+**本次落地**：`@prisma/adapter-libsql@6.19.3` 同时声明在 `server-core`（模块所有权）与 `apps/web`（部署可解析性）；`next.config.ts` 将它列入服务端外部包并保留为 CommonJS external。Linux Node 22 干净构建已验证 trace 同时包含 libSQL adapter 与 `better_sqlite3.node`。
