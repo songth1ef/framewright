@@ -75,7 +75,13 @@ tools/               Prisma 包装器、测试发现门禁、录制脚本
 ## 3. 常用命令
 
 ```bash
+pnpm setup              # 🔴 全新机器第一步：生成 Prisma Client + 建库 + 装 Playwright 浏览器
+                        #    与 .github/workflows/deploy.yml 的准备步骤逐条对齐。
+                        #    不跑它，verify 会连挂三次，且报错都指不到「你少了准备步骤」上
 pnpm dev                # 开发服务器，端口 3100
+
+# 开着 dev（3100）时要跑 e2e，换端口，不要去杀 dev
+FRAMEWRIGHT_E2E_PORT=3200 pnpm e2e
 pnpm typecheck          # tsc --build --force
 pnpm test               # 全量单测
 pnpm test:discovery     # 测试发现门禁（防止新测试文件不被 vitest 发现）
@@ -212,7 +218,27 @@ Next trace 包含它与 libSQL adapter。
 - **上限只截输出不截工作量是常见陷阱**：`maxConnections` 原本只影响"最终渲染几条"，
   不影响"算了多少条" —— fanin 下全文档 1 万条线每次都物化+排序，最后才丢掉 9000 条
 
-### 7.4 工程环境
+### 7.4 干净克隆专属的坑（2026-08-06 换机时暴露）
+
+在跑过几十轮的机器上**全部不可见**，因为残留产物把它们盖住了。CI 反而撞不上——
+`deploy.yml` 显式做了 generate / migrate / playwright install 三步准备，
+**本地路径却指望 `globalSetup` 兜底**。两条路径的假设不一致，是这几个缺陷能长期潜伏的原因。
+
+- **e2e 首次运行的先后死锁**：Playwright 先起 webServer 并等首页返回 2xx，
+  而首页要查 `Document` 表；空库 500 → 等满 120s → **`globalSetup` 里建表那句永远轮不到跑**。
+  已修：migrate 串到 `webServer.command` 前面。报错原文只说「webServer 超时」，指不到根因
+- **`better-sqlite3` 根目录未声明**：`e2e/global-setup.ts` 在仓库根被执行并 import 它，
+  但它只声明在 `apps/web`。严格 pnpm 布局下从根 resolve 不到。已修（同 `@prisma/client` 那次）
+- **Playwright 浏览器版本**：缓存里有 chromium 不等于是对的那个版本。
+  `@playwright/test@1.62.1` 要 `1234`，装着 `1223`/`1228` 会让 44 条全部 0ms 失败
+- **排序次级键方向相反**：`[{ createdAt: 'desc' }, { id: 'asc' }]` 在时间戳打平时
+  给出的正好是反序。快机器上同毫秒插入是常态 —— 该用例实测 10 次挂 9 次。
+  已把 4 处次级键改为与主键同向（cuid v1 带时间戳前缀，字典序≈创建序，生产同样成立）
+
+**教训**：`pnpm verify` 过去不是自包含的。现在有 `pnpm setup` 与之配对，
+本地与 CI 走同一条路径。**新机器接手先跑 `pnpm setup`。**
+
+### 7.5 工程环境
 - **`git commit -- <具体路径>`**，新文件先 `git add`。
   **禁止 `git add .` 或裸 `git commit`** —— 有并行 agent 时会把别人未完成的改动扫进你的提交（真实发生过，9 个文件）
 - **后台派发经常被环境中止**。应对方式：**一次一小步、做完就提交**，
