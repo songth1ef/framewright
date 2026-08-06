@@ -101,7 +101,7 @@ export function createAssetStore(client: PrismaClient): AssetStore {
     async listProjectAssets(projectId) {
       const assets = await client.asset.findMany({
         where: { projectId },
-        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       })
       return assets.map(toStoredAsset)
     },

@@ -105,6 +105,27 @@ describe('Asset store', () => {
     expect(assets.map(({ id }) => id)).toEqual(['asset-2', 'asset-1'])
   })
 
+  // createdAt 只到毫秒，同一毫秒内连续插入会打平；此时次级键决定顺序。
+  // 次级键必须与主键同向（都是「后创建的在前」），否则打平时给出的正好是反序。
+  // 这个用例把 createdAt 强制设成完全相同，把时间竞态从断言里去掉 ——
+  // 原用例在快机器上 10 次里失败 9 次，正是因为它依赖两次插入落在不同毫秒。
+  it('listProjectAssets 在 createdAt 完全相同时仍按创建顺序倒序，不依赖时间精度', async () => {
+    for (const id of ['asset-1', 'asset-2']) {
+      await store.createAsset({
+        id, projectId: 'proj-a', kind: 'image', origin: 'upload',
+        storageKey: `${id}.png`, mimeType: 'image/png', byteSize: 1,
+      })
+    }
+    const sameInstant = new Date('2026-01-01T00:00:00.000Z')
+    await prisma.asset.updateMany({
+      where: { projectId: 'proj-a' },
+      data: { createdAt: sameInstant },
+    })
+
+    const assets = await store.listProjectAssets('proj-a')
+    expect(assets.map(({ id }) => id)).toEqual(['asset-2', 'asset-1'])
+  })
+
   it('deleteAsset 删除记录；不存在的 id 抛 P2025', async () => {
     await store.createAsset({
       id: 'asset-1', projectId: 'proj-a', kind: 'image', origin: 'upload',

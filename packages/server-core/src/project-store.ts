@@ -64,7 +64,7 @@ export function createProjectStore(client: PrismaClient): ProjectStore {
 
     async listProjects() {
       const projects = await client.project.findMany({
-        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
       })
       return projects.map(toStoredProject)
     },

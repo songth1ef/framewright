@@ -127,7 +127,7 @@ export function createSessionStore(client: PrismaClient): SessionStore {
     async listProjectSessions(projectId) {
       const sessions = await client.session.findMany({
         where: { projectId },
-        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
       })
       return sessions.map(toStoredSession)
     },

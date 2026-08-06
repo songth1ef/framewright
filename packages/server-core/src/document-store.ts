@@ -67,7 +67,7 @@ export function createDocumentStore(client: PrismaClient): DocumentStore {
   return {
     async listDocuments() {
       const documents = await client.document.findMany({
-        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
       })
       return documents.map(toStoredDocument)
     },
@@ -75,7 +75,7 @@ export function createDocumentStore(client: PrismaClient): DocumentStore {
     async listProjectDocuments(projectId) {
       const documents = await client.document.findMany({
         where: { projectId },
-        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
       })
       return documents.map(toStoredDocument)
     },
