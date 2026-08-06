@@ -9,6 +9,8 @@ import { resolve } from 'node:path'
 const DOC_ID = process.argv[2] ?? 'cmsguasg00000p0lygh9e2s2z'
 const RENDERER = process.argv[3] ?? 'HTML / DOM'
 const OUT_DIR = resolve(process.argv[4] ?? 'tools/recordings')
+// pan-zoom：常规平移+缩放巡览；zoom-out-fast：缩到 10% 再快速拖拽（最吃性能的一档）
+const SEQUENCE = process.argv[5] ?? 'pan-zoom'
 const BASE = 'http://localhost:3100'
 
 mkdirSync(OUT_DIR, { recursive: true })
@@ -49,7 +51,75 @@ await page.waitForTimeout(2500)
 const actionStartMs = Date.now() - navStartedAt
 console.log('ACTION_START_MS=', actionStartMs)
 
-// ---- 操作序列（总时长约 10s）----
+// ---- 操作序列 ----
+
+/**
+ * 读工具栏上的缩放百分比，用来**确认**真的到了目标档位，
+ * 而不是靠「滚了 40 次应该够了」去猜 —— 猜错就录出一个档位不对的 GIF。
+ * 工具栏没有专门的 testid，所以按文本形态匹配百分比。
+ */
+/**
+ * 缩放 N 步 —— 点工具栏的「缩小 / 放大」按钮。
+ *
+ * 🔴 为什么不用滚轮：两条路都试过，都不行。
+ * ① 裸滚轮是**平移**不是缩放（见 `viewport-interaction.ts` 的 `onWheel`：
+ *    只有 `ctrlKey || metaKey` 才走 `zoomAtPoint`）。第一版脚本用裸滚轮，
+ *    录出来画面确实在动、看着像缩放，其实只是平移 —— 差点当成缩放交了。
+ * ② Playwright 的 `mouse.wheel()` **不带修饰键状态**：先 `keyboard.down('Control')`
+ *    再 wheel 也没用；手工 `dispatchEvent` 一个带 `ctrlKey: true` 的 WheelEvent 同样没生效。
+ *
+ * 工具栏按钮有 `aria-label`，是这里最确定的入口 —— 不跟事件合成较劲。
+ */
+async function zoomBy(steps, direction) {
+  const label = direction === 'out' ? '缩小' : '放大'
+  const button = page.getByRole('button', { name: label })
+  for (let i = 0; i < steps; i += 1) {
+    await button.click()
+    await page.waitForTimeout(45)
+  }
+}
+
+/** 读工具栏显示的缩放比例，用来**确认**到了目标档位，而不是靠「点够次数应该到了」去猜。 */
+async function readScale() {
+  return page
+    .getByLabel('当前缩放比例')
+    .textContent()
+    .then((t) => t?.trim() ?? '?')
+    .catch(() => '?')
+}
+
+if (SEQUENCE === 'zoom-out-fast') {
+  // 缩到 10% 再快速拖拽 —— 这是最吃性能的一档：
+  // 视口内节点最多、连线最密，且快速拖拽让每帧都要重算裁剪集合。
+
+  // 1. 缩小到 10%（下限）。
+  await zoomBy(25, 'out')
+  await page.waitForTimeout(1200)
+  const reached = await readScale()
+  console.log('缩放档位 =', reached)
+  if (!/^(10|1[0-5])%$/.test(reached)) {
+    console.warn(`⚠️ 没到 10% 档（当前 ${reached}），录出来的不是目标场景`)
+  }
+
+  // 2. 快速拖拽：步长大、间隔短，逼近真人「甩」画布的手感
+  for (let round = 0; round < 3; round += 1) {
+    const dirX = round % 2 === 0 ? -1 : 1
+    await page.mouse.move(cx, cy)
+    await page.mouse.down({ button: 'middle' })
+    for (let i = 1; i <= 22; i += 1) {
+      await page.mouse.move(cx + dirX * i * 34, cy + (round === 1 ? i * 18 : -i * 12))
+      await page.waitForTimeout(12)
+    }
+    await page.mouse.up({ button: 'middle' })
+    await page.waitForTimeout(260)
+  }
+  await page.waitForTimeout(700)
+
+  await context.close()
+  await browser.close()
+  console.log('录制完成 →', OUT_DIR)
+  process.exit(0)
+}
 
 // 1. 中键平移：横向扫过 (约 2.5s)
 await page.mouse.move(cx, cy)
@@ -61,11 +131,8 @@ for (let i = 1; i <= 30; i += 1) {
 await page.mouse.up({ button: 'middle' })
 await page.waitForTimeout(400)
 
-// 2. 滚轮放大 (约 2s)
-for (let i = 0; i < 16; i += 1) {
-  await page.mouse.wheel(0, -220)
-  await page.waitForTimeout(90)
-}
+// 2. 放大 (约 2s)
+await zoomBy(10, 'in')
 await page.waitForTimeout(500)
 
 // 3. 放大状态下再平移 (约 2s)
@@ -77,12 +144,10 @@ for (let i = 1; i <= 24; i += 1) {
 await page.mouse.up({ button: 'middle' })
 await page.waitForTimeout(400)
 
-// 4. 滚轮缩小到全局视图 (约 2.5s)
-for (let i = 0; i < 26; i += 1) {
-  await page.mouse.wheel(0, 240)
-  await page.waitForTimeout(80)
-}
+// 4. 缩小回全局视图 (约 2.5s)
+await zoomBy(14, 'out')
 await page.waitForTimeout(900)
+console.log('结束档位 =', await readScale())
 
 await context.close()
 await browser.close()
