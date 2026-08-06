@@ -20,6 +20,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.10
         version: 4.1.10(vitest@4.1.10)
+      better-sqlite3:
+        specifier: 11.10.0
+        version: 11.10.0
       jsdom:
         specifier: ^27.4.0
         version: 27.4.0
