@@ -112,13 +112,44 @@ function countMountedConnections(): number {
   return scene.getMountedConnectionCount()
 }
 
+/**
+ * 🔴「已挂载」不等于「屏幕上看得见」。
+ *
+ * 挂载集合包含 overscan 区 —— 视口外一圈也会被挂上。原实现挑的是**第一个**已挂载的
+ * 生成节点，它很可能落在可视区之外，于是 `sampleNodePixel` 永远取不到像素，
+ * 探针以「首屏 N 帧后仍无 xxx 像素」失败。
+ *
+ * 这不是假想问题：把夹具格子从 160×100 放大到 480×300 后，同屏装得下的节点变少，
+ * 原来碰巧可见的那个节点就跑到屏幕外去了，整个 Leafer 探针直接跑不起来。
+ *
+ * 所以这里按**屏幕坐标**筛，只认中心点确实落在画布可视区内的节点。
+ */
 function selectPaintableLeafId(mountedIds: readonly string[], nextRoot: FrameNode): string {
   const mounted = new Set(mountedIds)
-  const generated = nextRoot.children.find(
+  const viewWidth = view.clientWidth
+  const viewHeight = view.clientHeight
+  const isOnScreen = (node: { x: number; y: number; width: number; height: number }): boolean => {
+    const cx = (node.x + node.width / 2) * viewport.scale + viewport.offsetX
+    const cy = (node.y + node.height / 2) * viewport.scale + viewport.offsetY
+    // 留 4px 边距：正好压在边缘的节点取样窗口会越界
+    return cx >= 4 && cy >= 4 && cx <= viewWidth - 4 && cy <= viewHeight - 4
+  }
+
+  const visibleGenerated = nextRoot.children.find(
     (node) =>
-      mounted.has(node.fwId) && (node.fwType === 'ai-image' || node.fwType === 'ai-video'),
+      mounted.has(node.fwId) &&
+      (node.fwType === 'ai-image' || node.fwType === 'ai-video') &&
+      isOnScreen(node),
   )
-  return generated?.fwId ?? selectMountedLeafId(mountedIds, nextRoot.fwId)
+  if (visibleGenerated !== undefined) return visibleGenerated.fwId
+
+  // 退一步：任何可见的已挂载节点都行，画得出像素就能当旁证
+  const visibleAny = nextRoot.children.find(
+    (node) => mounted.has(node.fwId) && node.fwId !== nextRoot.fwId && isOnScreen(node),
+  )
+  if (visibleAny !== undefined) return visibleAny.fwId
+
+  return selectMountedLeafId(mountedIds, nextRoot.fwId)
 }
 
 function sampleNodePixel(): number[] | null {
