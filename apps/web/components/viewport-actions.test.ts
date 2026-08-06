@@ -38,8 +38,8 @@ describe('工具栏视口动作', () => {
     })
   })
 
-  it('适应内容仍遵守 10%–400% 缩放范围', () => {
-    expect(fitContent({ x: 0, y: 0, width: 10, height: 10 }, size).scale).toBe(4)
+  it('适应内容仍遵守 10%–800% 缩放范围', () => {
+    expect(fitContent({ x: 0, y: 0, width: 10, height: 10 }, size).scale).toBe(8)
     expect(fitContent({ x: 0, y: 0, width: 20_000, height: 20_000 }, size).scale).toBe(0.1)
   })
 })

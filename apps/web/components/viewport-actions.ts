@@ -5,7 +5,10 @@ export interface ViewportSize {
   height: number
 }
 
-const SCALE_LIMITS = { min: 0.1, max: 4 } as const
+// 上限从 400% 提到 800%：真实素材接入后需要放到更大才看得清细节，
+// 而 400% 顶到头时用户仍觉得不够。下限 10% 保持不变 ——
+// 那一档已实测能撑住 10000 节点 60fps，再往下没有实测背书。
+const SCALE_LIMITS = { min: 0.1, max: 8 } as const
 
 function centerOf(size: ViewportSize): { x: number; y: number } {
   return { x: size.width / 2, y: size.height / 2 }

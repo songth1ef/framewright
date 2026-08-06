@@ -72,10 +72,14 @@ const DEFAULT_TYPE_RATIOS: Record<ScaleFixtureNodeType, number> = {
   'ai-video': 2,
 }
 
-const NODE_CELL_WIDTH = 160
-const NODE_CELL_HEIGHT = 100
-const COLUMN_GAP = 40
-const ROW_GAP = 60
+// 三倍于最初的 160×100。原尺寸下真实素材几乎看不清内容，
+// 而素材本身分辨率高达 4000×3200 —— 解码成本由**源图分辨率**决定、与显示尺寸无关，
+// 所以放大格子不增加解码开销；反而视口内装得下的节点变少（面积 9 倍 → 数量约 1/9），
+// 挂载数随之下降。间距同比放大，否则放大后的卡片会挤在一起。
+const NODE_CELL_WIDTH = 480
+const NODE_CELL_HEIGHT = 300
+const COLUMN_GAP = 120
+const ROW_GAP = 180
 const CANVAS_PADDING = 40
 
 interface Topology {
