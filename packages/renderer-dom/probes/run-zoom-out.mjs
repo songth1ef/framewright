@@ -11,6 +11,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { DOM_ZOOM_OUT_PROBE_WORKLOAD } from './probe-config.mjs'
+import { describeMachine } from './probe-machine.mjs'
 import { buildDragEvidence, buildPanEvidence } from './browser/scale-sampling.mjs'
 import { aggregateSamples } from './browser/repeated-sampling.mjs'
 
@@ -292,6 +293,7 @@ if (caseId !== undefined) {
   const results = {
     probe: 'renderer-dom-scale-s4-zoom-out',
     startedAt: new Date().toISOString(),
+    machine: describeMachine(),
     workload: { ...workload, scenarios },
     sampling: {
       repeatCount,

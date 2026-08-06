@@ -9,6 +9,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { DOM_SCALE_PROBE_WORKLOAD } from './probe-config.mjs'
+import { describeMachine } from './probe-machine.mjs'
 import { buildDragEvidence, buildPanEvidence, buildZoomEvidence } from './browser/scale-sampling.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -40,6 +41,7 @@ await build({
 const bundle = await readFile(path.join(distDir, 'scale-probe.iife.js'), 'utf8')
 const results = {
   probe: 'renderer-dom-scale-s3',
+  machine: describeMachine(),
   startedAt: new Date().toISOString(),
   workload,
   memory: null,

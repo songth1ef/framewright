@@ -9,6 +9,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { LEAFER_SCALE_PROBE_WORKLOAD } from './probe-config.mjs'
+import { describeMachine } from './probe-machine.mjs'
 import {
   buildDragEvidence,
   buildPanEvidence,
@@ -50,6 +51,7 @@ await build({
 const bundle = await readFile(path.join(distDir, 'scale-probe.iife.js'), 'utf8')
 const results = {
   probe: 'renderer-leafer-scale-s3',
+  machine: describeMachine(),
   startedAt: new Date().toISOString(),
   workload,
   memory: { value: null, reason: memoryReason },

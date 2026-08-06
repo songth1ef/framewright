@@ -11,6 +11,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { LEAFER_ZOOM_OUT_PROBE_WORKLOAD } from './probe-config.mjs'
+import { describeMachine } from './probe-machine.mjs'
 import { buildDragEvidence, buildPanEvidence } from './browser/scale-sampling.mjs'
 import { aggregateSamples } from './browser/repeated-sampling.mjs'
 
@@ -236,6 +237,7 @@ if (caseId !== undefined) {
   await buildBundle()
   const results = {
     probe: 'renderer-leafer-scale-s4-zoom-out',
+    machine: describeMachine(),
     startedAt: new Date().toISOString(),
     workload: { ...workload, scenarios },
     sampling: {
