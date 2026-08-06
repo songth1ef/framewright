@@ -1,6 +1,25 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { NextConfig } from 'next'
 
+const appDirectory = path.dirname(fileURLToPath(import.meta.url))
+const repoRoot = path.resolve(appDirectory, '../..')
+
 const nextConfig: NextConfig = {
+  // 🔴 pnpm monorepo 必须显式指定，否则 Next 会顺着 lockfile 往上猜。
+  // 本机曾因家目录里有一个游离的 package-lock.json 而把 workspace root 判成 ~/，
+  // 部署时 tracing 会因此收错文件。
+  outputFileTracingRoot: repoRoot,
+  // Prisma 6 用 WASM 查询编译器，`.wasm` 不是静态 import —— tracing 看不见它，
+  // 于是 serverless bundle 里缺文件，线上首页 500：
+  //   ENOENT: ... /.prisma/client/query_compiler_bg.wasm
+  // 这个坑只在真实部署里出现：本地 dev 直接从 node_modules 读，永远不会缺。
+  outputFileTracingIncludes: {
+    '/**/*': [
+      './node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/**/*',
+      './node_modules/.pnpm/@prisma+client@*/node_modules/@prisma/client/**/*',
+    ],
+  },
   // workspace 包以 TS 源码形式发布，交给 Next 转译
   // ⚠️ server-core 也是 TS 源码包，必须在这里而不是 serverExternalPackages ——
   //    后者意味着「运行时原生 require」，而 Node 无法 require 一个 .ts 文件
