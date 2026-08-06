@@ -25,8 +25,22 @@ export interface PublicAudioAsset {
   channels: number
 }
 
-export const DEMO_IMAGE_REQUEST_TIERS = [0.125, 0.25, 0.5, 1, 2, 4, 8] as const
+// 16× 这一档是为「放大到原图分辨率」准备的：800% 缩放 × DPR 2 需要 density 16，
+// 阶梯顶格在 8 时 requestScale = min(ceil(75×8), 800) = 600，永远取不到 4K 素材
+// 对应的 800，于是原图最后那 25% 的细节根本请求不到 —— 用户现场看到的「4K 原图发糊」
+// 就是这么来的。钳到原图的 sourceScale 本来就在，缺的只是阶梯上这一档。
+// 不必担心请求爆炸：capTierToVisibleViewport 仍按可见视口封顶，
+// 且 requestScale 永远 min 到 sourceScale，不会超过素材本身。
+export const DEMO_IMAGE_REQUEST_TIERS = [0.125, 0.25, 0.5, 1, 2, 4, 8, 16] as const
 export type DemoImageRequestTier = (typeof DEMO_IMAGE_REQUEST_TIERS)[number]
+
+/**
+ * 超出阶梯时的饱和值。**必须由阶梯派生，不能写死**：
+ * 原先两处兜底都硬编码成 `?? 8`，阶梯一旦加档就会出现「密度越高、档位反而越低」的
+ * 非单调行为（density 20 找不到档 → 回落到 8，比 density 10 拿到的 16 还小）。
+ */
+const MAX_IMAGE_REQUEST_TIER =
+  DEMO_IMAGE_REQUEST_TIERS[DEMO_IMAGE_REQUEST_TIERS.length - 1]!
 
 // 请求档位以规模夹具的 480×300 素材格子为 1×；URL 中仍使用宽高比的整数倍。
 const IMAGE_REQUEST_CELL = { width: 480, height: 300 } as const
@@ -50,7 +64,7 @@ export function selectDemoImageRequestTier(
 
   const requiredDensity = canvasScale * devicePixelRatio
   if (previousTier === undefined) {
-    return DEMO_IMAGE_REQUEST_TIERS.find((tier) => tier >= requiredDensity) ?? 8
+    return DEMO_IMAGE_REQUEST_TIERS.find((tier) => tier >= requiredDensity) ?? MAX_IMAGE_REQUEST_TIER
   }
 
   let index = DEMO_IMAGE_REQUEST_TIERS.indexOf(previousTier)
@@ -140,7 +154,7 @@ function capTierToVisibleViewport(
   )
   const viewportTier = DEMO_IMAGE_REQUEST_TIERS.find(
     (candidate) => candidate >= visibleDensity,
-  ) ?? 8
+  ) ?? MAX_IMAGE_REQUEST_TIER
   return Math.min(tier, viewportTier) as DemoImageRequestTier
 }
 

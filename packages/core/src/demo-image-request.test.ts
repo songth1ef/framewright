@@ -11,7 +11,16 @@ describe('demo 图片自适应请求', () => {
     expect(selectDemoImageRequestTier(0.5, 2)).toBe(1)
     expect(selectDemoImageRequestTier(1, 2)).toBe(2)
     expect(selectDemoImageRequestTier(2, 2)).toBe(4)
-    expect(selectDemoImageRequestTier(8, 2)).toBe(8)
+    // 8 × 2 = 16。此处原先断言 8 —— 那不是规则，是阶梯被截断在 8 的副作用。
+    expect(selectDemoImageRequestTier(8, 2)).toBe(16)
+  })
+
+  // 兜底原先硬编码成 `?? 8`。阶梯加档后，密度超出阶梯会回落到 8，
+  // 反而低于中等密度拿到的 16 —— 档位变成非单调的。饱和值必须由阶梯派生。
+  it('密度超出阶梯时饱和在最高档，不回落', () => {
+    expect(selectDemoImageRequestTier(8, 2)).toBe(16)
+    expect(selectDemoImageRequestTier(16, 2)).toBe(16)
+    expect(selectDemoImageRequestTier(64, 4)).toBe(16)
   })
 
   it('升档及时、降档带迟滞，边界附近不会反复横跳', () => {
@@ -49,6 +58,23 @@ describe('demo 图片自适应请求', () => {
     })
     expect(request.width * 2).toBe(request.height * 3)
     expect(request.width * request.height).toBeLessThan(960 * 1300 * 2)
+  })
+
+  // 用户现场反馈：4K 原图在画布上放大后仍然发糊。
+  // 机制是档位阶梯够不着 —— 800% × DPR 2 需要 density 16，而阶梯顶格是 8，
+  // requestScale = min(ceil(75×8), 800) = 600，永远取不到原图对应的 800。
+  // 钳到原图的逻辑本来就有（sourceScale），缺的只是阶梯上那一档。
+  it('放大到需要原图那么多像素时，请求的就是素材原始尺寸', () => {
+    const asset = PUBLIC_IMAGE_ASSETS.find((candidate) => candidate.id === 'picsum-5x4-4k')!
+    const tier = selectDemoImageRequestTier(8, 2)
+    const request = getDemoImageRequest(asset, tier, {
+      nodeSize: { width: 500, height: 400 },
+      viewportSize: { width: 4000, height: 4000 },
+      devicePixelRatio: 2,
+    })
+
+    expect(request.width).toBe(asset.width)
+    expect(request.height).toBe(asset.height)
   })
 
   it('视口封顶仍受声明源分辨率约束', () => {
