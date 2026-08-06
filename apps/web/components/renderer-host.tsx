@@ -91,9 +91,23 @@ type Factory = () => RendererAdapter
  * 只是失败形态从「内存爆掉」变成「帧率掉光」。**视口虚拟化两侧都得做**，
  * 裁剪判定放在 `core` 里共用。
  */
+// 🔴 **列表顺序即默认渲染器**（首项为默认），改动前先看 2026-08-06 的性能对比报告。
+//
+// 默认改回 DOM 的依据（三个维度，实测）：
+// ① 视频：Leafer 的 rAF fps **就是**视频帧率（8 路并发掉到 20fps、16 个长帧）；
+//    DOM 的 <video> 走浏览器合成器，rAF 掉到 30fps 时 8 路视频仍全部实时播放。
+//    这是架构性差异，调优抹不平 —— 而本项目是 AI 图像/视频画布，视频是主场景。
+// ② 高密度连线：25% 档平移 DOM 60.00 vs Leafer 34.64 fps，差 73%。
+// ③ 首屏：DOM 稳定快 2–3 倍；最大帧稳定在 16.8ms，Leafer 在 19.7–29.1ms 波动。
+//
+// Leafer 唯一领先的是低密度平移（100%/50% 档，56.28 vs 54.37），差距在 4% 内，人感知不到。
+//
+// ⚠️ e2e 不许再依赖这个顺序。上一次改默认渲染器时，十个 spec 写死了「切换 N 次」，
+// 全量 e2e 当场从 44 条掉到 2 条。现在统一走 `e2e/renderer.ts` 的 `selectRenderer`
+// 按标签循环切换，**改这里不应该再影响任何测试** —— 但改完仍然必须跑一次全量 e2e 验证。
 const RENDERERS: ReadonlyArray<{ id: string; label: string; create: Factory }> = [
-  { id: 'leafer', label: 'LeaferJS', create: createLeaferRenderer },
   { id: 'dom', label: 'HTML / DOM', create: createDomRenderer },
+  { id: 'leafer', label: 'LeaferJS', create: createLeaferRenderer },
 ]
 
 const DEV_PANEL_ENABLED = process.env.NODE_ENV !== 'production'
