@@ -13,9 +13,12 @@ import {
   isAiImageNode,
   isAiVideoNode,
   isFrameNode,
+  rewriteDemoImageRequests,
+  selectDemoImageRequestTier,
   walkTree,
   type CanvasNode,
   type CanvasOp,
+  type DemoImageRequestProjection,
   type AiImageNode,
   type AiVideoNode,
   type ConnectionVisibility,
@@ -32,6 +35,7 @@ import { createDomRenderer } from '@framewright/renderer-dom'
 import { createLeaferRenderer } from '@framewright/renderer-leafer'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DevPanelController, type DevPanelHandle } from './dev-panel'
+import { prepareDemoImageRequestTier } from './adaptive-demo-images'
 import { EmptyCanvasGuide, ShortcutHelpDialog } from './canvas-overlays'
 import { useCanvasDocumentFileActions } from './canvas-document-file-actions'
 import { CanvasDocumentStatus } from './canvas-document-status'
@@ -194,6 +198,14 @@ export function RendererHost({
     documentId === undefined ? DEFAULT_VIEWPORT : readStoredViewport(documentId),
   )
   const [root, setRoot] = useState(() => initialRoot ?? createDemoDocument())
+  const devicePixelRatio = window.devicePixelRatio || 1
+  const [demoImageProjection, setDemoImageProjection] = useState<DemoImageRequestProjection>(() => ({
+    tier: selectDemoImageRequestTier(viewport.scale, devicePixelRatio),
+    viewportSize: DEFAULT_VIEWPORT_SIZE,
+    devicePixelRatio,
+  }))
+  // 保留最近一档预加载完成的 Image 对象，直到下一档接管，避免换档瞬间被回收。
+  const preloadedDemoImagesRef = useRef<readonly HTMLImageElement[]>([])
   const [videoPlaybackSessions] = useState(() => createVideoPlaybackSessionStore())
   const [lastAction, setLastAction] = useState('')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -214,11 +226,61 @@ export function RendererHost({
   documentIdRef.current = documentId
   viewportRef.current = viewport
 
+  const renderedRoot = useMemo(
+    () => rewriteDemoImageRequests(root, demoImageProjection),
+    [root, demoImageProjection],
+  )
+  const desiredDemoImageRequestTier = selectDemoImageRequestTier(
+    viewport.scale,
+    devicePixelRatio,
+    demoImageProjection.tier,
+  )
+
   useEffect(() => {
     const container = containerRef.current
     if (container === null) return
     return observeViewportSize(container, setViewportSize)
   }, [])
+
+  useEffect(() => {
+    if (viewportSize === null) return
+    const nextProjection: DemoImageRequestProjection = {
+      tier: desiredDemoImageRequestTier,
+      viewportSize,
+      devicePixelRatio,
+    }
+    if (
+      nextProjection.tier === demoImageProjection.tier &&
+      nextProjection.viewportSize.width === demoImageProjection.viewportSize.width &&
+      nextProjection.viewportSize.height === demoImageProjection.viewportSize.height &&
+      nextProjection.devicePixelRatio === demoImageProjection.devicePixelRatio
+    ) return
+
+    let cancelled = false
+    void prepareDemoImageRequestTier({
+      root,
+      projection: nextProjection,
+      viewport: viewportRef.current,
+      viewportSize,
+      cullingLimits: viewportCullingLimits,
+    }).then(({ preloadedImages }) => {
+      if (cancelled) return
+      preloadedDemoImagesRef.current = preloadedImages
+      setDemoImageProjection(nextProjection)
+    }).catch((error: unknown) => {
+      if (!cancelled) console.error('[framewright] demo 图片换档失败，继续显示旧档', error)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [
+    demoImageProjection,
+    devicePixelRatio,
+    desiredDemoImageRequestTier,
+    root,
+    viewportCullingLimits,
+    viewportSize,
+  ])
 
   const commitViewport = useCallback((next: Viewport): void => {
     viewportRef.current = next
@@ -549,7 +611,7 @@ export function RendererHost({
   }, [])
 
   const ctx: RenderContext = {
-    root,
+    root: renderedRoot,
     selection,
     viewport,
     viewportSize: viewportSize ?? DEFAULT_VIEWPORT_SIZE,
