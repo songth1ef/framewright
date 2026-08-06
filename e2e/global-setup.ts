@@ -57,7 +57,34 @@ function truncateAllTables(): void {
  * 这个坑此前被绕过一次（临时换干净副本跑），但没做成常态，于是复发。
  * 隔离数据库是根治：e2e 永远从空库开始，跑多少次都一样。
  */
-export default function globalSetup(): void {
+/**
+ * 预热首页与文档 API。
+ *
+ * 🔴 为什么必须做：Next dev 是按需编译的，首次命中某个 Route Handler 会当场编译。
+ * 而 `createDocument` 点完就 `await expect(page).toHaveURL(...)`，用的是 Playwright
+ * 默认的 5 秒断言超时。冷编译在 CPU 被占（例如同时开着另一个 dev server）时轻易超过
+ * 5 秒，于是**每轮里第一个创建文档的用例随机变红**，而报错只说「URL 还停在首页」，
+ * 完全指不到「Route Handler 正在编译」上。
+ *
+ * 实测抖动：同一份代码连跑三轮，失败 7 条 / 0 条 / 1 条，失败全部落在
+ * `create-document.ts:21`。
+ *
+ * 预热把编译移出关键路径。这比「把断言超时调大」更好 —— 后者会顺带放宽对真实
+ * 回归的检测，而这里要治的只是首次编译。
+ */
+async function warmUpRoutes(): Promise<void> {
+  const port = process.env['FRAMEWRIGHT_E2E_PORT'] ?? '3100'
+  const baseUrl = `http://localhost:${port}`
+  for (const target of ['/', '/api/documents']) {
+    try {
+      await fetch(`${baseUrl}${target}`)
+    } catch {
+      // 预热失败不该让整轮 e2e 挂掉：它只是省掉首次编译，不是正确性前提。
+    }
+  }
+}
+
+export default async function globalSetup(): Promise<void> {
   const removed = tryRemoveDatabaseFiles()
 
   execFileSync(
@@ -72,4 +99,7 @@ export default function globalSetup(): void {
 
   // 文件没删成（被占用）时，迁移不会重建表，库里还留着上一轮的数据 —— 清表补上。
   if (!removed) truncateAllTables()
+
+  // 放在最后：预热要打到已经建好表的库上，否则首页会 500，等于没热到真实路径。
+  await warmUpRoutes()
 }
