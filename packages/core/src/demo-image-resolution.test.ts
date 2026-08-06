@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PUBLIC_IMAGE_ASSETS } from './demo-media'
+import { PUBLIC_IMAGE_ASSETS, selectDemoImageRequestTier } from './demo-media'
 import {
   collectDemoImageRequestUrls,
   rewriteDemoImageRequests,
@@ -10,7 +10,39 @@ import {
   createFrameNode,
   createImgNode,
   createVideoNode,
+  isAiImageNode,
+  isAiVideoNode,
+  isImgNode,
+  isVideoNode,
 } from './node-schema'
+import { walkTree } from './node-tree'
+import { CORS_SAFE_PROBE_MEDIA_ASSETS, createScaleFixture } from './scale-fixture'
+import { getNodesInViewport } from './viewport-culling'
+
+function mountedRequestPixelBudget(root: ReturnType<typeof createScaleFixture>, scale: number): number {
+  const viewportSize = { width: 960, height: 1300 }
+  const rewritten = rewriteDemoImageRequests(root, {
+    tier: selectDemoImageRequestTier(scale, 1),
+    viewportSize,
+    devicePixelRatio: 1,
+  })
+  const mountedFwIds = getNodesInViewport(rewritten, { scale, offsetX: 0, offsetY: 0 }, {
+    ...viewportSize,
+    maxNodes: 1500,
+    maxConnections: 1000,
+  })
+  let pixels = 0
+  walkTree(rewritten, (node) => {
+    if (!mountedFwIds.has(node.fwId)) return
+    const url = isImgNode(node) || isAiImageNode(node)
+      ? node.src
+      : isVideoNode(node) || isAiVideoNode(node) ? node.poster : null
+    if (url === null || url === '') return
+    const segments = new URL(url).pathname.split('/').filter(Boolean)
+    pixels += Number(segments.at(-2)) * Number(segments.at(-1))
+  })
+  return pixels
+}
 
 describe('demo 图片请求在共享 node 树中的投影', () => {
   it('同步改写 img、ai-image 与视频 poster，不改真实视频 URL', () => {
@@ -64,6 +96,19 @@ describe('demo 图片请求在共享 node 树中的投影', () => {
     expect((rewritten.children[0] as { src: string }).src).toBe(
       'https://picsum.photos/seed/framewright-3x2/1800/1200',
     )
+  })
+
+  it('有图片的缩放档总请求像素保持在同一量级', () => {
+    const fixture = createScaleFixture({
+      nodeCount: 10000,
+      connectionPattern: 'many-to-many',
+      seed: 7,
+      mediaAssets: CORS_SAFE_PROBE_MEDIA_ASSETS,
+    })
+    const budgets = [8, 1, 0.5].map((scale) => mountedRequestPixelBudget(fixture, scale))
+
+    expect(budgets).toEqual([2160000, 1821948, 1788628])
+    expect(Math.max(...budgets) / Math.min(...budgets)).toBeLessThan(2)
   })
 
   it('只收集当前挂载节点将要切换的唯一 URL', () => {
