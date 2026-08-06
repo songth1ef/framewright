@@ -24,3 +24,6 @@ demo-video/
 **/probes/.dist/
 **/probes/fixtures/*.webm
 **/probes/fixtures/*.mp4
+
+# 录制中间产物（webm 原片），GIF 成品在 docs/media 下入库
+tools/recordings/
