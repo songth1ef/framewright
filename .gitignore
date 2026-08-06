@@ -28,3 +28,9 @@ demo-video/
 
 # 录制中间产物（webm 原片），GIF 成品在 docs/media 下入库
 tools/recordings/
+
+# 性能基准产物：体积大、每次都变，不入 git（用 tools/benchmark.mjs 现跑现出）
+benchmarks/results/
+.vercel
+.env*
+.turso-migrate.env

@@ -6,12 +6,13 @@
 import { chromium } from '@playwright/test'
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { readdirSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { DOM_ZOOM_OUT_PROBE_WORKLOAD } from './probe-config.mjs'
 import { describeMachine } from './probe-machine.mjs'
+import { sampleProcessMemory, samplePageMetrics } from './probe-memory.mjs'
 import { buildDragEvidence, buildPanEvidence } from './browser/scale-sampling.mjs'
 import { aggregateSamples } from './browser/repeated-sampling.mjs'
 
@@ -19,7 +20,10 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(here, '../../..')
 const distDir = path.join(here, '.dist')
 const bundleFile = path.join(distDir, 'scale-probe.iife.js')
-const resultsDir = path.join(here, 'results')
+// --out-dir 让统一基准（tools/benchmark.mjs）把产物写到 benchmarks/results（已 gitignore），
+// 不污染 probes/results 里那些随提交入库的定点取证数据。
+const resultsDir = process.argv.find((arg) => arg.startsWith('--out-dir='))
+  ?.slice('--out-dir='.length) ?? path.join(here, 'results')
 const host = 'http://scale-probe.local'
 const workload = DOM_ZOOM_OUT_PROBE_WORKLOAD
 const memoryReason =
@@ -47,7 +51,15 @@ if (
 ) {
   throw new Error(`--max-connections 必须是正整数，收到：${requestedMaxConnections}`)
 }
-const scenarios = workload.scenarios.map((scenario) => requestedConnectionPattern === undefined
+// --scenarios-file 让外部注入任意场景矩阵（tools/benchmark.mjs 用它跑全维度组合）。
+// 场景对象的形状与 probe-config.mjs 里内置的完全一致，浏览器侧不需要任何改动。
+const scenariosFileArg = process.argv.find((arg) => arg.startsWith('--scenarios-file='))
+  ?.slice('--scenarios-file='.length)
+const baseScenarios = scenariosFileArg === undefined
+  ? workload.scenarios
+  : JSON.parse(readFileSync(scenariosFileArg, 'utf8'))
+
+const scenarios = baseScenarios.map((scenario) => requestedConnectionPattern === undefined
   ? scenario
   : { ...scenario, connectionPattern: requestedConnectionPattern })
   .map((scenario) => requestedMaxConnections === undefined
@@ -159,6 +171,11 @@ async function runCase(id) {
     await page.waitForFunction(() => window.__scaleProbe !== undefined)
     const browserName = await page.evaluate(() => navigator.userAgent)
 
+    const browserCdp = await browser.newBrowserCDPSession()
+    const pageCdp = await page.context().newCDPSession(page)
+    // 挂载任何场景之前先采基线，后面只用「后 - 前」的差值。
+    const memoryBaseline = await sampleProcessMemory(browserCdp)
+
     console.log('S4_PHASE:first-screen')
     const firstScreen = await page.evaluate((value) => window.__scaleProbe.mountScenario(value), scenario)
     const firstScreenFingerprint = screenshotFingerprint(await page.screenshot())
@@ -206,6 +223,12 @@ async function runCase(id) {
       },
     }
 
+    // 分进程真实 RSS（CDP 取 PID + ps 读 OS），与页面级 JS heap 分开记。
+    // 基线在挂载任何场景之前采，用来做「同档位前后对比」——RSS 绝对值含共享库
+    // 与浏览器自身开销，只有差值有意义。
+    const memoryAfter = await sampleProcessMemory(browserCdp)
+    const pageMetrics = await samplePageMetrics(pageCdp)
+
     const result = {
       ...scenario,
       status: 'completed',
@@ -214,13 +237,14 @@ async function runCase(id) {
         ...firstScreen,
         ...firstScreenDownloads,
         visualFingerprint: firstScreenFingerprint,
-        memory: null,
-        memoryReason,
       },
-      drag: { ...dragSample, avgFps: dragSample.fps, workEvidence: dragEvidence, memory: null, memoryReason },
-      pan: { ...panSample, avgFps: panSample.fps, workEvidence: panEvidence, memory: null, memoryReason },
-      memory: null,
-      memoryReason,
+      drag: { ...dragSample, avgFps: dragSample.fps, workEvidence: dragEvidence },
+      pan: { ...panSample, avgFps: panSample.fps, workEvidence: panEvidence },
+      memory: {
+        baseline: memoryBaseline,
+        afterScenario: memoryAfter,
+        pageMetrics,
+      },
     }
     console.log(`S4_RESULT:${JSON.stringify(result)}`)
   } finally {
@@ -236,6 +260,10 @@ function runIsolatedCase(scenario) {
     }
     if (requestedMaxConnections !== undefined) {
       childArgs.push(`--max-connections=${requestedMaxConnections}`)
+    }
+    // 子进程要能查到同一份场景表，否则 --case= 在子进程里找不到外部注入的档位。
+    if (scenariosFileArg !== undefined) {
+      childArgs.push(`--scenarios-file=${scenariosFileArg}`)
     }
     const child = spawn(process.execPath, childArgs, {
       cwd: repoRoot,
@@ -308,7 +336,15 @@ if (caseId !== undefined) {
     const samples = []
     for (let sampleIndex = 1; sampleIndex <= repeatCount; sampleIndex += 1) {
       if (sampleIndex > 1 && repeatCooldownMs > 0) await coolDown(repeatCooldownMs)
-      const sample = await runIsolatedCase(scenario)
+      // 🔴 单个样本抛错不能带走整轮。runIsolatedCase 对「超时」已经是记录后继续，
+      // 但对「子进程抛错」原先直接 reject，一个档位失败就把前面所有档位的结果一起丢了。
+      // 跑一小时的矩阵必须能部分交付；失败原因随样本入档，不假装它跑过。
+      let sample
+      try {
+        sample = await runIsolatedCase(scenario)
+      } catch (error) {
+        sample = { status: 'failed', error: error.message.split('\n')[0].slice(0, 300) }
+      }
       samples.push({ sampleIndex, ...sample })
       console.log(`[${scenario.id} ${sampleIndex}/${repeatCount}]`, JSON.stringify(sample))
     }
