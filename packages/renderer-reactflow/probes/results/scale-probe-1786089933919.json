@@ -1,0 +1,426 @@
+{
+  "probe": "renderer-reactflow-scale",
+  "startedAt": "2026-08-07T08:02:47.516Z",
+  "workload": {
+    "renderer": "React Flow 12.11.2（onlyRenderVisibleElements=true）",
+    "seed": 7,
+    "nodeCount": 10000,
+    "connectionPattern": "many-to-many",
+    "scales": [
+      1,
+      0.5,
+      0.25,
+      0.1
+    ],
+    "miniMapScales": [
+      1,
+      0.1
+    ],
+    "sampleWindowMs": 3000,
+    "dragDelta": {
+      "x": 240,
+      "y": 120
+    },
+    "panDelta": {
+      "x": -1200,
+      "y": -800
+    },
+    "longFrameThresholdMs": 50,
+    "viewport": {
+      "width": 1024,
+      "height": 1400,
+      "viewWidth": 960,
+      "viewHeight": 1300
+    }
+  },
+  "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+  "scenarios": [
+    {
+      "scale": 1,
+      "miniMap": false,
+      "firstScreen": {
+        "scale": 1,
+        "miniMap": false,
+        "renderMs": 2708.0999999940395,
+        "fixtureBuildMs": 17,
+        "mountedLogicalNodeCount": 10000,
+        "mountedEdgeCount": 0,
+        "miniMapNodeCount": 0,
+        "mountedDomElementCount": 50011,
+        "totalNodeCount": 10000,
+        "mountedToTotalRatio": 1
+      },
+      "drag": {
+        "frames": 3,
+        "elapsedMs": 5401.2,
+        "fps": 0.555432126194179,
+        "frameTimeMs": {
+          "median": 34.600000000000364,
+          "p95": 5333.299999999999,
+          "max": 5333.299999999999
+        },
+        "longFrames": 1,
+        "evidence": {
+          "start": {
+            "fwId": "scale-node-0",
+            "x": 40,
+            "y": 40
+          },
+          "end": {
+            "fwId": "scale-node-0",
+            "x": 280,
+            "y": 160
+          }
+        }
+      },
+      "pan": {
+        "frames": 3,
+        "elapsedMs": 5416.699999999999,
+        "fps": 0.5538427455831042,
+        "frameTimeMs": {
+          "median": 16.5,
+          "p95": 5385,
+          "max": 5385
+        },
+        "longFrames": 1,
+        "evidence": {
+          "start": {
+            "scale": 1,
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "end": {
+            "scale": 1,
+            "offsetX": -1200,
+            "offsetY": -800
+          }
+        }
+      }
+    },
+    {
+      "scale": 0.5,
+      "miniMap": false,
+      "firstScreen": {
+        "scale": 0.5,
+        "miniMap": false,
+        "renderMs": 2997.5,
+        "fixtureBuildMs": 17.200000017881393,
+        "mountedLogicalNodeCount": 10000,
+        "mountedEdgeCount": 0,
+        "miniMapNodeCount": 0,
+        "mountedDomElementCount": 50011,
+        "totalNodeCount": 10000,
+        "mountedToTotalRatio": 1
+      },
+      "drag": {
+        "frames": 2,
+        "elapsedMs": 4616.700000000004,
+        "fps": 0.43320986852080445,
+        "frameTimeMs": {
+          "median": 2308.350000000002,
+          "p95": 4583.4000000000015,
+          "max": 4583.4000000000015
+        },
+        "longFrames": 1,
+        "evidence": {
+          "start": {
+            "fwId": "scale-node-0",
+            "x": 40,
+            "y": 40
+          },
+          "end": {
+            "fwId": "scale-node-0",
+            "x": 280,
+            "y": 160
+          }
+        }
+      },
+      "pan": {
+        "frames": 3,
+        "elapsedMs": 5250.899999999994,
+        "fps": 0.5713306290350232,
+        "frameTimeMs": {
+          "median": 48.89999999999418,
+          "p95": 5166.5999999999985,
+          "max": 5166.5999999999985
+        },
+        "longFrames": 1,
+        "evidence": {
+          "start": {
+            "scale": 0.5,
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "end": {
+            "scale": 0.5,
+            "offsetX": -1200,
+            "offsetY": -800
+          }
+        }
+      }
+    },
+    {
+      "scale": 0.25,
+      "miniMap": false,
+      "firstScreen": {
+        "scale": 0.25,
+        "miniMap": false,
+        "renderMs": 3409.5,
+        "fixtureBuildMs": 52.20000001788139,
+        "mountedLogicalNodeCount": 10000,
+        "mountedEdgeCount": 0,
+        "miniMapNodeCount": 0,
+        "mountedDomElementCount": 50011,
+        "totalNodeCount": 10000,
+        "mountedToTotalRatio": 1
+      },
+      "drag": {
+        "frames": 3,
+        "elapsedMs": 5083.299999999996,
+        "fps": 0.5901678043790456,
+        "frameTimeMs": {
+          "median": 33.39999999999418,
+          "p95": 5033.4000000000015,
+          "max": 5033.4000000000015
+        },
+        "longFrames": 1,
+        "evidence": {
+          "start": {
+            "fwId": "scale-node-0",
+            "x": 40,
+            "y": 40
+          },
+          "end": {
+            "fwId": "scale-node-0",
+            "x": 280,
+            "y": 160
+          }
+        }
+      },
+      "pan": {
+        "frames": 3,
+        "elapsedMs": 7064.700000000012,
+        "fps": 0.4246464818038975,
+        "frameTimeMs": {
+          "median": 84.89999999999418,
+          "p95": 6964.700000000012,
+          "max": 6964.700000000012
+        },
+        "longFrames": 2,
+        "evidence": {
+          "start": {
+            "scale": 0.25,
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "end": {
+            "scale": 0.25,
+            "offsetX": -1200,
+            "offsetY": -800
+          }
+        }
+      }
+    },
+    {
+      "scale": 0.1,
+      "miniMap": false,
+      "firstScreen": {
+        "scale": 0.1,
+        "miniMap": false,
+        "renderMs": 6633,
+        "fixtureBuildMs": 31.400000005960464,
+        "mountedLogicalNodeCount": 10000,
+        "mountedEdgeCount": 0,
+        "miniMapNodeCount": 0,
+        "mountedDomElementCount": 50011,
+        "totalNodeCount": 10000,
+        "mountedToTotalRatio": 1
+      },
+      "drag": {
+        "frames": 2,
+        "elapsedMs": 5018.399999999994,
+        "fps": 0.3985333970986773,
+        "frameTimeMs": {
+          "median": 2509.199999999997,
+          "p95": 4900,
+          "max": 4900
+        },
+        "longFrames": 2,
+        "evidence": {
+          "start": {
+            "fwId": "scale-node-0",
+            "x": 40,
+            "y": 40
+          },
+          "end": {
+            "fwId": "scale-node-0",
+            "x": 280,
+            "y": 160
+          }
+        }
+      },
+      "pan": {
+        "frames": 3,
+        "elapsedMs": 5666.699999999997,
+        "fps": 0.5294086505373501,
+        "frameTimeMs": {
+          "median": 116.69999999999709,
+          "p95": 5450.899999999994,
+          "max": 5450.899999999994
+        },
+        "longFrames": 3,
+        "evidence": {
+          "start": {
+            "scale": 0.1,
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "end": {
+            "scale": 0.1,
+            "offsetX": -1200,
+            "offsetY": -800
+          }
+        }
+      }
+    },
+    {
+      "scale": 1,
+      "miniMap": true,
+      "firstScreen": {
+        "scale": 1,
+        "miniMap": true,
+        "renderMs": 3309.300000011921,
+        "fixtureBuildMs": 29.19999998807907,
+        "mountedLogicalNodeCount": 10000,
+        "mountedEdgeCount": 0,
+        "miniMapNodeCount": 10000,
+        "mountedDomElementCount": 60015,
+        "totalNodeCount": 10000,
+        "mountedToTotalRatio": 1
+      },
+      "drag": {
+        "frames": 3,
+        "elapsedMs": 5416.699999999997,
+        "fps": 0.5538427455831044,
+        "frameTimeMs": {
+          "median": 16.70000000001164,
+          "p95": 5383.299999999988,
+          "max": 5383.299999999988
+        },
+        "longFrames": 1,
+        "evidence": {
+          "start": {
+            "fwId": "scale-node-0",
+            "x": 40,
+            "y": 40
+          },
+          "end": {
+            "fwId": "scale-node-0",
+            "x": 280,
+            "y": 160
+          }
+        }
+      },
+      "pan": {
+        "frames": 3,
+        "elapsedMs": 6200.100000000006,
+        "fps": 0.48386316349736247,
+        "frameTimeMs": {
+          "median": 32.39999999999418,
+          "p95": 6150,
+          "max": 6150
+        },
+        "longFrames": 1,
+        "evidence": {
+          "start": {
+            "scale": 1,
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "end": {
+            "scale": 1,
+            "offsetX": -1200,
+            "offsetY": -800
+          }
+        }
+      }
+    },
+    {
+      "scale": 0.1,
+      "miniMap": true,
+      "firstScreen": {
+        "scale": 0.1,
+        "miniMap": true,
+        "renderMs": 3708.5,
+        "fixtureBuildMs": 27.30000001192093,
+        "mountedLogicalNodeCount": 10000,
+        "mountedEdgeCount": 0,
+        "miniMapNodeCount": 10000,
+        "mountedDomElementCount": 60015,
+        "totalNodeCount": 10000,
+        "mountedToTotalRatio": 1
+      },
+      "drag": {
+        "frames": 2,
+        "elapsedMs": 4416.6999999999825,
+        "fps": 0.45282677111871034,
+        "frameTimeMs": {
+          "median": 2208.3499999999913,
+          "p95": 4383.399999999994,
+          "max": 4383.399999999994
+        },
+        "longFrames": 1,
+        "evidence": {
+          "start": {
+            "fwId": "scale-node-0",
+            "x": 40,
+            "y": 40
+          },
+          "end": {
+            "fwId": "scale-node-0",
+            "x": 280,
+            "y": 160
+          }
+        }
+      },
+      "pan": {
+        "frames": 3,
+        "elapsedMs": 6450,
+        "fps": 0.4651162790697675,
+        "frameTimeMs": {
+          "median": 33.29999999998836,
+          "p95": 6384.3000000000175,
+          "max": 6384.3000000000175
+        },
+        "longFrames": 1,
+        "evidence": {
+          "start": {
+            "scale": 0.1,
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          "end": {
+            "scale": 0.1,
+            "offsetX": -1200,
+            "offsetY": -800
+          }
+        }
+      }
+    }
+  ],
+  "miniMapComparisons": [
+    {
+      "scale": 1,
+      "renderMsDelta": 601.2000000178814,
+      "dragFpsDelta": -0.001589380611074609,
+      "panFpsDelta": -0.06997958208574173
+    },
+    {
+      "scale": 0.1,
+      "renderMsDelta": -2924.5,
+      "dragFpsDelta": 0.054293374020033036,
+      "panFpsDelta": -0.0642923714675826
+    }
+  ],
+  "finishedAt": "2026-08-07T08:05:33.919Z"
+}

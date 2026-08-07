@@ -1,7 +1,10 @@
 import {
+  CORS_SAFE_PROBE_MEDIA_ASSETS,
   NOOP_RENDERER_CALLBACKS,
   applyNodeMoves,
   createScaleFixture,
+  isAiImageNode,
+  isAiVideoNode,
   type FrameNode,
   type Point,
   type RenderContext,
@@ -10,26 +13,73 @@ import {
 } from '@framewright/core'
 import { createReactFlowProbeRenderer } from '../../src/index'
 import { REACT_FLOW_SCALE_WORKLOAD } from '../probe-config.mjs'
-import { buildFrameStats, type FrameStats } from './sampling.mjs'
+import { buildFrameStats, buildDragEvidence, buildPanEvidence, type FrameStats } from './sampling.mjs'
 
-interface Scenario { scale: number; miniMap: boolean }
-interface Snapshot { fwId: string; x: number; y: number }
-
-interface ScaleProbe {
-  mount(scenario: Scenario): Promise<Record<string, unknown>>
-  sampleDrag(ms: number, threshold: number): Promise<FrameStats>
-  samplePan(ms: number, threshold: number): Promise<FrameStats>
-  sampleFrames(ms: number, threshold: number): Promise<FrameStats>
-  startFrameRecording(): void
-  stopFrameRecording(threshold: number): FrameStats
-  panePoint(): Point
-  dragSnapshot(): Snapshot
-  domNodeSnapshot(): { fwId: string; transform: string; x: number; y: number }
-  panSnapshot(): Viewport
-  destroy(): void
+interface ZoomOutScenario {
+  id?: string
+  label?: string
+  nodeCount: number
+  connectionPattern: 'none' | 'fanin' | 'distributed' | 'many-to-many'
+  initialScale?: number
+  maxConnections?: number
+  miniMap?: boolean
 }
 
-declare global { interface Window { __reactFlowScaleProbe: ScaleProbe } }
+interface LegacyScenario { scale: number; miniMap: boolean }
+
+interface FirstScreenSample {
+  elapsedMs: number
+  fixtureBuildMs: number
+  totalNodeCount: number
+  totalConnectionCount: number
+  evidenceNodeFwId: string
+  mountedLogicalNodeCount: number
+  mountedConnectionCount: number
+  connectionLayerPresent: boolean
+  mountedConnectionElementTypes: Record<string, number>
+  mountedDomElementCount: number
+  mountedToTotalRatio: number
+  requestedImageCount: number
+  decodedImageCount: number
+  failedImageCount: number
+  devicePixelRatio: number
+  viewportPixelBudget: number
+  requestedPixelBudget: number
+  decodedPixelBudget: number
+  decodedToViewportRatio: number
+  maxDisplayStretchRatio: number
+  maxVisibleStretchRatio: number
+  decodedImages: unknown[]
+}
+
+interface PanSnapshot { offsetX: number; offsetY: number }
+interface DragSnapshot { fwId: string; x: number; y: number }
+
+interface ReactFlowScaleProbe {
+  /** 旧版 run-scale.mjs / run-native.mjs 入口。 */
+  mount(scenario: LegacyScenario): Promise<Record<string, unknown>>
+  /** 统一 zoom-out 基准入口，与 DOM 侧 mountScenario 同名同签名。 */
+  mountScenario(scenario: ZoomOutScenario): Promise<FirstScreenSample>
+  sampleDrag(ms: number, threshold: number): Promise<FrameStats>
+  samplePan(ms: number, threshold: number, panDelta?: Readonly<{ x: number; y: number }>): Promise<FrameStats>
+  dragSnapshot(): DragSnapshot
+  panSnapshot(): PanSnapshot
+  mountedConnectionCount(): number
+  destroy(): void
+  /** run-native.mjs 专用，不在统一基准里。 */
+  domNodeSnapshot?(): { fwId: string; transform: string; x: number; y: number }
+  startFrameRecording?(): void
+  stopFrameRecording?(threshold: number): FrameStats
+  panePoint?(): Point
+  sampleFrames?(ms: number, threshold: number): Promise<FrameStats>
+}
+
+declare global {
+  interface Window {
+    __reactFlowScaleProbe: ReactFlowScaleProbe
+    __scaleProbe: ReactFlowScaleProbe
+  }
+}
 
 const workload = REACT_FLOW_SCALE_WORKLOAD
 const view = document.getElementById('view')
@@ -39,8 +89,6 @@ let renderer: RendererAdapter | null = null
 let root: FrameNode | null = null
 let viewport: Viewport = { scale: 1, offsetX: 0, offsetY: 0 }
 let evidenceFwId: string | null = null
-let recordedDurations: number[] | null = null
-let recordedPrevious = 0
 
 function context(): RenderContext {
   if (root === null) throw new Error('尚未建立 fixture')
@@ -84,35 +132,89 @@ async function waitForStableRender(): Promise<ReturnType<typeof counts>> {
   throw new Error(`180 帧内未稳定：${JSON.stringify(counts())}`)
 }
 
-async function mount(scenario: Scenario): Promise<Record<string, unknown>> {
+function countFixtureConnections(): number {
+  if (root === null) return 0
+  return root.children.reduce(
+    (total, node) => total + (isAiImageNode(node) || isAiVideoNode(node) ? node.sourceFwIds.length : 0),
+    0,
+  )
+}
+
+function buildFixture(scenario: ZoomOutScenario): FrameNode {
+  return createScaleFixture({
+    nodeCount: scenario.nodeCount,
+    connectionPattern: scenario.connectionPattern,
+    seed: workload.seed,
+    mediaAssets: CORS_SAFE_PROBE_MEDIA_ASSETS,
+  })
+}
+
+async function mountScenario(scenario: ZoomOutScenario): Promise<FirstScreenSample> {
   renderer?.destroy()
   view.replaceChildren()
   const fixtureStart = performance.now()
-  root = createScaleFixture({
-    nodeCount: workload.nodeCount,
-    connectionPattern: workload.connectionPattern,
-    seed: workload.seed,
-  })
+  root = buildFixture(scenario)
   const fixtureBuildMs = performance.now() - fixtureStart
-  viewport = { scale: scenario.scale, offsetX: 0, offsetY: 0 }
-  renderer = createReactFlowProbeRenderer({ miniMap: scenario.miniMap })
+  const initialScale = scenario.initialScale ?? 1
+  viewport = { scale: initialScale, offsetX: 0, offsetY: 0 }
+  renderer = createReactFlowProbeRenderer({ miniMap: scenario.miniMap ?? false })
   const renderStart = performance.now()
   renderer.mount(view, context())
   const mounted = await waitForStableRender()
-  const renderMs = performance.now() - renderStart
+  const elapsedMs = performance.now() - renderStart
+  const totalConnectionCount = countFixtureConnections()
+
   const evidence = view.querySelector<HTMLElement>('[data-fw-id]:not([data-fw-id="scale-fixture-root"])')
   evidenceFwId = evidence?.dataset.fwId ?? null
   if (evidenceFwId === null) throw new Error('没有可用于拖拽的已挂载节点')
+
+  const viewRect = view.getBoundingClientRect()
+  const viewportPixelBudget = viewRect.width * viewRect.height * window.devicePixelRatio ** 2
+
+  return {
+    elapsedMs,
+    fixtureBuildMs,
+    totalNodeCount: scenario.nodeCount,
+    totalConnectionCount,
+    evidenceNodeFwId: evidenceFwId,
+    mountedLogicalNodeCount: mounted.nodes,
+    mountedConnectionCount: mounted.edges,
+    connectionLayerPresent: mounted.edges > 0,
+    mountedConnectionElementTypes: { path: mounted.edges },
+    mountedDomElementCount: view.querySelectorAll('*').length,
+    mountedToTotalRatio: mounted.nodes / scenario.nodeCount,
+    requestedImageCount: 0,
+    decodedImageCount: 0,
+    failedImageCount: 0,
+    devicePixelRatio: window.devicePixelRatio,
+    viewportPixelBudget,
+    requestedPixelBudget: 0,
+    decodedPixelBudget: 0,
+    decodedToViewportRatio: 0,
+    maxDisplayStretchRatio: 0,
+    maxVisibleStretchRatio: 0,
+    decodedImages: [],
+  }
+}
+
+/** 保留给 run-scale.mjs / run-native.mjs 的 legacy 入口。 */
+async function mountLegacy(scenario: LegacyScenario): Promise<Record<string, unknown>> {
+  const sample = await mountScenario({
+    nodeCount: workload.nodeCount,
+    connectionPattern: workload.connectionPattern,
+    initialScale: scenario.scale,
+    miniMap: scenario.miniMap,
+  })
   return {
     ...scenario,
-    fixtureBuildMs,
-    renderMs,
-    mountedLogicalNodeCount: mounted.nodes,
-    mountedEdgeCount: mounted.edges,
-    miniMapNodeCount: mounted.minimapNodes,
-    mountedDomElementCount: view.querySelectorAll('*').length,
-    totalNodeCount: workload.nodeCount,
-    mountedToTotalRatio: mounted.nodes / workload.nodeCount,
+    renderMs: sample.elapsedMs,
+    fixtureBuildMs: sample.fixtureBuildMs,
+    mountedLogicalNodeCount: sample.mountedLogicalNodeCount,
+    mountedEdgeCount: sample.mountedConnectionCount,
+    miniMapNodeCount: counts().minimapNodes,
+    mountedDomElementCount: sample.mountedDomElementCount,
+    totalNodeCount: sample.totalNodeCount,
+    mountedToTotalRatio: sample.mountedToTotalRatio,
   }
 }
 
@@ -162,6 +264,9 @@ function sampleFrames(ms: number, threshold: number): Promise<FrameStats> {
   })
 }
 
+let recordedDurations: number[] | null = null
+let recordedPrevious = 0
+
 function recordFrame(now: number): void {
   if (recordedDurations === null) return
   recordedDurations.push(now - recordedPrevious)
@@ -197,6 +302,8 @@ function sampleDrag(ms: number, threshold: number): Promise<FrameStats> {
   const node = root.children.find((candidate) => candidate.fwId === evidenceFwId)
   if (node === undefined) throw new Error(`${evidenceFwId} 不在 fixture 根节点下`)
   const origin = { x: node.x, y: node.y }
+  viewport = { scale: viewport.scale, offsetX: 0, offsetY: 0 }
+  renderer?.update(context())
   return sampleAnimation(ms, threshold, (progress) => {
     if (root === null) return
     root = applyNodeMoves(root, [{
@@ -208,46 +315,61 @@ function sampleDrag(ms: number, threshold: number): Promise<FrameStats> {
   })
 }
 
-function samplePan(ms: number, threshold: number): Promise<FrameStats> {
+function samplePan(
+  ms: number,
+  threshold: number,
+  panDelta: Readonly<{ x: number; y: number }> = workload.panDelta,
+): Promise<FrameStats> {
   const scale = viewport.scale
   viewport = { scale, offsetX: 0, offsetY: 0 }
   renderer?.update(context())
   return sampleAnimation(ms, threshold, (progress) => {
     viewport = {
       scale,
-      offsetX: workload.panDelta.x * progress,
-      offsetY: workload.panDelta.y * progress,
+      offsetX: panDelta.x * progress,
+      offsetY: panDelta.y * progress,
     }
   })
 }
 
-function dragSnapshot(): Snapshot {
+function dragSnapshot(): DragSnapshot {
   const node = root?.children.find((candidate) => candidate.fwId === evidenceFwId)
   if (node === undefined) throw new Error('找不到拖拽证据节点')
   return { fwId: node.fwId, x: node.x, y: node.y }
 }
 
-window.__reactFlowScaleProbe = {
-  mount,
+function mountedConnectionCount(): number {
+  return counts().edges
+}
+
+function domNodeSnapshot(): { fwId: string; transform: string; x: number; y: number } {
+  if (evidenceFwId === null) throw new Error('没有证据节点')
+  const wrapper = view.querySelector(`[data-fw-id="${evidenceFwId}"]`)?.closest<HTMLElement>('.react-flow__node')
+  if (wrapper === undefined || wrapper === null) throw new Error('证据节点未挂载')
+  const rect = wrapper.getBoundingClientRect()
+  return { fwId: evidenceFwId, transform: getComputedStyle(wrapper).transform, x: rect.x, y: rect.y }
+}
+
+const probeApi: ReactFlowScaleProbe = {
+  mount: mountLegacy,
+  mountScenario,
   sampleDrag,
   samplePan,
-  sampleFrames,
-  startFrameRecording,
-  stopFrameRecording,
-  panePoint,
   dragSnapshot,
-  domNodeSnapshot: () => {
-    if (evidenceFwId === null) throw new Error('没有证据节点')
-    const wrapper = view.querySelector(`[data-fw-id="${evidenceFwId}"]`)?.closest<HTMLElement>('.react-flow__node')
-    if (wrapper === undefined || wrapper === null) throw new Error('证据节点未挂载')
-    const rect = wrapper.getBoundingClientRect()
-    return { fwId: evidenceFwId, transform: getComputedStyle(wrapper).transform, x: rect.x, y: rect.y }
-  },
   panSnapshot: () => ({ ...viewport }),
+  mountedConnectionCount,
   destroy: () => {
     renderer?.destroy()
     renderer = null
     root = null
     evidenceFwId = null
   },
+  domNodeSnapshot,
+  startFrameRecording,
+  stopFrameRecording,
+  panePoint,
+  sampleFrames,
 }
+
+window.__reactFlowScaleProbe = probeApi
+window.__scaleProbe = probeApi

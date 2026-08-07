@@ -1,0 +1,347 @@
+{
+  "probe": "renderer-reactflow-scale-s4-zoom-out",
+  "startedAt": "2026-08-07T08:01:08.633Z",
+  "machine": {
+    "platform": "darwin",
+    "release": "25.6.0",
+    "arch": "arm64",
+    "cpuModel": "Apple M4",
+    "cpuCount": 10,
+    "totalMemoryBytes": 25769803776
+  },
+  "workload": {
+    "renderer": "React Flow 12.11.2（onlyRenderVisibleElements=true）",
+    "scenarios": [
+      {
+        "id": "rf-check",
+        "label": "校验",
+        "nodeCount": 1000,
+        "connectionPattern": "many-to-many",
+        "initialScale": 1
+      }
+    ],
+    "seed": 7,
+    "sampleWindowMs": 3000,
+    "repeatCount": 5,
+    "repeatCooldownMs": 1000,
+    "caseTimeoutMs": 120000,
+    "viewport": {
+      "width": 1024,
+      "height": 1400,
+      "viewWidth": 960,
+      "viewHeight": 1300
+    },
+    "viewportRole": "browser viewport 为 1024×1400；其中 #view 是 960×1300 的可见画布裁剪区。React Flow onlyRenderVisibleElements=true 执行节点裁剪；两侧必须使用同一口径。",
+    "dragDelta": {
+      "x": 240,
+      "y": 120
+    },
+    "panDelta": {
+      "x": -1200,
+      "y": -800
+    },
+    "longFrameThresholdMs": 50
+  },
+  "sampling": {
+    "repeatCount": 1,
+    "repeatCooldownMs": 1000,
+    "isolation": "每次样本启动独立子进程，并新建 browser 与 page"
+  },
+  "memory": null,
+  "memoryReason": "页面级 API 无法可靠覆盖 React 组件树、布局、合成层与浏览器进程总内存；performance.memory 仅代表部分 JS heap，故不采集。",
+  "scenarios": [
+    {
+      "id": "rf-check",
+      "label": "校验",
+      "nodeCount": 1000,
+      "connectionPattern": "many-to-many",
+      "initialScale": 1,
+      "status": "completed",
+      "requestedSampleCount": 1,
+      "samples": [
+        {
+          "sampleIndex": 1,
+          "id": "rf-check",
+          "label": "校验",
+          "nodeCount": 1000,
+          "connectionPattern": "many-to-many",
+          "initialScale": 1,
+          "status": "completed",
+          "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+          "firstScreen": {
+            "elapsedMs": 430.69999998807907,
+            "fixtureBuildMs": 3.4000000059604645,
+            "totalNodeCount": 1000,
+            "totalConnectionCount": 1776,
+            "evidenceNodeFwId": "scale-node-0",
+            "mountedLogicalNodeCount": 6,
+            "mountedConnectionCount": 32,
+            "connectionLayerPresent": true,
+            "mountedConnectionElementTypes": {
+              "path": 32
+            },
+            "mountedDomElementCount": 169,
+            "mountedToTotalRatio": 0.006,
+            "requestedImageCount": 0,
+            "decodedImageCount": 0,
+            "failedImageCount": 0,
+            "devicePixelRatio": 1,
+            "viewportPixelBudget": 1248000,
+            "requestedPixelBudget": 0,
+            "decodedPixelBudget": 0,
+            "decodedToViewportRatio": 0,
+            "maxDisplayStretchRatio": 0,
+            "maxVisibleStretchRatio": 0,
+            "decodedImages": [],
+            "downloadedImageCount": 6,
+            "downloadedImageBytes": 0,
+            "visualFingerprint": "457ac43422c56df4a0a8678da5de37ef69da2bfd9fe2379a4b736306d4c99308"
+          },
+          "drag": {
+            "frames": 10,
+            "elapsedMs": 3000.1020000000003,
+            "fps": 3.333220003853202,
+            "frameTimeMs": {
+              "median": 375.04999999999995,
+              "p95": 450.0999999999999,
+              "max": 450.0999999999999
+            },
+            "longFrames": 9,
+            "avgFps": 3.333220003853202,
+            "workEvidence": {
+              "fwId": "scale-node-0",
+              "start": {
+                "x": 40,
+                "y": 40
+              },
+              "end": {
+                "x": 280,
+                "y": 160
+              },
+              "delta": {
+                "x": 240,
+                "y": 120
+              },
+              "positionChanged": true
+            }
+          },
+          "pan": {
+            "frames": 12,
+            "elapsedMs": 3216.7019999999993,
+            "fps": 3.7305289703553526,
+            "frameTimeMs": {
+              "median": 316.69999999999936,
+              "p95": 398.10000000000036,
+              "max": 398.10000000000036
+            },
+            "longFrames": 10,
+            "avgFps": 3.7305289703553526,
+            "workEvidence": {
+              "start": {
+                "offsetX": 0,
+                "offsetY": 0
+              },
+              "end": {
+                "offsetX": -1200,
+                "offsetY": -800
+              },
+              "delta": {
+                "x": -1200,
+                "y": -800
+              },
+              "offsetChanged": true,
+              "visual": {
+                "startFingerprint": "a54a553889d9f230f2f5331c03844596a29c51f31777493dfeff3a2c970e948a",
+                "endFingerprint": "fb3ea4e645dbf9b12dd8fd8565511e21b6d41c2eb33622b63f9eb32cd7e577c4",
+                "fingerprintChanged": true,
+                "mountedConnectionCountStart": 32,
+                "mountedConnectionCountEnd": 54,
+                "connectionCountChanged": true
+              }
+            }
+          },
+          "memory": {
+            "baseline": {
+              "available": true,
+              "unit": "bytes",
+              "source": "CDP SystemInfo.getProcessInfo 取 PID + ps -o rss=",
+              "caveats": [
+                "headless 使用 SwiftShader 软件光栅化，GPU 进程 RSS 不反映真实显存",
+                "RSS 含共享库与浏览器自身开销，只做同档位前后对比，不作绝对值结论"
+              ],
+              "byProcess": {
+                "browser": {
+                  "pids": [
+                    6688
+                  ],
+                  "rssBytes": 92340224,
+                  "cpuTimeSeconds": 0.13393
+                },
+                "renderer": {
+                  "pids": [
+                    6691
+                  ],
+                  "rssBytes": 94715904,
+                  "cpuTimeSeconds": 0.112573
+                },
+                "GPU": {
+                  "pids": [
+                    6689
+                  ],
+                  "rssBytes": 58294272,
+                  "cpuTimeSeconds": 0.087196
+                },
+                "network.mojom.NetworkService": {
+                  "pids": [
+                    6690
+                  ],
+                  "rssBytes": 40337408,
+                  "cpuTimeSeconds": 0.034216
+                }
+              }
+            },
+            "afterScenario": {
+              "available": true,
+              "unit": "bytes",
+              "source": "CDP SystemInfo.getProcessInfo 取 PID + ps -o rss=",
+              "caveats": [
+                "headless 使用 SwiftShader 软件光栅化，GPU 进程 RSS 不反映真实显存",
+                "RSS 含共享库与浏览器自身开销，只做同档位前后对比，不作绝对值结论"
+              ],
+              "byProcess": {
+                "browser": {
+                  "pids": [
+                    6688
+                  ],
+                  "rssBytes": 116998144,
+                  "cpuTimeSeconds": 1.671516
+                },
+                "renderer": {
+                  "pids": [
+                    6691
+                  ],
+                  "rssBytes": 1729609728,
+                  "cpuTimeSeconds": 12.354797
+                },
+                "GPU": {
+                  "pids": [
+                    6689
+                  ],
+                  "rssBytes": 69877760,
+                  "cpuTimeSeconds": 0.815981
+                },
+                "network.mojom.NetworkService": {
+                  "pids": [
+                    6690
+                  ],
+                  "rssBytes": 72335360,
+                  "cpuTimeSeconds": 0.632179
+                },
+                "audio.mojom.AudioService": {
+                  "pids": [
+                    6836
+                  ],
+                  "rssBytes": 48742400,
+                  "cpuTimeSeconds": 0.128362
+                }
+              }
+            },
+            "pageMetrics": {
+              "Documents": 7,
+              "Frames": 7,
+              "Nodes": 495384,
+              "LayoutCount": 0,
+              "RecalcStyleCount": 0,
+              "LayoutDuration": 0,
+              "RecalcStyleDuration": 0,
+              "ScriptDuration": 0,
+              "TaskDuration": 0.000013,
+              "JSHeapUsedSize": 87586608,
+              "JSHeapTotalSize": 183828480
+            }
+          }
+        }
+      ],
+      "completedSampleCount": 1,
+      "aggregate": {
+        "firstScreen": {
+          "elapsedMs": {
+            "median": 430.69999998807907,
+            "q1": 430.69999998807907,
+            "q3": 430.69999998807907,
+            "iqr": 0
+          }
+        },
+        "drag": {
+          "avgFps": {
+            "median": 3.333220003853202,
+            "q1": 3.333220003853202,
+            "q3": 3.333220003853202,
+            "iqr": 0
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 375.04999999999995,
+              "q1": 375.04999999999995,
+              "q3": 375.04999999999995,
+              "iqr": 0
+            },
+            "p95": {
+              "median": 450.0999999999999,
+              "q1": 450.0999999999999,
+              "q3": 450.0999999999999,
+              "iqr": 0
+            },
+            "max": {
+              "median": 450.0999999999999,
+              "q1": 450.0999999999999,
+              "q3": 450.0999999999999,
+              "iqr": 0
+            }
+          },
+          "longFrames": {
+            "median": 9,
+            "q1": 9,
+            "q3": 9,
+            "iqr": 0
+          }
+        },
+        "pan": {
+          "avgFps": {
+            "median": 3.7305289703553526,
+            "q1": 3.7305289703553526,
+            "q3": 3.7305289703553526,
+            "iqr": 0
+          },
+          "frameTimeMs": {
+            "median": {
+              "median": 316.69999999999936,
+              "q1": 316.69999999999936,
+              "q3": 316.69999999999936,
+              "iqr": 0
+            },
+            "p95": {
+              "median": 398.10000000000036,
+              "q1": 398.10000000000036,
+              "q3": 398.10000000000036,
+              "iqr": 0
+            },
+            "max": {
+              "median": 398.10000000000036,
+              "q1": 398.10000000000036,
+              "q3": 398.10000000000036,
+              "iqr": 0
+            }
+          },
+          "longFrames": {
+            "median": 10,
+            "q1": 10,
+            "q3": 10,
+            "iqr": 0
+          }
+        }
+      }
+    }
+  ],
+  "finishedAt": "2026-08-07T08:01:18.243Z"
+}
