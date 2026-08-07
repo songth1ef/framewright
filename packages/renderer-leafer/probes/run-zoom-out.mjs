@@ -53,6 +53,40 @@ function screenshotFingerprint(buffer) {
   return createHash('sha256').update(buffer).digest('hex')
 }
 
+/**
+ * 🔴 与 DOM 侧完全对称的图片下载采集。
+ *
+ * 此前只有 DOM 探针采这个,Leafer 探针一条都不采。后果是 2026-08-06 的基准里
+ * 出现「DOM 首屏 5-6 秒 vs Leafer 10-85ms」的 60 倍差距,看上去像是 Leafer 碾压 ——
+ * 实际上 DOM 侧在等 picsum 下载(实测其首字节 5.5~6.6 秒且与图片大小几乎无关),
+ * 而 Leafer 侧**下没下我们根本不知道**,因为没有仪表。
+ *
+ * 仪表不对称造成的差距会被当成实现差距。这与本仓记过的
+ * 「Leafer 那份 JSON 没有 workload 块,产物层面无法核对」是同一类问题。
+ */
+async function trackImageDownloads(page) {
+  const session = await page.context().newCDPSession(page)
+  const imageRequestIds = new Set()
+  const completed = new Map()
+  await session.send('Network.enable')
+  session.on('Network.responseReceived', (event) => {
+    if (event.type === 'Image') imageRequestIds.add(event.requestId)
+  })
+  session.on('Network.loadingFinished', (event) => {
+    if (imageRequestIds.has(event.requestId)) {
+      completed.set(event.requestId, event.encodedDataLength)
+    }
+  })
+  return {
+    snapshot() {
+      return {
+        downloadedImageCount: completed.size,
+        downloadedImageBytes: [...completed.values()].reduce((total, bytes) => total + bytes, 0),
+      }
+    },
+  }
+}
+
 function positiveIntegerOption(name, fallback) {
   const raw = process.argv.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3)
   if (raw === undefined) return fallback
@@ -105,6 +139,7 @@ async function runCase(id) {
     const page = await browser.newPage({
       viewport: { width: workload.viewport.width, height: workload.viewport.height },
     })
+    const imageDownloads = await trackImageDownloads(page)
     page.on('pageerror', (error) => console.error('[pageerror]', error.message))
     await page.route(`${host}/**`, (route) => {
       const url = new URL(route.request().url())
@@ -179,7 +214,7 @@ async function runCase(id) {
       ...scenario,
       status: 'completed',
       browser: browserName,
-      firstScreen,
+      firstScreen: { ...firstScreen, ...imageDownloads.snapshot() },
       drag: { ...dragSample, avgFps: dragSample.fps, workEvidence: dragEvidence },
       pan: { ...panSample, avgFps: panSample.fps, workEvidence: panEvidence },
       memory: {
