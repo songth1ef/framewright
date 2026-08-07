@@ -34,6 +34,7 @@ import {
 import { createDomRenderer } from '@framewright/renderer-dom'
 import { createLeaferRenderer } from '@framewright/renderer-leafer'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { loadSettings, saveSettings } from './settings-store'
 import { DevPanelController, type DevPanelHandle } from './dev-panel'
 import { prepareDemoImageRequestTier } from './adaptive-demo-images'
 import { EmptyCanvasGuide, ShortcutHelpDialog } from './canvas-overlays'
@@ -174,9 +175,40 @@ export function RendererHost({
   const [activeIndex, setActiveIndex] = useState(0)
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [minimapVisible, setMinimapVisible] = useState(() => readStoredMinimapVisibility())
-  const [viewportCullingLimits, setViewportCullingLimits] = useState(
-    () => readStoredViewportCullingLimits(),
+  // 🔴 统一设置是唯一真相源。此前裁剪预算读的是自己的 localStorage 键,
+  // 而 LOD 阈值根本没有来源(渲染器直接调 getViewportLod(scale) 不带阈值)——
+  // 于是设置页改了「简化细节阈值」画布毫无反应。两者现在都从 loadSettings() 来。
+  const [appSettings, setAppSettings] = useState(() => loadSettings())
+  const viewportCullingLimits = useMemo(
+    () => ({
+      maxNodes: appSettings.performance.maxNodes,
+      maxConnections: appSettings.performance.maxConnections,
+      lowDetailMaxNodes: appSettings.performance.lowDetailMaxNodes,
+    }),
+    [
+      appSettings.performance.maxNodes,
+      appSettings.performance.maxConnections,
+      appSettings.performance.lowDetailMaxNodes,
+    ],
   )
+  const lodThresholds = useMemo(
+    () => ({
+      fullDetailScale: appSettings.performance.fullDetailScale,
+      simplifiedDetailScale: appSettings.performance.simplifiedDetailScale,
+    }),
+    [appSettings.performance.fullDetailScale, appSettings.performance.simplifiedDetailScale],
+  )
+  const setViewportCullingLimits = (limits: { maxNodes: number; maxConnections: number }): void => {
+    setAppSettings((current) => {
+      const next = {
+        ...current,
+        performance: { ...current.performance, ...limits },
+        performancePreset: 'custom',
+      }
+      saveSettings(next)
+      return next
+    })
+  }
   const [viewportSize, setViewportSize] = useState<ViewportSize | null>(null)
   const getViewportSize = (): ViewportSize => ({
     width: containerRef.current?.clientWidth || 800,
@@ -305,9 +337,11 @@ export function RendererHost({
     writeStoredMinimapVisibility(next)
   }, [])
 
+  // 只写统一设置。此前这里还会 writeStoredViewportCullingLimits 双写旧键 ——
+  // 双真相源正是这次收编要消除的东西：设置页与开发面板改的是两份数据，
+  // 谁后写谁赢，而两边都以为自己是对的。
   const commitViewportCullingLimits = useCallback((next: ViewportCullingLimits): void => {
     setViewportCullingLimits(next)
-    writeStoredViewportCullingLimits(next)
   }, [])
 
   useEffect(() => {
@@ -620,6 +654,7 @@ export function RendererHost({
     interactionMode,
     connectionVisibility,
     cullingLimits: viewportCullingLimits,
+    lodThresholds,
     callbacks,
   }
   const ctxRef = useRef(ctx)

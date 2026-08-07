@@ -44,6 +44,29 @@ export interface ViewportCullingOptions {
 export interface ViewportCullingLimits {
   maxNodes: number
   maxConnections: number
+  /**
+   * 低细节档（节点已退化为色块/点）的挂载上限。未提供时沿用 maxNodes —— 行为与
+   * 该字段落地前完全一致。
+   *
+   * 🔴 为什么要分开：10% 缩放下每个节点只是个小方块，成本比 100% 时低一个量级。
+   * 共用一个按满细节定的预算，结果就是用户看到的「缩到 10% 时中间一块有内容、
+   * 外面整片消失」—— 预算没用完就先被上限截断了。
+   */
+  lowDetailMaxNodes?: number
+}
+
+/**
+ * 按当前细节档选用哪个挂载上限。
+ *
+ * 只有 `full` 用 maxNodes；`simplified` 与 `dot` 都属于低细节档 ——
+ * 用户在 25% 与 10% 看到的是同一个现象，没有理由只治其中一个。
+ */
+export function resolveMaxNodesForDetail(
+  limits: ViewportCullingLimits,
+  detail: 'full' | 'simplified' | 'dot',
+): number {
+  if (detail === 'full') return limits.maxNodes
+  return limits.lowDetailMaxNodes ?? limits.maxNodes
 }
 
 /** 2535 个节点时 DOM 已降至 24fps；1500 为该实测拐点留出约 40% 余量。 */

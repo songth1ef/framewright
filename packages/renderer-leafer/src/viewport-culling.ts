@@ -5,6 +5,7 @@ import {
   getViewportLod,
   getViewportCullingResult,
   isFrameNode,
+  resolveMaxNodesForDetail,
   resolveViewportCullingLimits,
   resolveViewportSize,
   type CanvasNode,
@@ -118,12 +119,18 @@ export class LeaferViewportScene {
   ): LeaferSceneSnapshot {
     const resolvedViewportSize = resolveViewportSize(ctx.viewportSize)
     const resolvedCullingLimits = resolveViewportCullingLimits(ctx.cullingLimits)
+    // lod 提前到裁剪选项之前算：低细节档要用独立的挂载上限，
+    // 与 DOM 侧保持同一口径，否则两个渲染器在同一缩放下挂载数不同,对照就失效了。
+    const lod = getViewportLod(ctx.viewport.scale, ctx.lodThresholds ?? {})
+    const limitsForDetail = {
+      ...resolvedCullingLimits,
+      maxNodes: resolveMaxNodesForDetail(resolvedCullingLimits, lod.detail),
+    }
     const resolvedCullingOptions =
       ctx.viewportSize === undefined
-        ? { ...cullingOptions, ...resolvedCullingLimits }
-        : { ...cullingOptions, ...resolvedViewportSize, ...resolvedCullingLimits }
+        ? { ...cullingOptions, ...limitsForDetail }
+        : { ...cullingOptions, ...resolvedViewportSize, ...limitsForDetail }
     const { descriptors, snapshot } = collectDescriptors(ctx, preview)
-    const lod = getViewportLod(ctx.viewport.scale)
     const descriptorById = new Map(descriptors.map((descriptor) => [descriptor.node.fwId, descriptor]))
     const canReuse =
       this.cullingCache !== null &&

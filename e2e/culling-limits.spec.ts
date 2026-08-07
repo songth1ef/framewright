@@ -3,7 +3,21 @@ import { createBoxNode, createFrameNode } from '../packages/core/src/index'
 import { openCustomDocument } from './custom-document'
 import { selectRenderer, type RendererLabel } from './renderer'
 
-const STORAGE_KEY = 'framewright:viewport-culling-limits'
+// 2026-08-06 起所有设置收编进统一键。断言改为「统一设置里的预算」而不是
+// 已废弃的独立键 —— 守的仍是「改了能生效、刷新后保持」这条不变量。
+const STORAGE_KEY = 'framewright:settings'
+
+function readStoredLimits(page: import('@playwright/test').Page) {
+  return page.evaluate((key) => {
+    const raw = localStorage.getItem(key)
+    if (raw === null) return null
+    const parsed = JSON.parse(raw) as { performance?: { maxNodes?: number; maxConnections?: number } }
+    return {
+      maxNodes: parsed.performance?.maxNodes ?? null,
+      maxConnections: parsed.performance?.maxConnections ?? null,
+    }
+  }, STORAGE_KEY)
+}
 const BOX_COLORS = ['#ef4444', '#22c55e', '#3b82f6', '#eab308'] as const
 
 function createCullingFixture() {
@@ -76,9 +90,7 @@ for (const renderer of ['HTML / DOM', 'LeaferJS'] as const) {
 
     await maxNodes.fill('3')
     await expect.poll(() => readRenderedNodeCount(page, renderer)).toBe(3)
-    await expect(page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).resolves.toBe(
-      JSON.stringify({ maxNodes: 3, maxConnections: 1000 }),
-    )
+    await expect(readStoredLimits(page)).resolves.toEqual({ maxNodes: 3, maxConnections: 1000 })
 
     await page.reload()
     // 渲染器选择不跨刷新保持，必须按标签重新选择。
@@ -111,13 +123,14 @@ test('裁剪预算接受上下边界，拒绝非法输入并让坏存储回退�
   await expect(maxNodes).toHaveValue('100000')
   await expect(maxConnections).toHaveValue('0')
 
+  // 坏存储：非法档案应整体回退默认，而不是把画布带进无法解释的状态
   await page.evaluate((key) => {
-    localStorage.setItem(key, JSON.stringify({ maxNodes: 1.5, maxConnections: 100001 }))
+    localStorage.setItem(key, JSON.stringify({ performance: { maxNodes: 1.5, maxConnections: 100001 } }))
   }, STORAGE_KEY)
   await page.reload()
   await selectRenderer(page, 'HTML / DOM')
   await openDevPanel(page)
   await expect(page.getByTestId('max-nodes-input')).toHaveValue('1500')
   await expect(page.getByTestId('max-connections-input')).toHaveValue('1000')
-  await expect(page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).resolves.toBeNull()
+  await expect(readStoredLimits(page)).resolves.toEqual({ maxNodes: 1500, maxConnections: 1000 })
 })

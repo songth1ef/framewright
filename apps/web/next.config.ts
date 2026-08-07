@@ -14,10 +14,13 @@ const nextConfig: NextConfig = {
   // 于是 serverless bundle 里缺文件，线上首页 500：
   //   ENOENT: ... /.prisma/client/query_compiler_bg.wasm
   // 这个坑只在真实部署里出现：本地 dev 直接从 node_modules 读，永远不会缺。
+  // ⚠️ 这里的相对路径以 **next.config 所在目录**（apps/web）为基准，不是 tracing root。
+  // 第一版写成 './node_modules/...' 指向了 apps/web/node_modules —— 那里没有 .pnpm，
+  // 于是 include 静默匹配到 0 个文件，部署照样 500，报错和没加时一模一样。
   outputFileTracingIncludes: {
     '/**/*': [
-      './node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/**/*',
-      './node_modules/.pnpm/@prisma+client@*/node_modules/@prisma/client/**/*',
+      '../../node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/**/*',
+      '../../node_modules/.prisma/client/**/*',
     ],
   },
   // workspace 包以 TS 源码形式发布，交给 Next 转译

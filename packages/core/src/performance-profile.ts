@@ -17,6 +17,18 @@
 export interface PerformanceProfile {
   /** 最多挂载多少节点（含 root）。超出时按到视口中心的归一化距离取最近的。 */
   maxNodes: number
+  /**
+   * 低细节档（缩放低于 simplifiedDetailScale，节点已退化为色块/点）时的挂载上限。
+   *
+   * 🔴 为什么要和 maxNodes 分开：10% 缩放下每个节点只是个小方块，成本比 100% 时
+   * 低一个量级，能承受的数量完全不同。共用一个预算的后果，正是用户看到的
+   * 「缩到 10% 时中间一块有内容、外面整片消失」—— 上限是按满细节定的，
+   * 到了低细节档就显得过于保守。
+   *
+   * 反过来也成立：在弱机器上可以把这一档压得比 maxNodes 更低，
+   * 因为低缩放意味着同屏候选节点暴涨。
+   */
+  lowDetailMaxNodes: number
   /** 最多渲染多少条连线。0 表示不渲染连线。 */
   maxConnections: number
   /** 向四周预挂载多少个视口尺寸。0 = 只挂当前视口相交项。 */
@@ -51,6 +63,7 @@ export const PERFORMANCE_PRESETS: Readonly<Record<PerformancePresetKey, Performa
     // 省电/低配：优先保证不卡，接受更早降级
     battery: Object.freeze({
       maxNodes: 600,
+      lowDetailMaxNodes: 1500,
       maxConnections: 200,
       overscan: 0,
       minScale: 0.02,
@@ -61,6 +74,7 @@ export const PERFORMANCE_PRESETS: Readonly<Record<PerformancePresetKey, Performa
     // 均衡：与本仓此前的写死默认值一致，保证升级到配置系统后行为不变
     balanced: Object.freeze({
       maxNodes: 1500,
+      lowDetailMaxNodes: 4000,
       maxConnections: 1000,
       overscan: 1,
       minScale: 0.01,
@@ -71,6 +85,7 @@ export const PERFORMANCE_PRESETS: Readonly<Record<PerformancePresetKey, Performa
     // 高画质：更晚降级，看得更清，代价是低缩放下更吃力
     quality: Object.freeze({
       maxNodes: 3000,
+      lowDetailMaxNodes: 8000,
       maxConnections: 2000,
       overscan: 1,
       minScale: 0.01,
@@ -81,6 +96,7 @@ export const PERFORMANCE_PRESETS: Readonly<Record<PerformancePresetKey, Performa
     // 极致：几乎不降级。仅在高核心数 + 大内存机器上推荐
     ultra: Object.freeze({
       maxNodes: 6000,
+      lowDetailMaxNodes: 20000,
       maxConnections: 4000,
       overscan: 2,
       minScale: 0.005,
@@ -189,6 +205,7 @@ export function recommendPreset(capability: DeviceCapability): PresetRecommendat
 
 const NUMERIC_BOUNDS: Record<keyof PerformanceProfile, { min: number; max: number; integer: boolean }> = {
   maxNodes: { min: 1, max: 100_000, integer: true },
+  lowDetailMaxNodes: { min: 1, max: 200_000, integer: true },
   maxConnections: { min: 0, max: 100_000, integer: true },
   overscan: { min: 0, max: 4, integer: true },
   minScale: { min: 0.001, max: 1, integer: false },

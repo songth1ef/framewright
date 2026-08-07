@@ -1,6 +1,7 @@
 import { SHAPE_TYPES, type FrameNode } from './node-schema'
 import type { SelectionMode } from './selection'
 import type { ViewportCullingLimits } from './viewport-culling'
+import type { LodThresholds } from './viewport-lod'
 
 export type RendererId = 'dom' | 'leafer'
 export type InteractionMode = 'unified' | 'native'
@@ -103,6 +104,15 @@ export interface RenderContext {
   connectionVisibility?: ConnectionVisibility
   /** 用户本机的裁剪预算；未提供时由 resolveViewportCullingLimits 解析契约默认值。 */
   cullingLimits?: ViewportCullingLimits
+  /**
+   * 用户本机的 LOD 降级阈值。未提供时用 DEFAULT_LOD_THRESHOLDS —— 与配置系统
+   * 落地前完全一致，既有调用方不受影响。
+   *
+   * 🔴 缺省值必须「没人传的时候就是对的」：`interactionMode` 在这上面栽过
+   * （直接写 `=== 'unified'` 导致 undefined 落进 native 分支）。这里统一走
+   *   `thresholds.x ?? DEFAULT_LOD_THRESHOLDS.x`，且为「不传时用默认」单独写了测试。
+   */
+  lodThresholds?: LodThresholds
   callbacks: RendererCallbacks
 }
 

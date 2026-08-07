@@ -6,6 +6,7 @@ import {
   isAiImageNode,
   isAiVideoNode,
   isFrameNode,
+  resolveMaxNodesForDetail,
   resolveViewportCullingLimits,
   resolveViewportSize,
   assertShapeCoverage,
@@ -168,7 +169,7 @@ export function createDomRenderer(): RendererAdapter {
     bounds = new Map<string, Rect>()
     visibleNodeIds = []
     const { scale, offsetX, offsetY } = ctx.viewport
-    const lod = getViewportLod(scale)
+    const lod = getViewportLod(scale, ctx.lodThresholds ?? {})
     const previewMoves = new Map(
       (interactionPreview.moves ?? []).map((move) => [move.fwId, { x: move.x, y: move.y }]),
     )
@@ -192,9 +193,13 @@ export function createDomRenderer(): RendererAdapter {
             height: cursorContainer?.clientHeight || ctx.root.height * scale,
           }
         : resolvedViewportSize
+    const resolvedLimits = resolveViewportCullingLimits(ctx.cullingLimits)
     const cullingOptions = {
       ...viewportSize,
-      ...resolveViewportCullingLimits(ctx.cullingLimits),
+      ...resolvedLimits,
+      // 低细节档用独立预算：10% 缩放下每个节点只是个色块，成本低一个量级。
+      // 共用满细节预算会让画布在缩小时「中间有内容、外面整片消失」。
+      maxNodes: resolveMaxNodesForDetail(resolvedLimits, lod.detail),
     }
     const mountedNodeIds = getNodesInViewport(ctx.root, ctx.viewport, cullingOptions)
     const videoVisibleNodeIds =

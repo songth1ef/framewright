@@ -152,7 +152,16 @@ export function loadSettings(): AppSettings {
   if (store === undefined) return DEFAULT_SETTINGS
   const migrated = migrateLegacySettings(store)
   if (migrated !== undefined) return migrated
-  return normalizeSettings(readJson(store, SETTINGS_STORAGE_KEY))
+
+  const raw = readJson(store, SETTINGS_STORAGE_KEY)
+  const normalized = normalizeSettings(raw)
+  // 自愈：读到坏配置时把规范化结果写回去，保证存储里**永远**是一份合法配置。
+  // 不写回的话坏数据会一直躺着：UI 每次都靠规范化兜住，看起来正常，
+  // 而真正的问题（谁写坏的、什么时候写坏的）永远不显形。
+  if (raw !== undefined && JSON.stringify(raw) !== JSON.stringify(normalized)) {
+    saveSettings(normalized)
+  }
+  return normalized
 }
 
 export function saveSettings(settings: AppSettings): void {
