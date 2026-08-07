@@ -134,4 +134,49 @@ describe('demo 图片自适应请求', () => {
       ).toThrow(RangeError)
     }
   })
+
+  /**
+   * §4.1 收尾：迟滞的**真正验收条件**不是单次调用给对档位，
+   * 而是「连续缩放时不会反复横跳」—— 横跳意味着反复下载与解码同一张图。
+   *
+   * 此前只测了单点(1.01→2、0.99 保持 2、0.81 保持 2、0.79 降到 1)，
+   * 那证明不了序列行为:每次都从头算的实现同样能通过那四个断言。
+   */
+  it('在档位边界附近来回缩放时不产生反复换档', () => {
+    // 在 1× 档边界(requiredDensity 1.0)附近来回抖动，模拟滚轮微调
+    const sequence = [1.02, 0.98, 1.03, 0.97, 1.01, 0.99, 1.04, 0.96]
+    let tier = selectDemoImageRequestTier(1, 1)
+    const switches: number[] = []
+    for (const scale of sequence) {
+      const next = selectDemoImageRequestTier(scale, 1, tier)
+      if (next !== tier) switches.push(next)
+      tier = next
+    }
+    // 允许**一次**必要的升档(1.02 的密度确实超过 1× 档，糊图不该省)，
+    // 但此后 7 次抖动一次都不该再换 —— 反复横跳才是要防的。
+    expect(switches.length).toBeLessThanOrEqual(1)
+    expect(tier).toBe(2)
+    // 关键：没有「升上去又掉下来」。降档带是 (2/2)×0.8 = 0.8，序列最低 0.96 仍在带内。
+    expect(switches.filter((next) => next < 2)).toEqual([])
+  })
+
+  it('缩放真的跨过迟滞带才降档，且降一档就停', () => {
+    let tier = selectDemoImageRequestTier(2, 1)
+    expect(tier).toBe(2)
+    // 2× 档下界 = (2/2)×0.8 = 0.8；0.9 仍在带内
+    tier = selectDemoImageRequestTier(0.9, 1, tier)
+    expect(tier).toBe(2)
+    // 0.7 跨过 0.8 → 降到 1×；1× 的下界是 0.4，0.7 > 0.4 所以停在 1×
+    tier = selectDemoImageRequestTier(0.7, 1, tier)
+    expect(tier).toBe(1)
+  })
+
+  it('升档不带迟滞：放大时立刻给足分辨率', () => {
+    // 升档若也带迟滞，用户放大后会看到一段时间的糊图 —— 那是最不该省的地方
+    let tier = selectDemoImageRequestTier(0.5, 1)
+    expect(tier).toBe(0.5)
+    tier = selectDemoImageRequestTier(0.51, 1, tier)
+    expect(tier).toBe(1)
+  })
+
 })
