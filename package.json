@@ -19,7 +19,8 @@
     "db:deploy": "node tools/prisma.mjs migrate deploy --schema prisma/schema.prisma",
     "db:migrate": "node tools/prisma.mjs migrate dev --schema prisma/schema.prisma",
     "dev": "pnpm --filter @framewright/web dev",
-    "build": "pnpm --filter @framewright/web build"
+    "build": "pnpm --filter @framewright/web build",
+    "db:deploy:turso": "node tools/turso-migrate.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
@@ -31,6 +32,7 @@
     "next": "15.5.22",
     "prisma": "^6.19.3",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "@libsql/client": "0.8.1"
   }
 }

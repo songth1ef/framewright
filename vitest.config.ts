@@ -44,6 +44,16 @@ export default defineConfig({
       },
       {
         test: {
+          // 仓根 tools/ 下的脚本测试。2026-08-07 新增 turso-migrate 时发现这里
+          // 原本没有对应项，测试写了也不会被 `pnpm test` 执行 ——
+          // 与注释里记的那三次事故是同一类。发现门禁的 SCAN_ROOTS 也一并加了 tools。
+          name: 'tools',
+          environment: 'node',
+          include: ['tools/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
           name: 'provider',
           environment: 'node',
           include: ['packages/provider/src/**/*.test.ts'],

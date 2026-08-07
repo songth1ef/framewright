@@ -18,7 +18,9 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const SCAN_ROOTS = ['packages', 'apps']
+// tools/ 也纳入扫描：2026-08-07 新增 turso-migrate 时发现它不在扫描根里，
+// 放在那里的测试会被门禁判为漏网而无人察觉。
+const SCAN_ROOTS = ['packages', 'apps', 'tools']
 const SKIP_DIRS = new Set(['node_modules', 'dist', '.next', 'coverage', '.turbo'])
 const TEST_FILE = /\.test\.(ts|tsx)$/
 
