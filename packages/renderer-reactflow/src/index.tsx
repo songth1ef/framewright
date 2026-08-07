@@ -23,6 +23,11 @@ import {
 import '@xyflow/react/dist/style.css'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import {
+  getNodesInViewport,
+  resolveViewportCullingLimits,
+  resolveViewportSize,
+} from '@framewright/core'
 import { mapFrameToReactFlow, type ProbeEdge, type ProbeNode } from './mapping'
 import { ProbeNodeView } from './probe-node'
 import { REACT_FLOW_SHAPES } from './shape-registry'
@@ -30,6 +35,19 @@ import { REACT_FLOW_SHAPES } from './shape-registry'
 export interface ReactFlowProbeOptions {
   onlyRenderVisibleElements?: boolean
   miniMap?: boolean
+  /**
+   * 喂给 React Flow 之前，先用**我们自己的** `getNodesInViewport` 预裁剪。
+   *
+   * 🔴 为什么需要这个开关：不开时把整棵树全喂进去，React Flow 每帧要对全部节点
+   * 做可见性判定与测量（实测 1000 节点 3.2fps、100 节点 23.9fps，而屏幕上
+   * 始终只画 6 个 —— 成本只随总数变化，与连线无关）。
+   *
+   * 而我们的 DOM / Leafer 渲染器是先裁剪再渲染。两边**画的不是同一批节点**，
+   * 直接比帧率没有意义。开启后三方喂进去的是同一个可见集，对照才成立。
+   *
+   * 这也更接近真实集成形态：真要用 React Flow，我们同样会在外层做视口裁剪。
+   */
+  preCull?: boolean
 }
 
 const NODE_TYPES = { probe: ProbeNodeView }
@@ -57,8 +75,27 @@ function findParentGeometry(
 
 function ProbeFlow({ ctx, options }: { ctx: RenderContext; options: ReactFlowProbeOptions }): ReactNode {
   const projection = useMemo(
-    () => mapFrameToReactFlow(ctx.root, ctx.selection),
-    [ctx.root, ctx.selection],
+    () => {
+      const full = mapFrameToReactFlow(ctx.root, ctx.selection)
+      if (options.preCull !== true) return full
+      // 与 DOM / Leafer 同一口径：同一份 cullingLimits、同一个 overscan。
+      const size = resolveViewportSize(ctx.viewportSize)
+      if (size.width <= 0 || size.height <= 0) return full
+      const mounted = getNodesInViewport(ctx.root, ctx.viewport, {
+        width: size.width,
+        height: size.height,
+        ...resolveViewportCullingLimits(ctx.cullingLimits),
+      })
+      const nodes = full.nodes.filter((node) => mounted.has(node.id))
+      const kept = new Set(nodes.map((node) => node.id))
+      return {
+        ...full,
+        nodes,
+        // 两端都被裁掉的边不该保留 —— 悬空边会让 React Flow 报错并影响计数
+        edges: full.edges.filter((edge) => kept.has(edge.source) && kept.has(edge.target)),
+      }
+    },
+    [ctx.root, ctx.selection, ctx.viewport, ctx.viewportSize, ctx.cullingLimits, options.preCull],
   )
   const [nodes, setNodes] = useState(projection.nodes)
   useEffect(() => setNodes(projection.nodes), [projection.nodes])

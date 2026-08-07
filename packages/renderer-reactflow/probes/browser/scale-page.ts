@@ -23,6 +23,10 @@ interface ZoomOutScenario {
   initialScale?: number
   maxConnections?: number
   miniMap?: boolean
+  /** 喂给 React Flow 前先用我们自己的裁剪过滤 —— 三方同题对照的前提。 */
+  preCull?: boolean
+  /** React Flow 内建的视口裁剪。默认 true（它自己的行为）。 */
+  onlyRenderVisibleElements?: boolean
 }
 
 interface LegacyScenario { scale: number; miniMap: boolean }
@@ -95,6 +99,10 @@ function context(): RenderContext {
   return {
     root,
     viewport,
+    // 🔴 必须给：裁剪要靠它算可见区。不给会退化成 DEFAULT_VIEWPORT_SIZE(0×0)，
+    // 预裁剪静默失效并把整棵树喂给 React Flow —— 首次做同题对照时就栽在这，
+    // 表现是「开了 preCull 却挂载 1000 个」。
+    viewportSize: { width: view.clientWidth, height: view.clientHeight },
     selection: [],
     callbacks: {
       ...NOOP_RENDERER_CALLBACKS,
@@ -157,7 +165,12 @@ async function mountScenario(scenario: ZoomOutScenario): Promise<FirstScreenSamp
   const fixtureBuildMs = performance.now() - fixtureStart
   const initialScale = scenario.initialScale ?? 1
   viewport = { scale: initialScale, offsetX: 0, offsetY: 0 }
-  renderer = createReactFlowProbeRenderer({ miniMap: scenario.miniMap ?? false })
+  renderer = createReactFlowProbeRenderer({
+    miniMap: scenario.miniMap ?? false,
+    // 同题对照需要它：默认 false 保持既有行为，场景显式开启才预裁剪。
+    preCull: scenario.preCull ?? false,
+    onlyRenderVisibleElements: scenario.onlyRenderVisibleElements ?? true,
+  })
   const renderStart = performance.now()
   renderer.mount(view, context())
   const mounted = await waitForStableRender()
