@@ -343,7 +343,15 @@ if (caseId !== undefined) {
       try {
         sample = await runIsolatedCase(scenario)
       } catch (error) {
-        sample = { status: 'failed', error: error.message.split('\n')[0].slice(0, 300) }
+        // 🔴 只留第一行会把真实错误砍掉。2026-08-07 排查 Leafer 800% 档时
+        // 连续两轮、四五次盲猜没有进展,就是因为这里只报了
+        // 「子进程失败(exit=1)」而真实原因(page.evaluate 的具体异常)在后面几行。
+        // 保留完整消息;子进程的 stderr 本来就已经拼进来了,只是被这行截断。
+        sample = {
+          status: 'failed',
+          error: error.message.split('\n')[0].slice(0, 300),
+          errorDetail: error.message.slice(0, 4000),
+        }
       }
       samples.push({ sampleIndex, ...sample })
       console.log(`[${scenario.id} ${sampleIndex}/${repeatCount}]`, JSON.stringify(sample))
