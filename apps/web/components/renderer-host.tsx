@@ -76,11 +76,7 @@ import {
   type ViewportStorageWriter,
 } from './viewport-storage'
 import { createVideoPlaybackSessionStore } from './video-playback-session-store'
-import {
-  readStoredViewportCullingLimits,
-  writeStoredViewportCullingLimits,
-  type ViewportCullingLimits,
-} from './viewport-culling-storage'
+import { type ViewportCullingLimits } from './viewport-culling-storage'
 
 type Factory = () => RendererAdapter
 

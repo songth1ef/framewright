@@ -54,6 +54,13 @@ jobs:
       - name: 全量单元测试
         run: pnpm test
 
+      # 🔴 next build 必须进门禁：它的类型检查比 tsc --build 严（会拒未使用的
+      # import/变量），而 Vercel 部署跑的正是这一条。2026-08-06 出过一次
+      # 「本地四关全绿、部署照样挂在 Linting and checking validity of types」。
+      # 放在 e2e 之前：构建错误几秒就能发现，没必要先等一分多钟的 e2e。
+      - name: 生产构建
+        run: pnpm build
+
       - name: 安装 Playwright Chromium
         run: npx playwright install --with-deps chromium
 
