@@ -34,30 +34,18 @@ import {
 import { createDomRenderer } from '@framewright/renderer-dom'
 import { createLeaferRenderer } from '@framewright/renderer-leafer'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { loadSettings, saveSettings } from './settings-store'
+import { loadSettings, saveSettings, type AppSettings } from './settings-store'
 import { DevPanelController, type DevPanelHandle } from './dev-panel'
 import { prepareDemoImageRequestTier } from './adaptive-demo-images'
 import { EmptyCanvasGuide, ShortcutHelpDialog } from './canvas-overlays'
 import { useCanvasDocumentFileActions } from './canvas-document-file-actions'
 import { CanvasDocumentStatus } from './canvas-document-status'
-import {
-  readStoredConnectionVisibility,
-  writeStoredConnectionVisibility,
-} from './connection-visibility-storage'
 import { createDerivedGenerationSubmitter } from './derived-actions'
 import { createDocumentAutosave, type DocumentAutosave } from './document-autosave'
 import { createGenerationController, type GenerationController, type GenerationNodePatch } from './generation-actions'
 import { createHttpGenerationBackend } from './generation-client'
 import { FpsMonitor } from './fps-monitor-view'
 import { Minimap, MinimapToggle } from './minimap-view'
-import {
-  readStoredMinimapVisibility,
-  writeStoredMinimapVisibility,
-} from './minimap-storage'
-import {
-  readStoredInteractionMode,
-  writeStoredInteractionMode,
-} from './interaction-mode-storage'
 import { loadServerHistory } from './server-history'
 import type { ServerHistory } from './server-history'
 import { observeViewportSize } from './renderer-host-viewport-size'
@@ -168,9 +156,14 @@ export function RendererHost({
   const containerRef = useRef<HTMLDivElement>(null)
   const adapterRef = useRef<RendererAdapter | null>(null)
   const devPanelRef = useRef<DevPanelHandle | null>(null)
-  const [activeIndex, setActiveIndex] = useState(0)
+  // 渲染器选择来自统一设置。列表首项仍是默认值，但用户选过就以设置为准。
+  const [activeIndex, setActiveIndex] = useState(() => {
+    const stored = loadSettings().renderer
+    const index = RENDERERS.findIndex((entry) => entry.id === stored)
+    return index < 0 ? 0 : index
+  })
   const [showShortcuts, setShowShortcuts] = useState(false)
-  const [minimapVisible, setMinimapVisible] = useState(() => readStoredMinimapVisibility())
+  const [minimapVisible, setMinimapVisible] = useState(() => loadSettings().minimapVisible)
   // 🔴 统一设置是唯一真相源。此前裁剪预算读的是自己的 localStorage 键,
   // 而 LOD 阈值根本没有来源(渲染器直接调 getViewportLod(scale) 不带阈值)——
   // 于是设置页改了「简化细节阈值」画布毫无反应。两者现在都从 loadSettings() 来。
@@ -194,6 +187,22 @@ export function RendererHost({
     }),
     [appSettings.performance.fullDetailScale, appSettings.performance.simplifiedDetailScale],
   )
+  /**
+   * 所有设置分项统一经此写入。**不要再新增独立 localStorage 键** ——
+   * 2026-08-06 收编前有 6 个各自为政的键，后果是没有任何地方能回答
+   * 「这台机器现在的完整配置是什么」，且互相打架的组合无人拦截。
+   */
+  const commitSetting = useCallback(<K extends keyof typeof appSettings>(
+    key: K,
+    value: (typeof appSettings)[K],
+  ): void => {
+    setAppSettings((current) => {
+      const next = { ...current, [key]: value }
+      saveSettings(next)
+      return next
+    })
+  }, [])
+
   const setViewportCullingLimits = (limits: { maxNodes: number; maxConnections: number }): void => {
     setAppSettings((current) => {
       const next = {
@@ -215,13 +224,11 @@ export function RendererHost({
   // viewport 只额外落用户本机的独立轻量记录，绝不进入 Document 自动保存。
   const [selection, setSelection] = useState<readonly string[]>(['box-front'])
   const [interactionMode, setInteractionMode] = useState<InteractionMode>(
-    () => readStoredInteractionMode(),
+    () => loadSettings().interactionMode,
   )
   // 连线显隐和 viewport 一样是每个用户各自的观看状态：只存本机偏好，
   // 不构造 CanvasOp、不进入撤销栈，也不改变 root，因此不会触发文档自动保存。
-  const [connectionVisibility, setConnectionVisibility] = useState<ConnectionVisibility>(
-    () => readStoredConnectionVisibility(),
-  )
+  const [connectionVisibility, setConnectionVisibility] = useState<ConnectionVisibility>(() => loadSettings().connectionVisibility)
   const [viewport, setViewport] = useState(() =>
     documentId === undefined ? DEFAULT_VIEWPORT : readStoredViewport(documentId),
   )
@@ -320,18 +327,18 @@ export function RendererHost({
 
   const commitInteractionMode = useCallback((next: InteractionMode): void => {
     setInteractionMode(next)
-    writeStoredInteractionMode(next)
-  }, [])
+    commitSetting('interactionMode', next)
+  }, [commitSetting])
 
   const commitConnectionVisibility = useCallback((next: ConnectionVisibility): void => {
     setConnectionVisibility(next)
-    writeStoredConnectionVisibility(next)
-  }, [])
+    commitSetting('connectionVisibility', next)
+  }, [commitSetting])
 
   const commitMinimapVisibility = useCallback((next: boolean): void => {
     setMinimapVisible(next)
-    writeStoredMinimapVisibility(next)
-  }, [])
+    commitSetting('minimapVisible', next)
+  }, [commitSetting])
 
   // 只写统一设置。此前这里还会 writeStoredViewportCullingLimits 双写旧键 ——
   // 双真相源正是这次收编要消除的东西：设置页与开发面板改的是两份数据，
@@ -712,7 +719,11 @@ export function RendererHost({
         disabled={!historyReady}
         onRendererChange={(id) => {
           const index = RENDERERS.findIndex((renderer) => renderer.id === id)
-          if (index >= 0) setActiveIndex(index)
+          if (index < 0) return
+          setActiveIndex(index)
+          // 工具栏切换也要落进统一设置,否则设置页与工具栏各说各话:
+          // 刷新后回到设置页里的值,用户会以为切换没生效。
+          commitSetting('renderer', id as AppSettings['renderer'])
         }}
         onInteractionModeChange={commitInteractionMode}
         onConnectionVisibilityChange={commitConnectionVisibility}

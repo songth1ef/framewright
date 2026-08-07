@@ -10,8 +10,10 @@ describe('RendererHost minimap 接线', () => {
   })
 
   it('开关初始化读取并写回 localStorage 偏好', () => {
-    expect(source).toContain('readStoredMinimapVisibility')
-    expect(source).toContain('writeStoredMinimapVisibility(next)')
+    // 2026-08-07 收编统一设置：真相源从独立 localStorage 键改为 loadSettings()/commitSetting。
+    // 守的不变量未变（初始化读偏好、切换时持久化、经 RenderContext 单向传给渲染器）。
+    expect(source).toContain('loadSettings().minimapVisible')
+    expect(source).toContain("commitSetting('minimapVisible', next)")
   })
 
   it('minimap 挂在画布定位容器内，不进入上方工具栏', () => {

@@ -44,4 +44,31 @@ describe('RendererHost 裁剪预算与 LOD 阈值', () => {
     // 不再双写旧键：双真相源会让设置页与开发面板改的是两份数据，谁后写谁赢
     expect(callback).not.toContain('writeStoredViewportCullingLimits')
   })
+
+  // 🔴 2026-08-07：设置页能改这四项并持久化，但画布此前不读 ——
+  // 用户改了渲染器/交互模式/小地图/帧率，画布毫无反应。
+  // 这条守住「统一设置是唯一真相源」，防止有人再新开独立 localStorage 键。
+  it('渲染器/交互模式/连线/小地图四项都从统一设置读写', () => {
+    const code = source()
+
+    expect(code).toContain("const stored = loadSettings().renderer")
+    expect(code).toContain('loadSettings().interactionMode')
+    expect(code).toContain('loadSettings().connectionVisibility')
+    expect(code).toContain('loadSettings().minimapVisible')
+
+    // 写回也必须走统一入口
+    expect(code).toContain("commitSetting('renderer'")
+    expect(code).toContain("commitSetting('interactionMode'")
+    expect(code).toContain("commitSetting('connectionVisibility'")
+    expect(code).toContain("commitSetting('minimapVisible'")
+
+    // 收编后的旧键读写函数不该再出现
+    for (const legacy of [
+      'readStoredMinimapVisibility', 'writeStoredMinimapVisibility',
+      'readStoredInteractionMode', 'writeStoredInteractionMode',
+      'readStoredConnectionVisibility', 'writeStoredConnectionVisibility',
+    ]) {
+      expect(code).not.toContain(legacy)
+    }
+  })
 })

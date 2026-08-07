@@ -6,8 +6,10 @@ describe('RendererHost 交互模式', () => {
     const source = readFileSync(new URL('./renderer-host.tsx', import.meta.url), 'utf8')
 
     expect(source).toContain('useState<InteractionMode>(')
-    expect(source).toContain('() => readStoredInteractionMode()')
-    expect(source).toContain('writeStoredInteractionMode(next)')
+    // 2026-08-07 收编统一设置：真相源从独立 localStorage 键改为 loadSettings()/commitSetting。
+    // 守的不变量未变（初始化读偏好、切换时持久化、经 RenderContext 单向传给渲染器）。
+    expect(source).toContain('loadSettings().interactionMode')
+    expect(source).toContain("commitSetting('interactionMode', next)")
     expect(source).toMatch(/const ctx: RenderContext = \{[\s\S]*interactionMode,[\s\S]*callbacks,[\s\S]*\}/)
     expect(source).toContain('interactionMode={interactionMode}')
     expect(source).toContain('onInteractionModeChange={commitInteractionMode}')
