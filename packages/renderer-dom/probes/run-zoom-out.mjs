@@ -11,7 +11,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { DOM_ZOOM_OUT_PROBE_WORKLOAD } from './probe-config.mjs'
-import { describeMachine } from './probe-machine.mjs'
+import { describeMachine, describeLoad } from './probe-machine.mjs'
 import { sampleProcessMemory, samplePageMetrics } from './probe-memory.mjs'
 import { buildDragEvidence, buildPanEvidence } from './browser/scale-sampling.mjs'
 import { aggregateSamples } from './browser/repeated-sampling.mjs'
@@ -289,6 +289,7 @@ function runIsolatedCase(scenario) {
       resolve({
         ...scenario,
         status: 'timeout',
+        load: describeLoad(),
         timeoutMs: workload.caseTimeoutMs,
         lastPhase,
         reason: `${scenario.label} 单档超过 ${workload.caseTimeoutMs}ms，已终止该档并继续。`,
@@ -349,6 +350,7 @@ if (caseId !== undefined) {
         // 保留完整消息;子进程的 stderr 本来就已经拼进来了,只是被这行截断。
         sample = {
           status: 'failed',
+          load: describeLoad(),
           error: error.message.split('\n')[0].slice(0, 300),
           errorDetail: error.message.slice(0, 4000),
         }
