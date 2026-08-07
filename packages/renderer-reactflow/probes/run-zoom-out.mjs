@@ -341,6 +341,17 @@ if (caseId !== undefined) {
     memoryReason,
     scenarios: [],
   }
+  // 🔴 边跑边落盘,不要等全部跑完。
+  // 2026-08-08 全量矩阵跑到 38/81 时进程被杀,**一小时的数据一条都没留下** ——
+  // 因为结果只在最后写一次。本文件早就记着「跑一小时的东西必须能部分交付」,
+  // 但那条只处理了「某个档位失败」,没处理「进程整个死掉」,等于只做了一半。
+  await mkdir(resultsDir, { recursive: true })
+  const outFile = path.join(resultsDir, `scale-s4-zoom-out-probe-${Date.now()}.json`)
+  const flush = async () => {
+    await writeFile(outFile, JSON.stringify(results, null, 2))
+  }
+  await flush()
+
   for (const scenario of scenarios) {
     const samples = []
     for (let sampleIndex = 1; sampleIndex <= repeatCount; sampleIndex += 1) {
@@ -377,10 +388,11 @@ if (caseId !== undefined) {
     }
     results.scenarios.push(result)
     console.log(`[${scenario.id} aggregate]`, JSON.stringify(result.aggregate))
+    // 每档跑完立刻落盘。没有 finishedAt 就表示这份是被中断的半成品 ——
+    // 半成品可用,但必须看得出它是半成品。
+    await flush()
   }
   results.finishedAt = new Date().toISOString()
-  await mkdir(resultsDir, { recursive: true })
-  const outFile = path.join(resultsDir, `scale-s4-zoom-out-probe-${Date.now()}.json`)
-  await writeFile(outFile, JSON.stringify(results, null, 2))
+  await flush()
   console.log('结果已写入', outFile)
 }

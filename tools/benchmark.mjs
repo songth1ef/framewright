@@ -25,9 +25,7 @@
  */
 import { spawn } from 'node:child_process'
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync } from 'node:fs'
-import { mkdtempSync } from 'node:fs'
-import os from 'node:os'
+import { mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildMatrix, LAYER_DESCRIPTIONS, BASE } from './benchmark-matrix.mjs'
@@ -132,17 +130,45 @@ for (const [key, description] of Object.entries(LAYER_DESCRIPTIONS)) {
   if (layers.length === 0 || layers.includes(key)) console.log(`  ${key}: ${description}`)
 }
 
-const tmpRoot = mkdtempSync(path.join(os.tmpdir(), 'fw-bench-'))
-
 const byRenderer = {}
 const failures = {}
 const scenariosFiles = {}
+
+// 🔴 每跑完一个渲染器就落一次盘,不要等三个都跑完。
+// 2026-08-08 全量矩阵跑到 38/81 被杀,一小时数据一条没留 —— 因为只在最后写一次。
+// 本文件已经因为「一侧失败带走另一侧」改过一轮,但那只防了异常,没防进程死亡。
+const startedAt = new Date().toISOString()
+mkdirSync(outDir, { recursive: true })
+const outFile = path.join(outDir, `benchmark-${startedAt.replace(/[:.]/g, '-')}-${gitDescribe().commit ?? 'nogit'}.json`)
+// 🔴 不要放系统临时目录。runner 已改成逐档落盘,但只要产物在 tmpRoot 里,
+// 进程一退出 finally 就把它删了 —— 实测:Leafer 跑完 8 档被杀,一档都没留下。
+// 「逐档落盘」和「落在会被删掉的地方」放一起,等于没做。
+const runRoot = path.join(outDir, `run-${startedAt.replace(/[:.]/g, '-')}`)
+mkdirSync(runRoot, { recursive: true })
+function flushReport(complete) {
+  const report = {
+    benchmark: 'framewright-unified',
+    startedAt,
+    // 没有 finishedAt 就是被中断的半成品。半成品可用,但必须看得出是半成品。
+    ...(complete ? { finishedAt: new Date().toISOString() } : {}),
+    completedRenderers: Object.keys(byRenderer),
+    git: gitDescribe(),
+    machine: byRenderer[targets[0].key]?.machine ?? null,
+    matrix: { layers: layers.length === 0 ? Object.keys(LAYER_DESCRIPTIONS) : layers, base: BASE, scenarios: matrix },
+    samplesPerScenario: Number(samples),
+    renderers: byRenderer,
+    failures,
+  }
+  writeFileSync(outFile, JSON.stringify(report, null, 2))
+  return report
+}
+
 try {
   for (const renderer of targets) {
     console.log(`\n▶ ${renderer.label}`)
-    const tmpOut = path.join(tmpRoot, renderer.key)
+    const tmpOut = path.join(runRoot, renderer.key)
     mkdirSync(tmpOut, { recursive: true })
-    const scenariosFile = prepareScenariosFile(renderer.key, matrix, tmpRoot)
+    const scenariosFile = prepareScenariosFile(renderer.key, matrix, runRoot)
     scenariosFiles[renderer.key] = scenariosFile
     try {
       byRenderer[renderer.key] = await runRenderer(renderer, scenariosFile, tmpOut)
@@ -154,29 +180,15 @@ try {
       failures[renderer.key] = error.message
       console.error(`✗ ${renderer.label} 失败，已记录并继续：${error.message.split('\n')[0]}`)
     }
+    flushReport(false)
+    console.log(`  ↳ 已落盘（${Object.keys(byRenderer).length}/${targets.length} 渲染器）`)
   }
 } finally {
-  rmSync(tmpRoot, { recursive: true, force: true })
+  // 不删 runRoot:它就在 outDir 下(已 gitignore),留着才有「被中断也能部分交付」这回事。
 }
 
-const startedAt = new Date().toISOString()
-const report = {
-  benchmark: 'framewright-unified',
-  startedAt,
-  git: gitDescribe(),
-  // 机器口径与负载口径都记：两者都对得上，跨次对比才成立。
-  machine: byRenderer[targets[0].key]?.machine ?? null,
-  matrix: { layers: layers.length === 0 ? Object.keys(LAYER_DESCRIPTIONS) : layers, base: BASE, scenarios: matrix },
-  samplesPerScenario: Number(samples),
-  renderers: byRenderer,
-  // 空对象表示两侧都跑完了。非空时**这份数据是不完整的**，跨渲染器对比不成立 ——
-  // 明写出来，免得日后有人拿半份数据下结论。
-  failures,
-}
-
-mkdirSync(outDir, { recursive: true })
-const stamp = startedAt.replace(/[:.]/g, '-')
-const outFile = path.join(outDir, `benchmark-${stamp}-${report.git.commit ?? 'nogit'}.json`)
-writeFileSync(outFile, JSON.stringify(report, null, 2))
+// failures 非空时**这份数据是不完整的**，跨渲染器对比不成立 ——
+// 明写出来，免得日后有人拿半份数据下结论。
+const report = flushReport(true)
 console.log(`\n✓ 已写入 ${path.relative(repoRoot, outFile)}`)
 if (report.git.dirty) console.log('⚠️ 工作区有未提交改动，这份数据对应的代码状态无法由 commit 唯一确定')
