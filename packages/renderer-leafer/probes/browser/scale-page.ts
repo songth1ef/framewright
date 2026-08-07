@@ -32,6 +32,8 @@ interface FirstScreenSample {
   mountedToTotalRatio: number
   paintedPixel: number[]
   paintedAfterFrames: number
+  /** 等首个像素的耗时；证据节点是图片时这里主要是网络下载，不是渲染 */
+  paintWaitMs: number
 }
 
 interface LeaferScaleProbe {
@@ -122,18 +124,33 @@ function countMountedConnections(): number {
  * 这不是假想问题：把夹具格子从 160×100 放大到 480×300 后，同屏装得下的节点变少，
  * 原来碰巧可见的那个节点就跑到屏幕外去了，整个 Leafer 探针直接跑不起来。
  *
- * 所以这里按**屏幕坐标**筛，只认中心点确实落在画布可视区内的节点。
+ * 所以这里按**屏幕坐标**筛，只认和画布可视区真正有交集的节点。
+ *
+ * 🔴 判据是**交集**不是中心点。中心点判据在高倍率下会整体失效：800% 时
+ * scale-node-0 的屏幕矩形是 (320,320)-(3920,2720)，铺满整个 960×1300 可视区，
+ * 但它的中心 (2120,1520) 在屏幕外 —— 于是「筛可见」筛不出任何节点，
+ * 兜底又挑回这个节点，采样点仍取中心，`cx >= canvas.width` 直接跳过，
+ * 探针报「首屏 10 帧后仍无像素」。节点明明铺满屏幕，量的地方却在屏幕外。
+ * 实测取证见 docs/architecture.md §8.7.2。
  */
+function visibleCenterOf(node: {
+  x: number; y: number; width: number; height: number
+}): { x: number; y: number } | null {
+  const left = node.x * viewport.scale + viewport.offsetX
+  const top = node.y * viewport.scale + viewport.offsetY
+  const l = Math.max(left, 0)
+  const t = Math.max(top, 0)
+  const r = Math.min(left + node.width * viewport.scale, view.clientWidth)
+  const b = Math.min(top + node.height * viewport.scale, view.clientHeight)
+  // 取样窗口是 4×4 且向外各扩 2px，交集窄于 8px 放不下，按不可见处理
+  if (r - l < 8 || b - t < 8) return null
+  return { x: (l + r) / 2, y: (t + b) / 2 }
+}
+
 function selectPaintableLeafId(mountedIds: readonly string[], nextRoot: FrameNode): string {
   const mounted = new Set(mountedIds)
-  const viewWidth = view.clientWidth
-  const viewHeight = view.clientHeight
-  const isOnScreen = (node: { x: number; y: number; width: number; height: number }): boolean => {
-    const cx = (node.x + node.width / 2) * viewport.scale + viewport.offsetX
-    const cy = (node.y + node.height / 2) * viewport.scale + viewport.offsetY
-    // 留 4px 边距：正好压在边缘的节点取样窗口会越界
-    return cx >= 4 && cy >= 4 && cx <= viewWidth - 4 && cy <= viewHeight - 4
-  }
+  const isOnScreen = (node: { x: number; y: number; width: number; height: number }): boolean =>
+    visibleCenterOf(node) !== null
 
   const visibleGenerated = nextRoot.children.find(
     (node) =>
@@ -155,9 +172,13 @@ function selectPaintableLeafId(mountedIds: readonly string[], nextRoot: FrameNod
 function sampleNodePixel(): number[] | null {
   const node = root?.children.find((candidate) => candidate.fwId === evidenceNodeFwId)
   if (node === undefined) return null
+  // 采样点必须和 selectPaintableLeafId 用同一个判据（交集中心），
+  // 否则会出现「筛的时候算可见、采的时候采到屏幕外」这种自相矛盾。
+  const center = visibleCenterOf(node)
+  if (center === null) return null
   const dpr = window.devicePixelRatio || 1
-  const cx = Math.floor((node.x + node.width / 2) * viewport.scale * dpr + viewport.offsetX * dpr)
-  const cy = Math.floor((node.y + node.height / 2) * viewport.scale * dpr + viewport.offsetY * dpr)
+  const cx = Math.floor(center.x * dpr)
+  const cy = Math.floor(center.y * dpr)
   for (const canvas of Array.from(view.querySelectorAll('canvas'))) {
     const ctx = canvas.getContext('2d')
     if (ctx === null || cx < 2 || cy < 2 || cx >= canvas.width || cy >= canvas.height) continue
@@ -181,14 +202,43 @@ async function mountScenario(value: LeaferScaleProbeScenario): Promise<FirstScre
   evidenceNodeFwId = selectPaintableLeafId(mountedIds, nextRoot)
   let paintedPixel: number[] | null = null
   let paintedAfterFrames = 0
-  for (let frame = 0; frame < 10; frame += 1) {
+  // 🔴 预算按**时间**给，不按帧数。
+  // 原先固定 10 帧(约 166ms)。800% 下唯一进可视区的是 img 节点,而它要等
+  // picsum 的真实网络下载 —— 实测一次 416 帧(约 7 秒)才出像素,另一次 900 帧
+  // (约 15 秒)仍没出。于是这三档永远 timeout,而失败原因和渲染器毫无关系。
+  const paintWaitStart = performance.now()
+  const PAINT_BUDGET_MS = 20_000
+  while (performance.now() - paintWaitStart < PAINT_BUDGET_MS) {
     await nextFrame()
     paintedAfterFrames += 1
     paintedPixel = sampleNodePixel()
     if (paintedPixel !== null) break
   }
+  const paintWaitMs = performance.now() - paintWaitStart
   if (paintedPixel === null) {
-    throw new Error(`${value.id} 首屏 10 帧后仍无 ${evidenceNodeFwId} 像素`)
+    // 报出采样点与画布尺寸:没有这些数字,「无像素」既可能是真没画,
+    // 也可能是采样点根本落在画布外 —— 两者的修法完全不同。
+    const n = root?.children.find((c) => c.fwId === evidenceNodeFwId)
+    const dpr = window.devicePixelRatio || 1
+    const c0 = n === undefined ? null : visibleCenterOf(n)
+    const at = n === undefined ? 'node-not-found' :
+      `sampleAt=${c0 === null ? 'no-intersection' : `(${Math.floor(c0.x * dpr)},${Math.floor(c0.y * dpr)})`}` +
+      ` nodeRect=(${n.x},${n.y},${n.width}x${n.height}) fwType=${n.fwType}`
+    // 「这个点没像素」和「整块画布全空」是两个截然不同的故障。不区分就只能猜。
+    const canvases = Array.from(view.querySelectorAll('canvas')).map((c) => {
+      const ctx = c.getContext('2d')
+      let painted = 0
+      if (ctx !== null && c.width > 0 && c.height > 0) {
+        const d = ctx.getImageData(0, 0, c.width, c.height).data
+        for (let i = 3; i < d.length; i += 4) if ((d[i] ?? 0) > 0) painted += 1
+      }
+      return `${c.width}x${c.height}(不透明像素${painted})`
+    }).join(',')
+    throw new Error(
+      `${value.id} 首屏等待 ${Math.round(paintWaitMs)}ms（${paintedAfterFrames} 帧）后仍无 ${evidenceNodeFwId} 像素` +
+      ` | ${at} scale=${viewport.scale} offset=(${viewport.offsetX},${viewport.offsetY})` +
+      ` view=${view.clientWidth}x${view.clientHeight} canvases=[${canvases}] dpr=${dpr}`,
+    )
   }
 
   const mountedLogicalNodeCount = mountedIds.filter((fwId) => fwId !== nextRoot.fwId).length
@@ -203,7 +253,12 @@ async function mountScenario(value: LeaferScaleProbeScenario): Promise<FirstScre
   }
 
   return {
+    // ⚠️ elapsedMs 含「等首个像素」的时间。当证据节点是图片时，这里面有一大截
+    // 是 picsum 的网络下载，不是渲染耗时 —— 800% 下实测可达 7 秒。
+    // 要看纯渲染，用 elapsedMs - paintWaitMs；paintWaitMs 单独记就是为了让这一刀切得开。
+    // 本仓记过「仪表不对称会把网络延迟当成实现差距」，这条同样适用于自己。
     elapsedMs: performance.now() - renderStart,
+    paintWaitMs,
     fixtureBuildMs,
     totalNodeCount: value.nodeCount,
     totalConnectionCount,
