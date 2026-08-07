@@ -18,7 +18,9 @@
     "better-sqlite3": "11.10.0",
     "next": "15.5.22",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "@framewright/renderer-reactflow": "workspace:*",
+    "@xyflow/react": "12.11.2"
   },
   "devDependencies": {
     "@types/react": "^19.2.0",
