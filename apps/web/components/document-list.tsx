@@ -94,6 +94,11 @@ export function DocumentList({ documents: initialDocuments }: { documents: reado
     <section style={{ fontFamily: 'system-ui, sans-serif', padding: '24px 16px 0' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <h1 style={{ margin: 0, fontSize: 24 }}>画布工作台</h1>
+        <a
+          href="/settings"
+          data-testid="open-settings"
+          style={{ fontSize: 13, marginLeft: 'auto', order: 99 }}
+        >⚙ 设置</a>
         <button
           type="button"
           data-testid="create-document"
