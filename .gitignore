@@ -23,6 +23,7 @@ demo-video/
 # 注意 `**/` 前缀不能省:含斜杠的 pattern 会被锚定到 .gitignore 所在目录,
 # 写成 `probes/.dist/` 只能匹配仓库根下的,匹配不到 packages/*/probes/。
 **/probes/.dist/
+**/probes/.dist-*/
 **/probes/fixtures/*.webm
 **/probes/fixtures/*.mp4
 
