@@ -38,6 +38,11 @@ export function aggregateSamples(samples) {
     aggregate: completed.length === 0 ? null : {
       firstScreen: {
         elapsedMs: summarizeValues(completed.map((sample) => sample.firstScreen.elapsedMs)),
+        // 老结果没有这个字段，缺就不给聚合，不要拿 0 冒充「没等过」——
+        // 那会让旧数据看起来像是纯渲染，正是本仓反复踩的「口径悄悄变了」。
+        ...(completed.every((sample) => typeof sample.firstScreen.paintWaitMs === 'number')
+          ? { paintWaitMs: summarizeValues(completed.map((sample) => sample.firstScreen.paintWaitMs)) }
+          : {}),
       },
       drag: summarizePhase(completed, 'drag'),
       pan: summarizePhase(completed, 'pan'),

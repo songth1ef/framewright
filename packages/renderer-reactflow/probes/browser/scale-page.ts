@@ -33,6 +33,8 @@ interface LegacyScenario { scale: number; miniMap: boolean }
 
 interface FirstScreenSample {
   elapsedMs: number
+  /** 该探针不等图片，恒为 0；保留字段是为了让口径差异在产物里可见 */
+  paintWaitMs: number
   fixtureBuildMs: number
   totalNodeCount: number
   totalConnectionCount: number
@@ -175,6 +177,11 @@ async function mountScenario(scenario: ZoomOutScenario): Promise<FirstScreenSamp
   renderer.mount(view, context())
   const mounted = await waitForStableRender()
   const elapsedMs = performance.now() - renderStart
+  // 🔴 恒为 0,而这**正是要记下来的事**:三个探针里只有它完全不等图片
+  // (DOM 等 decodeMountedImages、Leafer 等证据节点首像素)。
+  // 不记成 0 就看不出这份「首屏 ms」少算了一整块工作 —— 口径差异必须留在产物里,
+  // 而不是留在谁的记忆里。见 §8.8.1。
+  const paintWaitMs = 0
   const totalConnectionCount = countFixtureConnections()
 
   const evidence = view.querySelector<HTMLElement>('[data-fw-id]:not([data-fw-id="scale-fixture-root"])')
@@ -186,6 +193,7 @@ async function mountScenario(scenario: ZoomOutScenario): Promise<FirstScreenSamp
 
   return {
     elapsedMs,
+    paintWaitMs,
     fixtureBuildMs,
     totalNodeCount: scenario.nodeCount,
     totalConnectionCount,

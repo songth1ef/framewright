@@ -20,6 +20,8 @@ import {
 
 interface FirstScreenSample {
   elapsedMs: number
+  /** elapsedMs 中「等图片解码/下载」的部分；纯挂载 = elapsedMs - paintWaitMs */
+  paintWaitMs: number
   fixtureBuildMs: number
   totalNodeCount: number
   totalConnectionCount: number
@@ -240,7 +242,12 @@ async function mountScenario(scenario: DomScaleProbeScenario): Promise<FirstScre
   renderer = createDomRenderer()
   renderer.mount(view, context())
   await waitForMountedNodes()
+  // 🔴 decodeMountedImages 里含**真实网络下载**(picsum 实测首字节 5.5-6.6 秒)。
+  // 它此前被整个算进 elapsedMs,于是「首屏 ms」这一列量的主要是网络,不是渲染。
+  // 单独计时才能把两者分开,见 §8.8.1。
+  const paintWaitStart = performance.now()
   const imageEvidence = await decodeMountedImages()
+  const paintWaitMs = performance.now() - paintWaitStart
   const elapsedMs = performance.now() - start
 
   const mountedNodes = view.querySelectorAll('[data-fw-id]:not([data-fw-type="frame"])').length
@@ -259,6 +266,7 @@ async function mountScenario(scenario: DomScaleProbeScenario): Promise<FirstScre
 
   return {
     elapsedMs,
+    paintWaitMs,
     fixtureBuildMs,
     totalNodeCount: scenario.nodeCount,
     totalConnectionCount: countFixtureConnections(root),

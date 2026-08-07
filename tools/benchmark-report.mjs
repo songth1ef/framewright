@@ -28,7 +28,12 @@ const ALL_METRICS = [
   { key: 'mount', label: '挂载数', width: 8 },
   { key: 'drag', label: '拖拽 fps', width: 10 },
   { key: 'pan', label: '平移 fps', width: 10 },
-  { key: 'firstScreen', label: '首屏 ms', width: 10 },
+  // 🔴「首屏 ms」曾是一列不可用的数（§8.8.1）：三个探针量的根本不是同一件事 ——
+  // DOM 等 decodeMountedImages（含真实网络下载）、Leafer 等证据节点首像素（同样在等网络）、
+  // React Flow 完全不等图片。同一列里放三种口径，差距会被当成实现差距。
+  // 拆成「纯挂载」与「等待」两列后这一列才有意义：纯挂载可比，等待反映各自等了什么。
+  { key: 'firstScreenMount', label: '纯挂载 ms', width: 11 },
+  { key: 'firstScreenWait', label: '等待 ms', width: 10 },
   { key: 'memory', label: '内存 Δ', width: 10 },
 ]
 
@@ -94,9 +99,18 @@ function cellValue(rendererKey, scenario, metricKey) {
       const value = scenario.aggregate?.pan?.avgFps?.median
       return { value: formatFixed(value, 1), missing: !Number.isFinite(value) }
     }
-    case 'firstScreen': {
-      const value = scenario.aggregate?.firstScreen?.elapsedMs?.median
-      return { value: formatFixed(value, 0), missing: !Number.isFinite(value) }
+    case 'firstScreenMount': {
+      const total = scenario.aggregate?.firstScreen?.elapsedMs?.median
+      const wait = scenario.aggregate?.firstScreen?.paintWaitMs?.median
+      // 旧结果没有 paintWaitMs：标成「?」而不是把 total 当纯挂载 ——
+      // 那等于悄悄把网络耗时说成渲染耗时。
+      if (!Number.isFinite(total)) return { value: '—', missing: true }
+      if (!Number.isFinite(wait)) return { value: `${formatFixed(total, 0)}?`, missing: false }
+      return { value: formatFixed(total - wait, 0), missing: false }
+    }
+    case 'firstScreenWait': {
+      const wait = scenario.aggregate?.firstScreen?.paintWaitMs?.median
+      return { value: formatFixed(wait, 0), missing: !Number.isFinite(wait) }
     }
     case 'memory': {
       const value = rendererMemoryDeltaMB(scenario)
@@ -191,10 +205,16 @@ function renderLayerSection(layerKey, description) {
 
 function renderWarnings() {
   return [
-    '⚠️ **首屏那一列必须带警告**：本仓已确认两侧仪表曾不对称（`architecture.md` §8.8.1）。',
-    '此前 DOM 首屏 5–6 秒、Leafer 首屏 10–85ms 的 60 倍差距，根因是 Leafer 探针没有等待图片下载。',
-    '补上仪表后，同档首屏量级一致。此外 picsum 首字节约 5.5–6.6 秒，会主导首屏耗时。',
-    '因此**首屏数字只宜做同次同机器、同仪表条件下的相对对比，不宜直接跨报告比较绝对值**。',
+    '⚠️ **首屏已拆成「纯挂载」与「等待」两列**（`architecture.md` §8.8.1）。合并成一列时它不可用：',
+    '三个探针等的东西根本不同 —— DOM 等 `decodeMountedImages`（含真实网络）、',
+    'Leafer 等证据节点首个像素（证据节点是图片，同样在等网络）、React Flow 完全不等图片。',
+    '同一列里放三种口径，网络延迟会被读成实现差距：此前「DOM 5–6 秒 vs Leafer 10–85ms」的',
+    '60 倍差距即由此而来。',
+    '',
+    '**「等待 ms」这一列基本是 picsum 的网络耗时（首字节实测 5.5–6.6 秒），不是渲染。',
+    '要比渲染看「纯挂载 ms」。** React Flow 的等待恒为 0 —— 不是它快，是它这一段工作没做。',
+    '纯挂载仍受机器与并发影响，**只宜同次同机器对比，不宜跨报告比绝对值**。',
+    '标着 `?` 的是补该仪表之前产出的旧数据，其纯挂载无法从中分离。',
     '',
   ].join('\n')
 }
