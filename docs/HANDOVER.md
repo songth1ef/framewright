@@ -1,7 +1,7 @@
 # framewright 交接说明
 
 > 写给接手继续开发的人（含 AI agent）。
-> 最后更新：2026-08-06，对应提交 `ca1ad2b`。
+> 最后更新：2026-08-07，对应提交 `f24eb62`。
 > **先读这一份，再按需展开下面链接的文档。**
 
 ---
@@ -11,13 +11,25 @@
 | 项 | 状态 |
 |---|---|
 | `tsc --build` | 0 error |
-| 全量单测 | **125 文件 / 830 条全绿** |
-| 测试发现门禁 | 全覆盖 |
+| 全量单测 | **130 文件 / 886 条全绿** |
+| 测试发现门禁 | 全覆盖（`tools/` 已纳入扫描根）|
+| 生产构建 | ✅ **已进门禁**（`next build` 的类型检查比 tsc 严，会拒未使用的 import）|
 | 全量 e2e | **44 条全绿** |
 | 默认渲染器 | **HTML / DOM**（2026-08-06 起，依据见性能报告）|
-| 部署 | Vercel 配置已就绪，**等配 Secrets 才能真跑** |
+| 部署 | ✅ **已上线** https://framewright-ashen.vercel.app（Vercel + Turso）|
+
+> ⚠️ `pnpm verify` 现在是**五关**：typecheck / 发现门禁 / 单测 / **生产构建** / e2e。
+> 加 build 的原因见 §7.4。
+
+**全新机器第一步**：`pnpm setup`（生成 Prisma Client + 建库 + 装 Playwright 浏览器）。
+不跑它，`pnpm verify` 会连挂三次且报错都指不到「你少了准备步骤」上。
 
 跑起来：`pnpm dev` → http://localhost:3100
+
+线上：
+- 画布 https://framewright-ashen.vercel.app
+- **统一设置中心** https://framewright-ashen.vercel.app/settings
+- **React Flow 只读预览** `/compare/reactflow/<documentId>`（实验性，无交互）
 
 ---
 
@@ -44,7 +56,9 @@ AI 图像/视频生成画布工作台，对标 liblib canvas / 即梦 / Krea。
 
 ```
 packages/
-  core/              渲染器无关的业务核心：node schema、CanvasOp、视口裁剪、LOD、夹具、素材
+  core/              渲染器无关的业务核心：node schema、CanvasOp、视口裁剪、LOD、夹具、素材、
+                     performance-profile（画质档案+设备检测）、compressed-json（大请求体 gzip）、
+                     local-document-store（OPFS 三级落盘，核心层已就绪、尚未接进画布）
   renderer-dom/      DOM 渲染器 + 浏览器探针
   renderer-leafer/   LeaferJS 渲染器 + 浏览器探针
   renderer-reactflow/ React Flow 探针（仅调研，未成为可选渲染器）
@@ -54,7 +68,9 @@ apps/web/            Next.js 应用（App Router + Route Handlers）
 e2e/                 Playwright
 prisma/              schema + migrations（SQLite）
 docs/                架构、报告、部署
-tools/               Prisma 包装器、测试发现门禁、录制脚本
+tools/               Prisma 包装器、测试发现门禁、录制脚本、
+                     turso-migrate（Turso 迁移+漂移检测）、
+                     benchmark（统一基准）、benchmark-report（三方对照 Markdown）
 ```
 
 ### 关键契约
@@ -113,10 +129,14 @@ node tools/record-canvas-demo.mjs <docId> "HTML / DOM" tools/recordings zoom-out
   最大/最小 < 1.21 倍 —— 修正后的模型成立
 - 视口尺寸为 0 的崩溃修复
 
-**仍待完成**：
-- 迟滞（防在档位边界反复横跳）是否已完整落地，需要核对
-- 800% 档实际清晰度的端到端验证（`naturalWidth` 相对节点显示尺寸的比值）
-- 下载字节数的改前改后对比
+**✅ 2026-08-07 已收尾**（`10a28d5` / `f24eb62`，详见 `architecture.md` §8.8.4）：
+- **迟滞已完整落地**，并补了三条**序列级**用例。此前只有单点断言 ——
+  一个每次从头算的实现同样能通过，证明不了序列行为
+- **800% 档发糊的根因找到并修复**：档位阶梯顶格是 8，而 800%×DPR2 需要 density 16，
+  `requestScale = min(ceil(75×8), 800) = 600` 永远取不到 4K 素材对应的 800。
+  补 16× 档后请求的就是原始尺寸（4000×3200）
+- **代价已量化**：只在 800% 一档 +63.7% 请求像素，25%/100%/400% 三档零影响。
+  用**请求像素**而非下载字节做指标 —— 后者被 picsum 延迟主导，噪声极大
 
 **⚠️ 测量方法论上的坑（一定要读）**：
 `picsum.photos` 的**首字节要 5.5–6.6 秒**，而 TCP 连接只要 1 毫秒 ——
@@ -132,16 +152,24 @@ node tools/record-canvas-demo.mjs <docId> "HTML / DOM" tools/recordings zoom-out
 1. **demo 画布要不要挪出首页** —— 首页身兼二职（文档列表 + demo 画布宿主），
    列表变长会把画布挤下去，是 e2e 隔离问题的**根因**。现在靠 `e2e/reset-documents.ts`
    兜着，那是**权宜之计**。对照实验证实：`host-interaction` 单独跑 8/8 全过、全量跑失败 5 条。
-2. **飞书导入** —— 竞品调研文档已写好，需要人跑一次 `node authorize.mjs` 重新授权（`drive:drive`）
+2. ~~**飞书导入**~~ —— 用户 2026-08-06 决定不做，竞品调研留在本地 `docs/research/`
 3. **小地图「增加内容」的具体所指** —— 用户提过但未展开，候选：当前视口框、点击/拖拽跳转
+4. **`demo-document` 是否改尺寸** —— 它同时是**几何对照夹具**（文件头明写「输入不同，
+   对照就没有意义」），几何基线快照由它生成。改尺寸要显式 `--update-snapshots` 并说明原因
+5. **React Flow 是否升格为生产渲染器** —— 水印用户已确认接受（保留 attribution 本就
+   完全合规，灰区只在「移除」这个动作上）。剩下的成本是**三版同步**：`AGENTS.md` 禁止
+   「只在一个渲染器里实现某功能」，加到三个是每个功能写三遍
 
 ### 4.3 已知未闭合项
 - **fan 模式 50% 档 44.75 fps，未达 60** —— 端点早退有效但不是全部答案
 - **连线分档阈值 512 的推导过程未经复核** —— 执行方收尾前被中止，
   书面论证没留下，只有 11 份探针原始结果随提交入库。结果复核过（44/44 + 全量单测绿）
 - **8K 素材实测返回 400，未收录** —— 如实标注，没有伪装成可用素材
-- **内存未测** —— 页面级 API 无法可靠覆盖 DOM/布局/合成层/浏览器进程总内存，
-  `performance.memory` 只代表部分 JS heap，**故不采集，而不是估一个数**
+- ~~**内存未测**~~ —— **2026-08-06 已可测**：CDP `SystemInfo.getProcessInfo` 取分进程 PID
+  再用 `ps -o rss=` 读真实 RSS。实测对负载有反应（空页面 renderer 76MB → 压负载 233MB）。
+  原判断「页面级 API 测不到」对**页面级 API** 成立，但换条路就能拿到。
+  ⚠️ 仍有两条限制随数据一起记：headless 用 SwiftShader 软件光栅化，GPU 进程 RSS 不反映
+  真实显存；RSS 含共享库开销，只做同档位前后差值
 - **只测了 HeadlessChromium** —— 真机与 GPU 环境下 canvas 的合成路径未必被充分利用，
   DOM vs Leafer 的相对表现**可能不同**
 - **画布 `dot` LOD 档位（scale<0.2）仍把节点降级成纯点** ——
@@ -150,7 +178,25 @@ node tools/record-canvas-demo.mjs <docId> "HTML / DOM" tools/recordings zoom-out
 
 ---
 
-## 5. 部署（配好 Secrets 就能自动跑）
+## 5. 部署（✅ 已上线）
+
+> **2026-08-06 首次实跑上线**：https://framewright-ashen.vercel.app
+> Vercel + Turso 均已配好并验证（建文档 → 打开画布全通）。
+> 下面这节记录方案与**首次实跑踩到的五个坑**——它们本地全都测不到。
+
+### 首次上线踩到的五个坑（本地测不到，只有真实部署才暴露）
+
+1. **Prisma Migrate 不支持 Turso** —— 校验 sqlite provider 的 URL 必须 `file:` 开头，
+   `libsql://` 直接 P1012。已补 `tools/turso-migrate.mjs`（幂等 + 漂移检测 + `--baseline`）
+2. **Vercel 检测不到 Next** —— monorepo 里 `next` 在 `apps/web`，而框架检测只看**根**
+   `package.json`。已在根 devDeps 补声明
+3. **`TURSO_AUTH_TOKEN` 是独立环境变量**，不从 URL query 取
+4. **Prisma 的 `query_compiler_bg.wasm` 不进 tracing** —— 它不是静态 import，
+   Next 看不见，serverless 里缺文件导致全站 500。已加 `outputFileTracingIncludes`
+5. **`outputFileTracingIncludes` 的路径基准是 `next.config` 所在目录** —— 写错时
+   **匹配到 0 个文件是完全静默的**，构建照常绿、线上报错和没加时一模一样
+
+### 原方案说明
 
 **GitHub Pages 发不了全栈**：项目有 10 个 API Route Handler + Prisma + better-sqlite3（原生 `.node`），
 Pages 只托管静态文件。且 `output: 'export'` 会**直接 build 失败**（Route Handler 无法静态化）。
@@ -217,6 +263,23 @@ Next trace 包含它与 libSQL adapter。
   是因为那一档 LOD 本就把连线整个裁掉了。没有这个对照就会把"本来没干活"误读成结论
 - **上限只截输出不截工作量是常见陷阱**：`maxConnections` 原本只影响"最终渲染几条"，
   不影响"算了多少条" —— fanin 下全文档 1 万条线每次都物化+排序，最后才丢掉 9000 条
+
+### 7.3.1 2026-08-07 新增的四条
+
+- **仪表不对称造成的差距会被当成实现差距**：Leafer 探针此前一条图片下载数据都没采，
+  于是「DOM 首屏 5–6 秒 vs Leafer 10–85ms」看着像 60 倍碾压。补上仪表后同档
+  Leafer 首屏从 46~85ms 变成 243.4ms —— 不是变慢，是**之前压根没等图片**。
+  → `architecture.md` 里所有引用首屏数字的结论，在两侧对称重跑前一律视为不可用
+- **兜底会让配置错误静默失效**：React Flow 的 `preCull` 因探针没传 `viewportSize`
+  而退化成 0×0，实现按「尚未测量」返回全量，**预裁剪无声失效**（表现是开了 preCull
+  却挂载 1000 个）。那个兜底本身是对的，但开发期要留可观察痕迹
+- **门禁对机器负载过敏 = 会随机变红的守卫**：本机 load 16 时 minimap 用例连续多轮
+  稳定失败，我据「稳定复现」判成真回归 —— **该判据在负载持续偏高时不成立**。
+  受控实验（30s 过 / 5s 挂 / 30s 过，代码零改动）证明是超时问题。
+  修法是区分两类等待：就绪类（等导航、等 fetch）给 30s，业务断言保持 5s
+- **描述问题的段落，修好后要就地标注结论**：§8.4 那段「保存请求排队重叠」早在
+  `f9ada6d` 就修了，但原段落仍是未解决的口吻，导致本方据它论证 OPFS 的必要性 ——
+  只在别处记「已修」，后来的人（包括 AI）读到原段落仍会当成待办
 
 ### 7.4 干净克隆专属的坑（2026-08-06 换机时暴露）
 
