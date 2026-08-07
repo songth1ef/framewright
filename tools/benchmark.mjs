@@ -56,7 +56,30 @@ if (baseUrl !== '') {
 const RENDERERS = [
   { key: 'dom', label: 'HTML / DOM', runner: 'packages/renderer-dom/probes/run-zoom-out.mjs' },
   { key: 'leafer', label: 'LeaferJS', runner: 'packages/renderer-leafer/probes/run-zoom-out.mjs' },
+  { key: 'reactflow', label: 'React Flow（探针）', runner: 'packages/renderer-reactflow/probes/run-zoom-out.mjs' },
 ]
+
+/**
+ * 为每个渲染器准备实际注入的场景文件。
+ *
+ * React Flow 必须带 `preCull: true` + `onlyRenderVisibleElements: false`，否则它会按
+ * 原生行为全树渲染，和 DOM/Leafer 的「生产 renderer 自己做视口裁剪」口径不对等。
+ * 这些差异直接写进该渲染器拿到的场景对象，并在最终 JSON 的 `renderers.reactflow.workload.scenarios`
+ * 里可见 —— 口径不可见是本仓踩过多次的坑。
+ */
+function prepareScenariosFile(rendererKey, matrix, dir) {
+  const file = path.join(dir, `scenarios-${rendererKey}.json`)
+  const scenarios = matrix.map((scenario) => {
+    if (rendererKey !== 'reactflow') return scenario
+    return {
+      ...scenario,
+      preCull: true,
+      onlyRenderVisibleElements: false,
+    }
+  })
+  writeFileSync(file, JSON.stringify(scenarios))
+  return file
+}
 
 function gitDescribe() {
   try {
@@ -102,7 +125,7 @@ function runRenderer(renderer, scenariosFile, tmpOut) {
 
 const matrix = buildMatrix(layers)
 const targets = only === '' ? RENDERERS : RENDERERS.filter((r) => r.key === only)
-if (targets.length === 0) throw new Error(`--only 不支持：${only}（可选 dom / leafer）`)
+if (targets.length === 0) throw new Error(`--only 不支持：${only}（可选 dom / leafer / reactflow）`)
 
 console.log(`矩阵 ${matrix.length} 组合 × ${targets.length} 渲染器 × ${samples} 次采样`)
 for (const [key, description] of Object.entries(LAYER_DESCRIPTIONS)) {
@@ -110,16 +133,17 @@ for (const [key, description] of Object.entries(LAYER_DESCRIPTIONS)) {
 }
 
 const tmpRoot = mkdtempSync(path.join(os.tmpdir(), 'fw-bench-'))
-const scenariosFile = path.join(tmpRoot, 'scenarios.json')
-writeFileSync(scenariosFile, JSON.stringify(matrix))
 
 const byRenderer = {}
 const failures = {}
+const scenariosFiles = {}
 try {
   for (const renderer of targets) {
     console.log(`\n▶ ${renderer.label}`)
     const tmpOut = path.join(tmpRoot, renderer.key)
     mkdirSync(tmpOut, { recursive: true })
+    const scenariosFile = prepareScenariosFile(renderer.key, matrix, tmpRoot)
+    scenariosFiles[renderer.key] = scenariosFile
     try {
       byRenderer[renderer.key] = await runRenderer(renderer, scenariosFile, tmpOut)
     } catch (error) {
