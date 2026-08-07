@@ -40,5 +40,8 @@ export async function openCustomDocument(
     }
   }
   await page.reload()
-  await expect(page.getByTestId('canvas-host')).toHaveAttribute('data-history-ready', 'true')
+  // 等的是一次 history fetch 返回（首次还含 Route Handler 冷编译），不是业务状态。
+  // 理由与超时取值见 create-document.ts 的 READINESS_TIMEOUT_MS 注释。
+  await expect(page.getByTestId('canvas-host'))
+    .toHaveAttribute('data-history-ready', 'true', { timeout: 30_000 })
 }
